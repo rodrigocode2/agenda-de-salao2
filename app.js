@@ -33,15 +33,6 @@ const Auth = {
     });
   },
 
-  async loginSocial(provider) {
-    try {
-      const { error } = await supabaseClient.auth.signInWithOAuth({ provider });
-      if (error) alert('Erro no login social: ' + error.message);
-    } catch (e) {
-      console.error(e);
-    }
-  },
-
   async loginAdmin(event) {
     event.preventDefault();
     const email = document.getElementById('login-admin-email').value;
@@ -96,25 +87,89 @@ const App = {
   init() {
     console.log('App inicializado.');
     const filtroData = document.getElementById('filtro-data-agenda');
-    if (filtroData) filtroData.valueAsDate = new Date();
+    if (filtroData) {
+      if (!filtroData.value) filtroData.valueAsDate = new Date();
+      // Sempre que alterar a data no filtro, atualiza a grelha da agenda
+      filtroData.addEventListener('change', () => this.renderAgendaGrid());
+    }
     this.renderAgendaGrid();
   },
+
   setPlan(plan) {
     alert('Plano selecionado: ' + plan);
   },
-  renderAgendaGrid() {
+
+  // Agenda ligada ao Supabase para carregar agendamentos reais
+  async renderAgendaGrid() {
     const body = document.getElementById('grid-horarios-body');
     if (!body) return;
-    body.innerHTML = `<tr><td class="py-4 px-4 text-zinc-400" colspan="2">Nenhum agendamento para esta data.</td></tr>`;
+
+    const filtroData = document.getElementById('filtro-data-agenda');
+    const dataSelecionada = filtroData ? filtroData.value : new Date().toISOString().split('T')[0];
+
+    body.innerHTML = `<tr><td class="py-4 px-4 text-zinc-400" colspan="2">A carregar agendamentos...</td></tr>`;
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('agendamentos')
+        .select('*')
+        .eq('data', dataSelecionada);
+
+      if (error) {
+        console.error('Erro ao buscar agendamentos:', error);
+        body.innerHTML = `<tr><td class="py-4 px-4 text-red-400" colspan="2">Erro ao carregar (Certifique-se de que a tabela 'agendamentos' existe no Supabase).</td></tr>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        body.innerHTML = `<tr><td class="py-4 px-4 text-zinc-400" colspan="2">Nenhum agendamento para esta data.</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = data.map(item => `
+        <tr class="border-b border-zinc-800">
+          <td class="py-3 px-4 text-white font-medium">${item.horario || '00:00'}</td>
+          <td class="py-3 px-4 text-white">${item.cliente_nome || 'Cliente'} — <span class="text-brand-400">${item.servico || 'Serviço'}</span></td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+      body.innerHTML = `<tr><td class="py-4 px-4 text-red-400" colspan="2">Erro inesperado ao carregar agenda.</td></tr>`;
+    }
   },
-  handleCreateAgendamento(e) {
+
+  // Criar agendamento real guardando no Supabase
+  async handleCreateAgendamento(e) {
     e.preventDefault();
-    alert('Agendamento criado com sucesso!');
+    const cliente_nome = document.getElementById('input-cliente-nome')?.value || 'Cliente';
+    const servico = document.getElementById('input-servico')?.value || 'Corte';
+    const data = document.getElementById('input-data-agendamento')?.value || new Date().toISOString().split('T')[0];
+    const horario = document.getElementById('input-horario')?.value || '10:00';
+
+    try {
+      const { error } = await supabaseClient
+        .from('agendamentos')
+        .insert([{ cliente_nome, servico, data, horario }]);
+
+      if (error) {
+        alert('Erro ao criar agendamento: ' + error.message);
+        return;
+      }
+
+      alert('Agendamento criado com sucesso!');
+      e.target.reset();
+      this.renderAgendaGrid();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao guardar agendamento.');
+    }
   },
+
   handleCreateProfissional(e) {
     e.preventDefault();
     alert('Profissional cadastrado com sucesso!');
   },
+
   handleFotoUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -157,7 +212,3 @@ document.addEventListener('DOMContentLoaded', () => {
   Auth.initAuth();
   initMouseTrail();
 });
-    }
-};
-
-document.addEventListener('DOMContentLoaded', () => App.init());
