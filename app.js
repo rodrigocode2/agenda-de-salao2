@@ -115,7 +115,7 @@ const App = {
   },
 
   setPlan(plan) {
-    alert('Plano selecionado: ' + plan);
+    alert('Plano selecionado: ' + plan + '. Para ativar permanentemente, integre o gateway de pagamento (Stripe/Mercado Pago).');
   },
 
   async carregarSelectProfissionais() {
@@ -289,6 +289,22 @@ const App = {
 
   async handleCreateProfissional(e) {
     e.preventDefault();
+
+    // Validação do limite do plano gratuito (máximo de 2 profissionais)
+    try {
+      const { data: profissionaisAtuais, error: errCheck } = await supabaseClient
+        .from('profissionais')
+        .select('id');
+
+      if (!errCheck && profissionaisAtuais && profissionaisAtuais.length >= 2) {
+        alert('Limite do plano gratuito atingido (máximo de 2 profissionais). Para cadastrar mais profissionais, escolha o Plano Mensal (R$ 20/mês) ou Anual (R$ 200/ano)!');
+        UI.switchTab('aba2'); // Redireciona para a aba de planos
+        return;
+      }
+    } catch (err) {
+      console.error('Erro ao verificar limite de profissionais:', err);
+    }
+
     const nome = document.getElementById('prof-nome').value;
     const cargo = document.getElementById('prof-cargo').value;
     const cpf = document.getElementById('prof-cpf').value;
