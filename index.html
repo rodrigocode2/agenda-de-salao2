@@ -53,6 +53,7 @@
             <nav id="nav-menu" class="flex items-center gap-2 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10 text-xs font-semibold uppercase">
                 <button onclick="UI.switchTab('aba3')" class="px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-calendar-days text-brand-500"></i> Agenda</button>
                 <button id="nav-agendar" onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-plus text-brand-500"></i> Agendar</button>
+                <button id="nav-produtos" onclick="UI.switchTab('aba-produtos')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-box-open text-brand-500"></i> Produtos & Vendas</button>
                 <button id="nav-equipe" onclick="UI.switchTab('aba5')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
                 <button id="nav-planos" onclick="UI.switchTab('aba2')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-gem text-brand-500"></i> Planos</button>
             </nav>
@@ -71,7 +72,7 @@
 
     <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
 
-        <!-- LOGIN INICIAL COM VÍDEO HERO E RASTRO DO RATO -->
+        <!-- LOGIN INICIAL -->
         <section id="aba-login" class="tab-content relative overflow-hidden rounded-3xl p-8 md:p-16 border border-white/10 space-y-12">
             <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-60 filter brightness-90"></video>
@@ -79,119 +80,91 @@
             </div>
 
             <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-                <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase">Gratuito para até 2 Profissionais</span>
+                <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase">Gestão Completa com Stock e Comissões</span>
                 <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white">HairConcept <span class="text-brand-500">Gestão</span></h1>
                 <p class="text-zinc-300 text-sm">Acesse sua conta para visualizar a agenda ou gerenciar o estabelecimento.</p>
             </div>
 
             <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                <!-- LOGIN ESTABELECIMENTO -->
                 <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl bg-zinc-950/70 backdrop-blur-md">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold">
-                            <i class="fa-solid fa-store"></i>
-                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold"><i class="fa-solid fa-store"></i></div>
                         <div>
                             <h3 class="text-lg font-bold uppercase text-white">Login Estabelecimento</h3>
                             <p class="text-[11px] text-zinc-400">Dono do Salão / Admin</p>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="Auth.loginSocial('google')" type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold text-white hover:border-brand-500 transition">
-                            <i class="fa-brands fa-google text-rose-500"></i> Google
-                        </button>
-                        <button onclick="Auth.loginSocial('facebook')" type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold text-white hover:border-brand-500 transition">
-                            <i class="fa-brands fa-facebook text-blue-500"></i> Facebook
-                        </button>
+                        <button onclick="Auth.loginSocial('google')" type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold text-white hover:border-brand-500 transition"><i class="fa-brands fa-google text-rose-500"></i> Google</button>
+                        <button onclick="Auth.loginSocial('facebook')" type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold text-white hover:border-brand-500 transition"><i class="fa-brands fa-facebook text-blue-500"></i> Facebook</button>
                     </div>
-
-                    <div class="flex items-center gap-3 text-zinc-600 text-[10px] uppercase font-bold">
-                        <div class="flex-grow border-t border-white/10"></div>
-                        Ou e-mail
-                        <div class="flex-grow border-t border-white/10"></div>
-                    </div>
-
                     <form onsubmit="Auth.loginAdmin(event)" class="space-y-4">
                         <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail do Salão</label>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
                             <input type="email" id="login-admin-email" required placeholder="salao@email.com" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha</label>
                             <input type="password" id="login-admin-senha" required placeholder="••••••••" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
-                        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase transition hover:bg-brand-600">Entrar no Painel Geral</button>
+                        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Entrar no Painel</button>
                     </form>
                 </div>
 
-                <!-- LOGIN PROFISSIONAL -->
                 <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl bg-zinc-950/70 backdrop-blur-md">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-                            <i class="fa-solid fa-user-tie"></i>
-                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold"><i class="fa-solid fa-user-tie"></i></div>
                         <div>
                             <h3 class="text-lg font-bold uppercase text-white">Login Profissional</h3>
-                            <p class="text-[11px] text-zinc-400">Cabeleireiros / Manicures / Reuniões</p>
+                            <p class="text-[11px] text-zinc-400">Cabeleireiros / Barbeiros</p>
                         </div>
                     </div>
-
                     <form onsubmit="Auth.loginProfissional(event)" class="space-y-4 pt-4">
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF Cadastrado</label>
                             <input type="text" id="login-prof-id" required placeholder="000.000.000-00" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso</label>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha</label>
                             <input type="password" id="login-prof-senha" required placeholder="••••••••" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
-                        <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/25 hover:border-brand-500 text-white font-bold text-xs uppercase transition">Acessar Minha Agenda</button>
+                        <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/25 hover:border-brand-500 text-white font-bold text-xs uppercase transition">Acessar Agenda</button>
                     </form>
                 </div>
             </div>
         </section>
 
-        <!-- PLANOS (Atualizado com R$ 20/mês e R$ 200/ano) -->
+        <!-- PLANOS -->
         <section id="aba2" class="tab-content hidden space-y-8">
             <div class="text-center max-w-2xl mx-auto space-y-2">
                 <h2 class="text-3xl font-black text-white uppercase">Planos de Assinatura</h2>
-                <p class="text-xs text-zinc-400">Plano Gratuito permite até 2 profissionais cadastrados. Ao passar de 2, escolha o seu plano.</p>
+                <p class="text-xs text-zinc-400">Plano Gratuito até 2 profissionais. Acima disso, escolha mensal (R$ 20) ou anual (R$ 200).</p>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
                 <div class="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-6 bg-zinc-950/60">
                     <div class="space-y-4">
                         <span class="text-[10px] font-bold text-zinc-500 uppercase">Gratuito</span>
                         <h3 class="text-xl font-bold text-white uppercase">Grátis</h3>
                         <div class="text-3xl font-black text-white">R$ 0<span class="text-xs font-normal text-zinc-400">/mês</span></div>
-                        <ul class="space-y-2 text-xs text-zinc-300">
-                            <li><i class="fa-solid fa-check text-brand-500"></i> Até 2 Profissionais ativos</li>
-                        </ul>
+                        <ul class="space-y-2 text-xs text-zinc-300"><li><i class="fa-solid fa-check text-brand-500"></i> Até 2 Profissionais</li></ul>
                     </div>
                     <button onclick="App.setPlan('gratis')" class="w-full py-3 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase">Manter Grátis</button>
                 </div>
-
                 <div class="glass-panel p-6 rounded-3xl border-2 border-brand-500 flex flex-col justify-between space-y-6 bg-zinc-950/80">
                     <div class="space-y-4">
                         <span class="text-[10px] font-bold text-brand-500 uppercase">Pro</span>
                         <h3 class="text-xl font-bold text-white uppercase">Plano Mensal</h3>
                         <div class="text-3xl font-black text-white">R$ 20<span class="text-xs font-normal text-zinc-400">/mês</span></div>
-                        <ul class="space-y-2 text-xs text-zinc-300">
-                            <li><i class="fa-solid fa-check text-brand-500"></i> Acima de 2 Profissionais</li>
-                        </ul>
+                        <ul class="space-y-2 text-xs text-zinc-300"><li><i class="fa-solid fa-check text-brand-500"></i> Profissionais Ilimitados</li></ul>
                     </div>
                     <button onclick="App.setPlan('mensal')" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Assinar R$ 20/mês</button>
                 </div>
-
                 <div class="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-6 bg-zinc-950/60">
                     <div class="space-y-4">
                         <span class="text-[10px] font-bold text-zinc-500 uppercase">Anual</span>
                         <h3 class="text-xl font-bold text-white uppercase">Plano Anual</h3>
                         <div class="text-3xl font-black text-white">R$ 200<span class="text-xs font-normal text-zinc-400">/ano</span></div>
-                        <ul class="space-y-2 text-xs text-zinc-300">
-                            <li><i class="fa-solid fa-check text-brand-500"></i> Acima de 2 Profissionais</li>
-                        </ul>
+                        <ul class="space-y-2 text-xs text-zinc-300"><li><i class="fa-solid fa-check text-brand-500"></i> Profissionais Ilimitados</li></ul>
                     </div>
                     <button onclick="App.setPlan('anual')" class="w-full py-3 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase">Assinar R$ 200/ano</button>
                 </div>
@@ -200,6 +173,9 @@
 
         <!-- AGENDA -->
         <section id="aba3" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 bg-zinc-950/40">
+            <!-- BANNER DE ALERTAS DE VALIDADE DE PRODUTOS -->
+            <div id="alerta-validade-container" class="hidden"></div>
+
             <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
                     <span class="text-xs font-bold text-white uppercase">Grade de Horários (08:00 - 18:00)</span>
@@ -220,7 +196,7 @@
             </div>
         </section>
 
-        <!-- AGENDAR COM TEMPO / DURAÇÃO -->
+        <!-- AGENDAR -->
         <section id="aba4" class="tab-content hidden max-w-xl mx-auto">
             <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl bg-zinc-950/80 backdrop-blur-md">
                 <h2 class="text-xl font-bold uppercase text-white">Marcar Atendimento / Reunião</h2>
@@ -238,26 +214,102 @@
                         <select id="agendamento-horario" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Duração do Serviço / Tempo Ocupado *</label>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Duração *</label>
                         <select id="agendamento-duracao" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                             <option value="30">30 minutos</option>
                             <option value="60">1 hora</option>
                             <option value="90" selected>1 hora e 30 minutos</option>
                             <option value="120">2 horas</option>
-                            <option value="150">2 horas e 30 minutos</option>
                             <option value="180">3 horas</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cliente / Participante *</label>
-                        <input id="cliente-nome" type="text" required placeholder="Nome do Cliente ou Reunião" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cliente *</label>
+                        <input id="cliente-nome" type="text" required placeholder="Nome do Cliente" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                     </div>
                     <div>
-                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço / Descrição *</label>
-                        <input id="cliente-servico" type="text" required placeholder="Ex: Coloração Completa / Reunião" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
+                        <input id="cliente-servico" type="text" required placeholder="Ex: Corte e Barba" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                     </div>
                     <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Confirmar Agendamento</button>
                 </form>
+            </div>
+        </section>
+
+        <!-- PRODUTOS & VENDAS COM COMISSÕES -->
+        <section id="aba-produtos" class="tab-content hidden max-w-5xl mx-auto space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- CADASTRAR PRODUTO -->
+                <div class="glass-panel rounded-3xl p-6 border border-white/10 space-y-6 bg-zinc-950/80">
+                    <h3 class="text-lg font-bold uppercase text-white flex items-center gap-2"><i class="fa-solid fa-box text-brand-500"></i> Cadastrar Produto</h3>
+                    <form onsubmit="App.handleCreateProduto(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Produto *</label>
+                            <input type="text" id="prod-nome" required placeholder="Ex: Pomada Modeladora 100g" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço Custo (R$) *</label>
+                                <input type="number" step="0.01" id="prod-custo" required placeholder="15.00" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço Venda (R$) *</label>
+                                <input type="number" step="0.01" id="prod-venda" required placeholder="35.00" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Stock Inicial *</label>
+                                <input type="number" id="prod-stock" required placeholder="10" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data de Validade *</label>
+                                <input type="date" id="prod-validade" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-3 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Salvar Produto</button>
+                    </form>
+                </div>
+
+                <!-- REGISTAR VENDA E COMISSÃO -->
+                <div class="glass-panel rounded-3xl p-6 border border-white/10 space-y-6 bg-zinc-950/80">
+                    <h3 class="text-lg font-bold uppercase text-white flex items-center gap-2"><i class="fa-solid fa-cash-register text-brand-500"></i> Registar Venda & Comissão</h3>
+                    <form onsubmit="App.handleVenderProduto(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Selecionar Produto *</label>
+                            <select id="venda-produto-select" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional Responsável (Comissão) *</label>
+                            <select id="venda-profissional-select" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Quantidade *</label>
+                            <input type="number" id="venda-qtd" min="1" value="1" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <button type="submit" class="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs uppercase hover:bg-emerald-500 transition">Registar Venda (Calcular Comissão)</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- LISTA DE PRODUTOS E STOCK -->
+            <div class="glass-panel rounded-3xl p-6 border border-white/10 space-y-4 bg-zinc-950/80">
+                <h3 class="text-sm font-bold uppercase text-zinc-400">Stock Atual & Validades</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-white/10 text-zinc-400 uppercase text-[10px]">
+                                <th class="py-3 px-4">Produto</th>
+                                <th class="py-3 px-4">Custo</th>
+                                <th class="py-3 px-4">Venda</th>
+                                <th class="py-3 px-4">Stock</th>
+                                <th class="py-3 px-4">Validade</th>
+                                <th class="py-3 px-4">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-produtos-body" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
@@ -267,53 +319,34 @@
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
                         <h2 class="text-xl font-bold uppercase text-white">Cadastrar Profissional</h2>
-                        <p class="text-xs text-zinc-400">Preencha os dados completos do integrante da equipe (Até 2 gratuitos)</p>
+                        <p class="text-xs text-zinc-400">Até 2 gratuitos. Acima disso, utilize os planos Pro.</p>
                     </div>
-                    <span id="limite-profissionais-badge" class="text-xs font-bold text-brand-500 uppercase px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20">Ativo</span>
                 </div>
-
                 <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
-                    <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
-                        <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-                            <img id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
-                            <i id="icon-foto-prof" class="fa-solid fa-user text-zinc-600 text-2xl"></i>
-                        </div>
-                        <div class="flex-grow space-y-1">
-                            <label class="block text-xs uppercase font-bold text-zinc-400">Foto de Perfil</label>
-                            <input type="file" id="prof-foto-file" accept="image/*" onchange="App.handleFotoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-brand-500 cursor-pointer">
-                        </div>
-                    </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo *</label>
                             <input type="text" id="prof-nome" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Especialidade / Cargo *</label>
-                            <input type="text" id="prof-cargo" placeholder="Ex: Cabeleireiro, Manicure" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cargo *</label>
+                            <input type="text" id="prof-cargo" placeholder="Ex: Cabeleireiro" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF *</label>
                             <input type="text" id="prof-cpf" placeholder="000.000.000-00" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Identidade (RG) *</label>
-                            <input type="text" id="prof-rg" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
-                        </div>
-                        <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Certificado / Reg. Profissional</label>
-                            <input type="text" id="prof-certificado" placeholder="Ex: Certificação nº 1234" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">% Comissão de Vendas *</label>
+                            <input type="number" id="prof-comissao" placeholder="15" value="15" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso *</label>
-                            <input type="password" id="prof-senha" required placeholder="Senha do profissional" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <input type="password" id="prof-senha" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                     </div>
-
-                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Salvar e Cadastrar Integrante</button>
+                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Salvar Integrante</button>
                 </form>
-
                 <div class="border-t border-white/10 pt-6 space-y-4">
                     <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
                     <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -323,7 +356,6 @@
 
     </main>
 
-    <!-- Rodapé -->
     <footer class="w-full py-6 border-t border-white/10 text-center text-xs text-zinc-400 bg-zinc-950/40">
         <p>&copy; 2026 HairConcept. Criado por rodrigo-n-s@live.com, rodrigocode2</p>
     </footer>
