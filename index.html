@@ -30,7 +30,6 @@
         };
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Caminho corrigido para a raiz -->
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -39,7 +38,7 @@
     <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
     <!-- HEADER -->
-    <header id="main-header" class="hidden sticky top-0 z-40 glass-panel border-b border-white/10">
+    <header id="main-header" class="hidden sticky top-0 z-40 glass-panel border-b border-white/15 bg-zinc-950/80 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500">
@@ -52,10 +51,10 @@
             </div>
 
             <nav id="nav-menu" class="flex items-center gap-2 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10 text-xs font-semibold uppercase">
-                <button onclick="UI.switchTab('aba3')" class="px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-calendar-days text-brand-500"></i> Agenda</button>
-                <button id="nav-agendar" onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-plus text-brand-500"></i> Agendar</button>
-                <button id="nav-equipe" onclick="UI.switchTab('aba5')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
-                <button id="nav-planos" onclick="UI.switchTab('aba2')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-gem text-brand-500"></i> Planos</button>
+                <button onclick="UI.switchTab('aba3')" class="px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-calendar-days text-brand-500"></i> Agenda</button>
+                <button id="nav-agendar" onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-plus text-brand-500"></i> Agendar</button>
+                <button id="nav-equipe" onclick="UI.switchTab('aba5')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
+                <button id="nav-planos" onclick="UI.switchTab('aba2')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white transition"><i class="fa-solid fa-gem text-brand-500"></i> Planos</button>
             </nav>
 
             <div class="flex items-center gap-3">
@@ -63,7 +62,7 @@
                     <span id="user-name-display" class="block text-xs font-bold text-white uppercase"></span>
                     <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase"></span>
                 </div>
-                <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white font-bold text-xs uppercase">
+                <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white font-bold text-xs uppercase transition">
                     <i class="fa-solid fa-right-from-bracket"></i> Sair
                 </button>
             </div>
@@ -72,9 +71,8 @@
 
     <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
 
-        <!-- LOGIN INICIAL COM VÍDEO HERO -->
+        <!-- LOGIN INICIAL COM VÍDEO HERO E RASTRO DO RATO -->
         <section id="aba-login" class="tab-content relative overflow-hidden rounded-3xl p-8 md:p-16 border border-white/10 space-y-12">
-            <!-- Vídeo Hero de Fundo corrigido para a raiz -->
             <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-60 filter brightness-90"></video>
                 <div class="absolute inset-0 bg-gradient-to-b from-darkbg-300/60 via-darkbg-300/40 to-darkbg-300"></div>
@@ -88,7 +86,7 @@
 
             <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 <!-- LOGIN ESTABELECIMENTO -->
-                <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
+                <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl bg-zinc-950/70 backdrop-blur-md">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold">
                             <i class="fa-solid fa-store"></i>
@@ -99,7 +97,6 @@
                         </div>
                     </div>
 
-                    <!-- BOTÕES DE REDES SOCIAIS -->
                     <div class="grid grid-cols-2 gap-3">
                         <button onclick="Auth.loginSocial('google')" type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold text-white hover:border-brand-500 transition">
                             <i class="fa-brands fa-google text-rose-500"></i> Google
@@ -129,14 +126,14 @@
                 </div>
 
                 <!-- LOGIN PROFISSIONAL -->
-                <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
+                <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl bg-zinc-950/70 backdrop-blur-md">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
                             <i class="fa-solid fa-user-tie"></i>
                         </div>
                         <div>
                             <h3 class="text-lg font-bold uppercase text-white">Login Profissional</h3>
-                            <p class="text-[11px] text-zinc-400">Cabeleireiros / Manicures / Esteticistas</p>
+                            <p class="text-[11px] text-zinc-400">Cabeleireiros / Manicures / Reuniões</p>
                         </div>
                     </div>
 
@@ -149,7 +146,7 @@
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso</label>
                             <input type="password" id="login-prof-senha" required placeholder="••••••••" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
-                        <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:border-brand-500 text-white font-bold text-xs uppercase transition">Acessar Minha Agenda</button>
+                        <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/25 hover:border-brand-500 text-white font-bold text-xs uppercase transition">Acessar Minha Agenda</button>
                     </form>
                 </div>
             </div>
@@ -163,7 +160,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                <div class="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-6">
+                <div class="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-6 bg-zinc-950/60">
                     <div class="space-y-4">
                         <span class="text-[10px] font-bold text-zinc-500 uppercase">Gratuito</span>
                         <h3 class="text-xl font-bold text-white uppercase">Grátis</h3>
@@ -175,7 +172,7 @@
                     <button onclick="App.setPlan('gratis')" class="w-full py-3 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase">Manter Grátis</button>
                 </div>
 
-                <div class="glass-panel p-6 rounded-3xl border-2 border-brand-500 flex flex-col justify-between space-y-6 bg-zinc-950/60">
+                <div class="glass-panel p-6 rounded-3xl border-2 border-brand-500 flex flex-col justify-between space-y-6 bg-zinc-950/80">
                     <div class="space-y-4">
                         <span class="text-[10px] font-bold text-brand-500 uppercase">Pro</span>
                         <h3 class="text-xl font-bold text-white uppercase">Plano Mensal</h3>
@@ -184,10 +181,10 @@
                             <li><i class="fa-solid fa-check text-brand-500"></i> Até 10 Profissionais</li>
                         </ul>
                     </div>
-                    <button onclick="App.setPlan('mensal')" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">Assinar R$ 30/mês</button>
+                    <button onclick="App.setPlan('mensal')" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Assinar R$ 30/mês</button>
                 </div>
 
-                <div class="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-6">
+                <div class="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-6 bg-zinc-950/60">
                     <div class="space-y-4">
                         <span class="text-[10px] font-bold text-zinc-500 uppercase">Anual</span>
                         <h3 class="text-xl font-bold text-white uppercase">Plano Anual</h3>
@@ -201,21 +198,21 @@
             </div>
         </section>
 
-        <!-- AGENDA -->
-        <section id="aba3" class="tab-content hidden space-y-6 agenda-bg p-6 rounded-3xl border border-white/10">
+        <!-- AGENDA (08:00 às 18:00 de meia em meia hora com profissionais em cima) -->
+        <section id="aba3" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 bg-zinc-950/40">
             <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <span class="text-xs font-bold text-white uppercase">Grade de Horários</span>
+                    <span class="text-xs font-bold text-white uppercase">Grade de Horários (08:00 - 18:00)</span>
                     <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white">
                 </div>
-                <button onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">+ Novo Agendamento</button>
+                <button onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">+ Novo Agendamento</button>
             </div>
 
-            <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
+            <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto shadow-2xl bg-zinc-950/70">
                 <table class="w-full text-left border-collapse min-w-[800px]">
                     <thead>
                         <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] font-bold uppercase">
-                            <th class="py-3 px-4 w-24 sticky-time-col">Horário</th>
+                            <th class="py-3 px-4 w-24">Horário</th>
                         </tr>
                     </thead>
                     <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
@@ -223,10 +220,10 @@
             </div>
         </section>
 
-        <!-- AGENDAR -->
+        <!-- AGENDAR COM TEMPO / DURAÇÃO -->
         <section id="aba4" class="tab-content hidden max-w-xl mx-auto">
-            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-                <h2 class="text-xl font-bold uppercase text-white">Marcar Atendimento</h2>
+            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl bg-zinc-950/80 backdrop-blur-md">
+                <h2 class="text-xl font-bold uppercase text-white">Marcar Atendimento / Reunião</h2>
                 <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
                     <div>
                         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
@@ -237,31 +234,42 @@
                         <select id="agendamento-profissional" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Início *</label>
                         <select id="agendamento-horario" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cliente *</label>
-                        <input id="cliente-nome" type="text" required placeholder="Nome do Cliente" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Duração do Serviço / Tempo Ocupado *</label>
+                        <select id="agendamento-duracao" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <option value="30">30 minutos</option>
+                            <option value="60">1 hora</option>
+                            <option value="90" selected>1 hora e 30 minutos</option>
+                            <option value="120">2 horas</option>
+                            <option value="150">2 horas e 30 minutos</option>
+                            <option value="180">3 horas</option>
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
-                        <input id="cliente-servico" type="text" required placeholder="Ex: Corte / Manicure" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cliente / Participante *</label>
+                        <input id="cliente-nome" type="text" required placeholder="Nome do Cliente ou Reunião" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                     </div>
-                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">Confirmar Agendamento</button>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço / Descrição *</label>
+                        <input id="cliente-servico" type="text" required placeholder="Ex: Coloração Completa / Reunião" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Confirmar Agendamento</button>
                 </form>
             </div>
         </section>
 
         <!-- EQUIPE -->
         <section id="aba5" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl bg-zinc-950/80 backdrop-blur-md">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
                         <h2 class="text-xl font-bold uppercase text-white">Cadastrar Profissional</h2>
                         <p class="text-xs text-zinc-400">Preencha os dados completos do integrante da equipe</p>
                     </div>
-                    <span id="limite-profissionais-badge" class="text-xs font-bold text-brand-500 uppercase px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20"></span>
+                    <span id="limite-profissionais-badge" class="text-xs font-bold text-brand-500 uppercase px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20">Ativo</span>
                 </div>
 
                 <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
@@ -295,7 +303,7 @@
                         </div>
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Certificado / Reg. Profissional</label>
-                            <input type="text" id="prof-certificado" placeholder="Ex: Certificação Senac nº 1234" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <input type="text" id="prof-certificado" placeholder="Ex: Certificação nº 1234" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso *</label>
@@ -303,7 +311,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">Salvar e Cadastrar Integrante</button>
+                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Salvar e Cadastrar Integrante</button>
                 </form>
 
                 <div class="border-t border-white/10 pt-6 space-y-4">
@@ -315,12 +323,11 @@
 
     </main>
 
-    <!-- Rodapé com Copyright -->
+    <!-- Rodapé -->
     <footer class="w-full py-6 border-t border-white/10 text-center text-xs text-zinc-400 bg-zinc-950/40">
         <p>&copy; 2026 HairConcept. Criado por rodrigo-n-s@live.com, rodrigocode2</p>
     </footer>
 
-    <!-- Caminho corrigido para a raiz -->
     <script src="app.js"></script>
 </body>
 
