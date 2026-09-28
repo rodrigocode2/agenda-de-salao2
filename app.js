@@ -1,6 +1,6 @@
 // Configuração do Supabase (HairConcept)
 const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTZWmg_XZHAU';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxxdHJmY2NmanhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NTA0MDEsImV4cCI6MjEwNjEyNjQwMX0.wJVZhvkvilggyf6yGe8F6e8Szs1E4hjD6fNGJpOlR7I';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -20,6 +20,15 @@ const Auth = {
       }
     } catch (e) {
       console.error('Erro ao verificar sessão:', e);
+    }
+  },
+
+  async loginSocial(provider) {
+    try {
+      const { error } = await supabaseClient.auth.signInWithOAuth({ provider });
+      if (error) alert('Erro no login social: ' + error.message);
+    } catch (e) {
+      console.error(e);
     }
   },
 
@@ -357,7 +366,6 @@ const App = {
   }
 };
 
-// Efeito de rastro do rato apenas na secção Hero
 function initMouseTrail() {
   const heroSection = document.querySelector('#aba-login');
   if (!heroSection) return;
