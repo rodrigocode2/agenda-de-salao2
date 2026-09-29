@@ -171,31 +171,33 @@
             </div>
         </section>
 
-        <!-- AGENDA COM IMAGEM DE FUNDO AGENDA.JPG VISÍVEL -->
-        <section id="aba3" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 bg-cover bg-center relative shadow-2xl overflow-hidden" style="background-image: url('agenda.jpg');">
-            <!-- Camada escura leve (50%) para a imagem agenda.jpg aparecer claramente -->
-            <div class="absolute inset-0 bg-zinc-950/50 backdrop-blur-[2px] z-0 pointer-events-none"></div>
+        <!-- AGENDA COM AGENDA.JPG EM DESTAQUE (TRANSLÚCIDO) -->
+        <section id="aba3" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/15 bg-cover bg-center relative shadow-2xl overflow-hidden" style="background-image: url('agenda.jpg');">
+            <!-- Camada de escurecimento suave (25%) para a imagem de fundo aparecer bem nítida -->
+            <div class="absolute inset-0 bg-zinc-950/25 backdrop-blur-[1px] z-0 pointer-events-none"></div>
 
             <div class="relative z-10 space-y-6">
                 <!-- BANNER DE ALERTAS DE VALIDADE DE PRODUTOS -->
                 <div id="alerta-validade-container" class="hidden"></div>
 
-                <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4 bg-zinc-950/80">
+                <!-- Barra superior em Glassmorphism -->
+                <div class="p-4 rounded-2xl border border-white/15 flex flex-wrap items-center justify-between gap-4 bg-zinc-950/50 backdrop-blur-md shadow-lg">
                     <div class="flex items-center gap-4">
                         <span class="text-xs font-bold text-white uppercase">Grade de Horários (08:00 - 18:00)</span>
-                        <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white">
+                        <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="bg-zinc-900/80 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white">
                     </div>
-                    <button onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">+ Novo Agendamento</button>
+                    <button onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition shadow-lg">+ Novo Agendamento</button>
                 </div>
 
-                <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto shadow-2xl bg-zinc-950/80">
+                <!-- Tabela da agenda translúcida -->
+                <div class="rounded-2xl border border-white/15 overflow-x-auto shadow-2xl bg-zinc-950/50 backdrop-blur-md">
                     <table class="w-full text-left border-collapse min-w-[800px]">
                         <thead>
-                            <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] font-bold uppercase">
+                            <tr id="grid-header-row" class="bg-zinc-950/70 border-b border-white/15 text-zinc-300 text-[11px] font-bold uppercase">
                                 <th class="py-3 px-4 w-24">Horário</th>
                             </tr>
                         </thead>
-                        <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
+                        <tbody id="grid-horarios-body" class="divide-y divide-white/10 text-xs"></tbody>
                     </table>
                 </div>
             </div>
