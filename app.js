@@ -91,7 +91,7 @@ const App = {
   },
 
   setPlan(plan) {
-    alert('Plano ' + plan + ' selecionado. Integre o seu link de pagamento da Vercel/Stripe/Mercado Pago.');
+    alert('Plano ' + plan + ' selecionado. Integre o seu link de pagamento.');
   },
 
   async carregarSelects() {
@@ -151,7 +151,6 @@ const App = {
     const qtd = parseInt(document.getElementById('venda-qtd').value);
 
     try {
-      // Buscar dados do produto e do profissional
       const { data: produto } = await supabaseClient.from('produtos').select('*').eq('id', produtoId).single();
       const { data: prof } = await supabaseClient.from('profissionais').select('*').eq('nome', profissionalNome).single();
 
@@ -164,8 +163,7 @@ const App = {
       const comissaoPct = prof?.comissao_pct || 10;
       const comissaoValor = (valorTotal * comissaoPct) / 100;
 
-      // Registar Venda
-      await supabaseClient.from('vendas_produtos').insert([{
+      const { error: errVenda } = await supabaseClient.from('vendas_produtos').insert([{
         produto_id: produto.id,
         produto_nome: produto.nome,
         profissional_nome: profissionalNome,
@@ -173,9 +171,10 @@ const App = {
         valor_total: valorTotal,
         comissao_valor: comissaoValor
       }]);
+      if (errVenda) throw errVenda;
 
-      // Atualizar Stock
-      await supabaseClient.from('produtos').update({ stock: produto.stock - qtd }).eq('id', produto.id);
+      const { error: errStock } = await supabaseClient.from('produtos').update({ stock: produto.stock - qtd }).eq('id', produto.id);
+      if (errStock) throw errStock;
 
       alert(`Venda efetuada com sucesso!\nValor Total: R$ ${valorTotal.toFixed(2)}\nComissão para ${profissionalNome}: R$ ${comissaoValor.toFixed(2)}`);
       e.target.reset();
@@ -237,7 +236,7 @@ const App = {
       if (produtosParaPromocao.length > 0) {
         container.classList.remove('hidden');
         container.innerHTML = `
-          <div class="glass-panel p-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 flex items-center justify-between">
+          <div class="glass-panel p-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 flex items-center justify-between backdrop-blur-md shadow-xl">
             <div class="flex items-center gap-3">
               <i class="fa-solid fa-triangle-exclamation text-amber-400 text-xl"></i>
               <div>
@@ -245,7 +244,7 @@ const App = {
                 <p class="text-[11px] text-zinc-300">Existem ${produtosParaPromocao.length} produto(s) perto de expirar. Hora de fazer promoção para o ${produtosParaPromocao[0].nome}!</p>
               </div>
             </div>
-            <button onclick="UI.switchTab('aba-produtos')" class="px-3 py-1.5 rounded-xl bg-amber-500 text-zinc-950 font-bold text-[10px] uppercase">Ver Stock</button>
+            <button onclick="UI.switchTab('aba-produtos')" class="px-3 py-1.5 rounded-xl bg-amber-500 text-zinc-950 font-bold text-[10px] uppercase shadow">Ver Stock</button>
           </div>
         `;
       } else {
@@ -279,11 +278,11 @@ const App = {
       const { data: profissionais } = await supabaseClient.from('profissionais').select('*');
       if (!profissionais || profissionais.length === 0) {
         headerRow.innerHTML = `<th class="py-3 px-4 w-24">Horário</th>`;
-        body.innerHTML = `<tr><td class="py-4 px-4 text-zinc-400">Nenhum profissional cadastrado.</td></tr>`;
+        body.innerHTML = `<tr><td class="py-4 px-4 text-zinc-300" colspan="2">Nenhum profissional cadastrado. Vá à aba 'Equipe'.</td></tr>`;
         return;
       }
 
-      headerRow.innerHTML = `<th class="py-3 px-4 w-24 sticky-time-col bg-zinc-950 text-white">Horário</th>` +
+      headerRow.innerHTML = `<th class="py-3 px-4 w-24 sticky-time-col bg-zinc-950/70 text-white backdrop-blur-sm">Horário</th>` +
         profissionais.map(p => `<th class="py-3 px-4 text-white uppercase">${p.nome}<br><span class="text-[10px] text-brand-400 font-normal">${p.cargo || ''}</span></th>`).join('');
 
       const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('data', dataSelecionada);
@@ -304,18 +303,18 @@ const App = {
       });
 
       body.innerHTML = horarios.map((hora, hIdx) => {
-        let linha = `<tr class="border-b border-white/5"><td class="py-3 px-4 font-bold text-brand-400 bg-zinc-950/50">${hora}</td>`;
+        let linha = `<tr class="border-b border-white/10"><td class="py-3 px-4 font-bold text-brand-400 bg-zinc-950/30 backdrop-blur-sm">${hora}</td>`;
         profissionais.forEach((prof, pIdx) => {
           if (skipMatrix[pIdx][hIdx]) return;
           const ag = agendamentosMapeados[`${pIdx}-${hIdx}`];
           if (ag) {
-            linha += `<td rowspan="${ag.blocos}" class="py-3 px-4 bg-brand-500/15 border-l border-white/10 align-top shadow-inner">
-              <span class="inline-block px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 text-[10px] font-bold uppercase">${ag.duracao_minutos} min</span>
-              <p class="font-extrabold text-white text-xs">${ag.cliente_nome}</p>
-              <p class="text-[11px] text-brand-400 font-medium">${ag.servico}</p>
+            linha += `<td rowspan="${ag.blocos}" class="py-3 px-4 bg-brand-500/25 border-l border-white/15 align-top shadow-inner backdrop-blur-md">
+              <span class="inline-block px-2 py-0.5 rounded bg-brand-500/30 text-brand-200 text-[10px] font-bold uppercase">${ag.duracao_minutos} min</span>
+              <p class="font-extrabold text-white text-xs mt-1">${ag.cliente_nome}</p>
+              <p class="text-[11px] text-brand-300 font-medium">${ag.servico}</p>
             </td>`;
           } else {
-            linha += `<td class="py-3 px-4 text-zinc-600 border-l border-white/5 hover:bg-white/5 cursor-pointer transition" onclick="App.preencherAgendamento('${hora}', '${prof.nome}')">+ Disponível</td>`;
+            linha += `<td class="py-3 px-4 text-zinc-400 border-l border-white/10 hover:bg-white/10 cursor-pointer transition" onclick="App.preencherAgendamento('${hora}', '${prof.nome}')">+ Disponível</td>`;
           }
         });
         return linha + `</tr>`;
@@ -340,18 +339,19 @@ const App = {
     const servico = document.getElementById('cliente-servico').value;
 
     try {
-      await supabaseClient.from('agendamentos').insert([{ data, profissional, horario, duracao_minutos, cliente_nome, servico }]);
+      const { error } = await supabaseClient.from('agendamentos').insert([{ data, profissional, horario, duracao_minutos, cliente_nome, servico }]);
+      if (error) throw error;
       alert('Agendamento efetuado com sucesso!');
       e.target.reset();
       UI.switchTab('aba3');
-    } catch (err) { alert('Erro ao agendar.'); }
+    } catch (err) { alert('Erro ao agendar: ' + err.message); }
   },
 
   async handleCreateProfissional(e) {
     e.preventDefault();
     const { data: profs } = await supabaseClient.from('profissionais').select('id');
     if (profs && profs.length >= 2) {
-      alert('Limite do plano gratuito atingido (2 profissionais). Assine o plano mensal ou anual.');
+      alert('Limite do plano gratuito atingido (2 profissionais).');
       UI.switchTab('aba2');
       return;
     }
@@ -363,12 +363,14 @@ const App = {
     const senha = document.getElementById('prof-senha').value;
 
     try {
-      await supabaseClient.from('profissionais').insert([{ nome, cargo, cpf, comissao_pct, senha }]);
+      const { error } = await supabaseClient.from('profissionais').insert([{ nome, cargo, cpf, comissao_pct, senha }]);
+      if (error) throw error;
+      
       alert('Profissional cadastrado com sucesso!');
       e.target.reset();
       this.renderListaProfissionais();
       this.carregarSelects();
-    } catch (err) { alert('Erro ao guardar profissional.'); }
+    } catch (err) { alert('Erro ao guardar profissional: ' + err.message); }
   },
 
   async renderListaProfissionais() {
@@ -377,13 +379,13 @@ const App = {
     try {
       const { data: profissionais } = await supabaseClient.from('profissionais').select('*');
       lista.innerHTML = profissionais?.map(p => `
-        <div class="flex items-center justify-between p-3 rounded-2xl bg-zinc-950 border border-white/10">
+        <div class="flex items-center justify-between p-3 rounded-2xl bg-zinc-950/80 border border-white/10 backdrop-blur-md">
           <div>
             <h4 class="text-xs font-bold text-white uppercase">${p.nome}</h4>
             <p class="text-[10px] text-brand-400 font-medium">${p.cargo} — Comissão: ${p.comissao_pct || 10}%</p>
           </div>
         </div>
-      `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional.</p>';
+      `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional cadastrado.</p>';
     } catch (e) { console.error(e); }
   }
 };
