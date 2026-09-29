@@ -8,29 +8,42 @@ const Auth = {
 
   async initAuth() {
     try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+      
       if (session && session.user) {
-        const email = session.user.email;
-        const name = session.user.user_metadata?.full_name || email.split('@')[0];
+        const email = session.user.email || '';
+        const name = session.user.user_metadata?.full_name || (email ? email.split('@')[0] : 'Utilizador');
         this.user = { loggedIn: true, role: 'admin', name };
         this.finishLogin(`Bem-vindo, ${name}!`);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Erro na inicialização da autenticação:", e);
     }
   },
 
   async loginSocial(provider) {
     try {
-      const { error } = await supabaseClient.auth.signInWithOAuth({ provider });
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
       if (error) alert('Erro no login social: ' + error.message);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error(e); 
+    }
   },
 
   async loginAdmin(event) {
     event.preventDefault();
-    const email = document.getElementById('login-admin-email').value;
-    const senha = document.getElementById('login-admin-senha').value;
+    const email = document.getElementById('login-admin-email')?.value;
+    const senha = document.getElementById('login-admin-senha')?.value;
+    if (!email || !senha) {
+      alert('Preencha o e-mail e a senha.');
+      return;
+    }
     try {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
       if (error) { alert('Erro: ' + error.message); return; }
@@ -42,8 +55,8 @@ const Auth = {
 
   async loginProfissional(event) {
     event.preventDefault();
-    const cpf = document.getElementById('login-prof-id').value;
-    const senha = document.getElementById('login-prof-senha').value;
+    const cpf = document.getElementById('login-prof-id')?.value;
+    const senha = document.getElementById('login-prof-senha')?.value;
     try {
       const { data, error } = await supabaseClient.from('profissionais').select('*').eq('cpf', cpf).eq('senha', senha).single();
       if (error || !data) { alert('CPF ou senha incorretos.'); return; }
@@ -53,9 +66,12 @@ const Auth = {
   },
 
   finishLogin(msg) {
-    alert(msg);
+    if (msg) console.log(msg);
+    // Ocultar ecrã de login e landing page, mostrando o painel de gestão
     document.getElementById('aba-login')?.classList.add('hidden');
+    document.getElementById('landing-page')?.classList.add('hidden');
     document.getElementById('main-header')?.classList.remove('hidden');
+    document.getElementById('app-content')?.classList.remove('hidden');
     UI.switchTab('aba3');
     App.init();
   },
@@ -64,6 +80,8 @@ const Auth = {
     supabaseClient.auth.signOut();
     this.user = { loggedIn: false, role: '', name: '' };
     document.getElementById('main-header')?.classList.add('hidden');
+    document.getElementById('app-content')?.classList.add('hidden');
+    document.getElementById('landing-page')?.classList.remove('hidden');
     document.getElementById('aba-login')?.classList.remove('hidden');
     UI.switchTab('aba-login');
   }
@@ -312,7 +330,7 @@ const App = {
               <span class="inline-block px-2 py-0.5 rounded bg-brand-500/30 text-brand-200 text-[10px] font-bold uppercase">${ag.duracao_minutos} min</span>
               <p class="font-extrabold text-white text-xs mt-1">${ag.cliente_nome}</p>
               <p class="text-[11px] text-brand-300 font-medium">${ag.servico}</p>
-            </td>`;
+              </td>`;
           } else {
             linha += `<td class="py-3 px-4 text-zinc-400 border-l border-white/10 hover:bg-white/10 cursor-pointer transition" onclick="App.preencherAgendamento('${hora}', '${prof.nome}')">+ Disponível</td>`;
           }
@@ -390,4 +408,16 @@ const App = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => { Auth.initAuth(); });
+// Execução automática ao carregar o site
+window.addEventListener('DOMContentLoaded', () => {
+  Auth.initAuth();
+
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      const email = session.user.email || '';
+      const name = session.user.user_metadata?.full_name || (email ? email.split('@')[0] : 'Utilizador');
+      Auth.user = { loggedIn: true, role: 'admin', name };
+      Auth.finishLogin(`Bem-vindo, ${name}!`);
+    }
+  });
+});
