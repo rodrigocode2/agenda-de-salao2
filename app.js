@@ -121,7 +121,7 @@ const App = {
 
       if (selectProf) {
         selectProf.innerHTML = '<option value="">Selecione o Profissional</option>';
-        profissionais?.forEach(p => selectProf.innerHTML += `<option value="${p.nome}">${p.nome}</option>`);
+        profissionais?.forEach(p => selectProf.innerHTML += `<option value="${p.id}">${p.nome}</option>`);
       }
       if (selectHorario) {
         selectHorario.innerHTML = '<option value="">Selecione o Horário</option>';
@@ -173,12 +173,11 @@ const App = {
       const agendamentosMapeados = {};
 
       agendamentos?.forEach(item => {
-        const pIdx = profissionais.findIndex(p => p.nome === item.profissional);
+        const pIdx = profissionais.findIndex(p => p.id === item.profissional_id);
         const hIdx = this.horarioParaIndice(item.horario);
         if (pIdx !== -1 && hIdx !== -1) {
-          const blocos = Math.ceil((parseInt(item.duracao_minutos) || 30) / 30);
+          const blocos = 1;
           agendamentosMapeados[`${pIdx}-${hIdx}`] = { ...item, blocos };
-          for (let b = 1; b < blocos; b++) skipMatrix[pIdx][hIdx + b] = true;
         }
       });
 
@@ -190,11 +189,11 @@ const App = {
           if (ag) {
             linha += `<td rowspan="${ag.blocos}" class="py-3 px-4 bg-brand-500/25 border-l border-white/15 align-top shadow-inner backdrop-blur-md">
               <span class="inline-block px-2 py-0.5 rounded bg-brand-500/30 text-brand-200 text-[10px] font-bold uppercase">Atendimento</span>
-              <p class="font-extrabold text-white text-xs mt-1">${ag.cliente_nome}</p>
+              <p class="font-extrabold text-white text-xs mt-1">${ag.cliente}</p>
               <p class="text-[11px] text-brand-300 font-medium">${ag.servico}</p>
               </td>`;
           } else {
-            linha += `<td class="py-3 px-4 text-zinc-400 border-l border-white/10 hover:bg-white/10 cursor-pointer transition" onclick="App.preencherAgendamento('${hora}', '${prof.nome}')">+ Disponível</td>`;
+            linha += `<td class="py-3 px-4 text-zinc-400 border-l border-white/10 hover:bg-white/10 cursor-pointer transition" onclick="App.preencherAgendamento('${hora}', '${prof.id}')">+ Disponível</td>`;
           }
         });
         return linha + `</tr>`;
@@ -202,9 +201,9 @@ const App = {
     } catch (e) { console.error(e); }
   },
 
-  preencherAgendamento(horario, profNome) {
+  preencherAgendamento(horario, profId) {
     UI.switchTab('aba4');
-    document.getElementById('agendamento-profissional').value = profNome;
+    document.getElementById('agendamento-profissional').value = profId;
     document.getElementById('agendamento-horario').value = horario;
     document.getElementById('agendamento-data').value = document.getElementById('filtro-data-agenda').value;
   },
@@ -212,14 +211,13 @@ const App = {
   async handleCreateAgendamento(e) {
     e.preventDefault();
     const data = document.getElementById('agendamento-data').value;
-    const profissional = document.getElementById('agendamento-profissional').value;
+    const profissional_id = document.getElementById('agendamento-profissional').value;
     const horario = document.getElementById('agendamento-horario').value;
-    const duracao_minutos = 30;
-    const cliente_nome = document.getElementById('cliente-nome').value;
+    const cliente = document.getElementById('cliente-nome').value;
     const servico = document.getElementById('cliente-servico').value;
 
     try {
-      const { error } = await supabaseClient.from('agendamentos').insert([{ data, profissional, horario, duracao_minutos, cliente_nome, servico }]);
+      const { error } = await supabaseClient.from('agendamentos').insert([{ data, profissional_id, horario, cliente, servico }]);
       if (error) throw error;
       alert('Agendamento efetuado com sucesso!');
       e.target.reset();
