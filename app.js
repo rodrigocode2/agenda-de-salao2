@@ -90,12 +90,10 @@ const App = {
         
         if (plano === 'mensal') {
             UI.showToast('Redirecionando para o pagamento seguro do Mercado Pago (Plano Mensal)...');
-            // Substitua abaixo pelo seu link de Checkout Pro / Pagamento do Mercado Pago
             window.location.href = 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=SEU_ID_DE_PREFERENCIA_MENSAL';
         } 
         else if (plano === 'anual') {
             UI.showToast('Redirecionando para o pagamento seguro do Mercado Pago (Plano Anual)...');
-            // Substitua abaixo pelo seu link de Checkout Pro / Pagamento do Mercado Pago
             window.location.href = 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=SEU_ID_DE_PREFERENCIA_ANUAL';
         } 
         else {
