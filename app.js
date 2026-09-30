@@ -141,7 +141,6 @@ const App = {
         this.renderProdutos();
     },
 
-    // Gestão de Planos & Links do Mercado Pago
     setPlan(plan) {
         localStorage.setItem('hairconcept_plan', plan);
 
@@ -165,7 +164,7 @@ const App = {
         }
     },
 
-    // Gestão de Stock e Alertas de Validade (3 Meses / 90 Dias)
+    // Gestão de Stock e Alertas de Validade com Notificação de Promoção (< 3 meses)
     async renderProdutos() {
         const lista = document.getElementById('lista-produtos');
         const badge = document.getElementById('alerta-validade-badge');
@@ -190,25 +189,39 @@ const App = {
 
                 let badgeStatus = '<span class="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase border border-emerald-500/30">Estável</span>';
                 let cardBorder = 'border-white/10 bg-zinc-950/80';
+                let alertaPromocaoHtml = '';
 
                 if (isVencido) {
                     badgeStatus = '<span class="px-2.5 py-1 rounded-md bg-rose-500/20 text-rose-400 text-[10px] font-bold uppercase border border-rose-500/30">Expirado</span>';
                     cardBorder = 'border-rose-500/40 bg-rose-950/20';
                 } else if (isVencendo) {
-                    badgeStatus = '<span class="px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-400 text-[10px] font-bold uppercase border border-amber-500/30"><i class="fa-solid fa-triangle-exclamation"></i> Promoção Sugerida (Vence em breve)</span>';
+                    badgeStatus = '<span class="px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-400 text-[10px] font-bold uppercase border border-amber-500/30">Vence em Breve</span>';
                     cardBorder = 'border-amber-500/40 bg-amber-950/20';
+                    alertaPromocaoHtml = `
+                        <div class="mt-3 p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center gap-2.5 text-amber-200 text-xs font-semibold animate-pulse">
+                            <i class="fa-solid fa-bullhorn text-amber-400 text-base"></i>
+                            <span><strong>Atenção:</strong> Está na hora de fazer promoção para não perder seu produto! Falta menos de 3 meses para acabar.</span>
+                        </div>
+                    `;
                 }
 
+                const tipoLabel = p.tipo === 'uso' ? 'Uso Interno' : 'Para Venda';
+
                 return `
-                  <div class="flex items-center justify-between p-4 rounded-2xl border ${cardBorder} backdrop-blur-md transition">
-                      <div class="space-y-1">
+                  <div class="flex flex-col p-5 rounded-2xl border ${cardBorder} backdrop-blur-md transition space-y-3 shadow-lg">
+                      <div class="flex items-center justify-between">
                           <div class="flex items-center gap-3">
                               <h4 class="text-sm font-bold text-white uppercase">${p.nome}</h4>
+                              <span class="px-2.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase border border-white/10">${tipoLabel}</span>
                               ${badgeStatus}
                           </div>
-                          <p class="text-xs text-zinc-300">Preço de Venda: <span class="font-bold text-brand-500">R$ ${p.preco_venda}</span> | Stock Disponível: <span class="font-bold text-white">${p.stock} un.</span></p>
-                          <p class="text-[11px] text-zinc-400"><i class="fa-regular fa-calendar"></i> Data de Validade: <span class="text-white">${p.data_validade || 'Não informada'}</span></p>
+                          <span class="text-xs font-bold text-brand-500">R$ ${Number(p.preco_venda || 0).toFixed(2)}</span>
                       </div>
+                      <div class="flex justify-between text-xs text-zinc-300 border-t border-white/5 pt-2">
+                          <span>Stock Disponível: <strong class="text-white">${p.stock} un.</strong></span>
+                          <span>Data de Validade: <strong class="text-white">${p.data_validade || 'Não informada'}</strong></span>
+                      </div>
+                      ${alertaPromocaoHtml}
                   </div>
                 `;
             }).join('') || '<p class="text-xs text-zinc-500 text-center py-6">Nenhum produto cadastrado no stock.</p>';
@@ -218,7 +231,34 @@ const App = {
             }
         } catch (e) {
             console.error("Erro ao carregar produtos:", e);
-            lista.innerHTML = '<p class="text-xs text-rose-400 text-center py-4">Erro ao carregar dados do stock. Verifique a tabela "produtos" no Supabase.</p>';
+            lista.innerHTML = '<p class="text-xs text-rose-400 text-center py-4">Erro ao carregar dados do stock.</p>';
+        }
+    },
+
+    async handleCreateProduto(event) {
+        event.preventDefault();
+        const nome = document.getElementById('prod-nome').value;
+        const tipo = document.getElementById('prod-tipo').value;
+        const preco_venda = parseFloat(document.getElementById('prod-preco').value) || 0;
+        const stock = parseInt(document.getElementById('prod-stock').value) || 0;
+        const data_validade = document.getElementById('prod-validade').value;
+
+        try {
+            const { error } = await supabaseClient.from('produtos').insert([{
+                nome,
+                tipo,
+                preco_venda,
+                stock,
+                data_validade
+            }]);
+
+            if (error) throw error;
+
+            UI.showToast('Produto cadastrado com sucesso!');
+            event.target.reset();
+            this.renderProdutos();
+        } catch (e) {
+            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');
         }
     },
 
@@ -309,7 +349,6 @@ const App = {
         const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
 
         try {
-            // Regra: Limite de até 20 agendas por dia no Plano Anual
             const { count, error: countError } = await supabaseClient
                 .from('agendamentos')
                 .select('*', { count: 'exact', head: true })
@@ -359,7 +398,6 @@ const App = {
 
             if (countError) throw countError;
 
-            // Regra: Plano Gratuito permite no máximo 2 profissionais
             if (planoAtual === 'gratis' && count >= 2) {
                 UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais. Faça upgrade na aba Planos.', 'error');
                 UI.switchTab('aba2');
