@@ -54,6 +54,7 @@
                 <button onclick="UI.switchTab('aba3')" class="px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-calendar-days text-brand-500"></i> Agenda</button>
                 <button id="nav-agendar" onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-plus text-brand-500"></i> Agendar</button>
                 <button id="nav-equipe" onclick="UI.switchTab('aba5')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
+                <button id="nav-produtos" onclick="UI.switchTab('aba-produtos')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-boxes-stacked text-brand-500"></i> Stock</button>
                 <button id="nav-planos" onclick="UI.switchTab('aba2')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-gem text-brand-500"></i> Planos</button>
             </nav>
 
@@ -307,6 +308,20 @@
                     <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
                     <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
+            </div>
+        </section>
+
+        <!-- PRODUTOS / STOCK (NOVA ABA ADICIONADA) -->
+        <section id="aba-produtos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold uppercase text-white">Gestão de Stock e Validade</h2>
+                        <p class="text-xs text-zinc-400">Controlo de inventário e alertas automáticos para produtos a vencer em até 3 meses</p>
+                    </div>
+                    <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25">A verificar...</span>
+                </div>
+                <div id="lista-produtos" class="grid grid-cols-1 gap-4"></div>
             </div>
         </section>
 
