@@ -1,316 +1,382 @@
-const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxxdHJmY2NmanhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NTA0MDEsImV4cCI6MjEwNjEyNjQwMX0.wJVZhvkvilggyf6yGe8F6e8Szs1E4hjD6fNGJpOlR7I';
+// ==========================================
+// CONFIGURAÇÃO DO SUPABASE
+// ==========================================
+const SUPABASE_URL = 'SUA_SUPABASE_URL_AQUI';
+const SUPABASE_KEY = 'SUA_SUPABASE_ANON_KEY_AQUI';
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Inicialização segura do cliente Supabase
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-const Auth = {
-  user: { loggedIn: false, role: '', name: '' },
-
-  async initAuth() {
-    try {
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
-      if (error) throw error;
-      
-      if (session && session.user) {
-        const email = session.user.email || '';
-        const name = session.user.user_metadata?.full_name || (email ? email.split('@')[0] : 'Utilizador');
-        this.user = { loggedIn: true, role: 'admin', name };
-        this.finishLogin(`Bem-vindo, ${name}!`);
-      }
-    } catch (e) {
-      console.error("Erro na inicialização da autenticação:", e);
-    }
-  },
-
-  async loginSocial(provider) {
-    try {
-      const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) alert('Erro no login social: ' + error.message);
-    } catch (e) { 
-      console.error(e); 
-    }
-  },
-
-  async loginAdmin(event) {
-    event.preventDefault();
-    const email = document.getElementById('login-admin-email')?.value;
-    const senha = document.getElementById('login-admin-senha')?.value;
-    if (!email || !senha) {
-      alert('Preencha o e-mail e a senha.');
-      return;
-    }
-    try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
-      if (error) { alert('Erro: ' + error.message); return; }
-      const name = data.session.user.user_metadata?.full_name || email.split('@')[0];
-      this.user = { loggedIn: true, role: 'admin', name };
-      this.finishLogin(`Bem-vindo, ${name}!`);
-    } catch (e) { alert('Erro crítico: ' + e.message); }
-  },
-
-  async loginProfissional(event) {
-    event.preventDefault();
-    const cpf = document.getElementById('login-prof-id')?.value;
-    const senha = document.getElementById('login-prof-senha')?.value;
-    try {
-      const { data, error } = await supabaseClient.from('profissionais').select('*').eq('cpf', cpf).eq('senha', senha).single();
-      if (error || !data) { alert('CPF ou senha incorretos.'); return; }
-      this.user = { loggedIn: true, role: 'profissional', name: data.nome };
-      this.finishLogin(`Bem-vindo, ${data.nome}!`);
-    } catch (e) { alert('Erro ao validar login.'); }
-  },
-
-  finishLogin(msg) {
-    if (msg) console.log(msg);
-    document.getElementById('aba-login')?.classList.add('hidden');
-    document.getElementById('main-header')?.classList.remove('hidden');
-    
-    const nameDisplay = document.getElementById('user-name-display');
-    const roleDisplay = document.getElementById('user-role-display');
-    if (nameDisplay) nameDisplay.textContent = this.user.name;
-    if (roleDisplay) roleDisplay.textContent = this.user.role.toUpperCase();
-
-    UI.switchTab('aba3');
-    App.init();
-  },
-
-  logout() {
-    supabaseClient.auth.signOut();
-    this.user = { loggedIn: false, role: '', name: '' };
-    document.getElementById('main-header')?.classList.add('hidden');
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById('aba-login')?.classList.remove('hidden');
-  }
-};
-
+// ==========================================
+// CONTROLADOR DE UI E TOASTS
+// ==========================================
 const UI = {
-  switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById(tabId)?.classList.remove('hidden');
-    if (tabId === 'aba3') App.renderAgendaGrid();
-    if (tabId === 'aba5') App.renderListaProfissionais();
-  }
+    switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        const target = document.getElementById(tabId);
+        if (target) target.classList.remove('hidden');
+        
+        if (tabId === 'aba-produtos') {
+            App.renderProdutos();
+        }
+        if (tabId === 'aba3') {
+            App.renderAgendaGrid();
+        }
+    },
+
+    showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `p-4 rounded-xl text-xs font-bold text-white shadow-2xl transition transform translate-y-0 border ${type === 'error' ? 'bg-rose-950/90 border-rose-500/40 text-rose-200' : 'bg-zinc-950/90 border-emerald-500/40 text-emerald-200'}; backdrop-blur-md`;
+        toast.innerHTML = `<div class="flex items-center gap-2"><i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation text-rose-500' : 'fa-circle-check text-emerald-500'}"></i> ${message}</div>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
 };
 
+// ==========================================
+// CONTROLADOR DE AUTENTICAÇÃO
+// ==========================================
+const Auth = {
+    currentUser: null,
+    isAdmin: false,
+    
+    async loginAdmin(event) {
+        event.preventDefault();
+        const email = document.getElementById('login-admin-email').value;
+        const senha = document.getElementById('login-admin-senha').value;
+        
+        try {
+            if (!supabaseClient) {
+                UI.showToast('Supabase não inicializado corretamente.', 'error');
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
+            if (error) {
+                UI.showToast('Erro ao entrar: ' + error.message, 'error');
+                return;
+            }
+            Auth.setAdminSession(email, 'Administrador');
+        } catch (err) {
+            UI.showToast('Erro de autenticação.', 'error');
+        }
+    },
+    
+    async loginProfissional(event) {
+        event.preventDefault();
+        const cpf = document.getElementById('login-prof-id').value;
+        const senha = document.getElementById('login-prof-senha').value;
+        
+        try {
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .select('*')
+                .eq('cpf', cpf)
+                .eq('senha', senha)
+                .single();
+                
+            if (error || !data) {
+                UI.showToast('CPF ou senha inválidos.', 'error');
+                return;
+            }
+            
+            Auth.setProfissionalSession(data);
+        } catch (e) {
+            UI.showToast('Erro ao fazer login profissional.', 'error');
+        }
+    },
+    
+    loginSocial(provider) {
+        UI.showToast(`Login social com ${provider} em configuração.`);
+    },
+    
+    setAdminSession(name, role) {
+        Auth.isAdmin = true;
+        Auth.currentUser = { name, role };
+        document.getElementById('aba-login').classList.add('hidden');
+        document.getElementById('main-header').classList.remove('hidden');
+        document.getElementById('user-name-display').textContent = name;
+        document.getElementById('user-role-display').textContent = role;
+        document.getElementById('saloon-name-header').textContent = 'Painel de Gestão - Admin';
+        
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+        UI.switchTab('aba3');
+        App.initAdminPanel();
+    },
+    
+    setProfissionalSession(prof) {
+        Auth.isAdmin = false;
+        Auth.currentUser = prof;
+        document.getElementById('aba-login').classList.add('hidden');
+        document.getElementById('main-header').classList.remove('hidden');
+        document.getElementById('user-name-display').textContent = prof.nome;
+        document.getElementById('user-role-display').textContent = prof.cargo || 'Profissional';
+        document.getElementById('saloon-name-header').textContent = 'Área do Profissional';
+        
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+        UI.switchTab('aba3');
+        App.renderAgendaGrid();
+    },
+    
+    logout() {
+        Auth.currentUser = null;
+        Auth.isAdmin = false;
+        document.getElementById('main-header').classList.add('hidden');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.getElementById('aba-login').classList.remove('hidden');
+        UI.showToast('Sessão encerrada.');
+    }
+};
+
+// ==========================================
+// CONTROLADOR PRINCIPAL DA APLICAÇÃO
+// ==========================================
 const App = {
-  fotoBase64Temp: '',
+    async init() {
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const filtroData = document.getElementById('filtro-data-agenda');
+        const agendamentoData = document.getElementById('agendamento-data');
+        if (filtroData) filtroData.value = hojeStr;
+        if (agendamentoData) agendamentoData.value = hojeStr;
+    },
+    
+    async initAdminPanel() {
+        this.renderAgendaGrid();
+        this.carregarSelectProfissionais();
+        this.renderProfissionaisList();
+        this.renderProdutos();
+    },
 
-  async init() {
-    const filtroData = document.getElementById('filtro-data-agenda');
-    if (filtroData && !filtroData.value) filtroData.valueAsDate = new Date();
-    await this.carregarSelects();
-    this.renderAgendaGrid();
-    this.renderListaProfissionais();
-  },
-
-  setPlan(plan) {
-    alert('Plano ' + plan + ' selecionado. Integre o seu link de pagamento.');
-  },
-
-  async carregarSelects() {
-    const selectProf = document.getElementById('agendamento-profissional');
-    const selectHorario = document.getElementById('agendamento-horario');
-
-    try {
-      const { data: profissionais } = await supabaseClient.from('profissionais').select('*');
-
-      if (selectProf) {
-        selectProf.innerHTML = '<option value="">Selecione o Profissional</option>';
-        profissionais?.forEach(p => selectProf.innerHTML += `<option value="${p.id}">${p.nome}</option>`);
-      }
-      if (selectHorario) {
-        selectHorario.innerHTML = '<option value="">Selecione o Horário</option>';
-        for (let h = 8; h < 18; h++) {
-          selectHorario.innerHTML += `<option value="${String(h).padStart(2, '0')}:00">${String(h).padStart(2, '0')}:00</option>`;
-          selectHorario.innerHTML += `<option value="${String(h).padStart(2, '0')}:30">${String(h).padStart(2, '0')}:30</option>`;
+    // 1. Gestão de Planos & Links do Mercado Pago
+    setPlan(plan) {
+        if (plan === 'gratis') {
+            UI.showToast('Plano Gratuito ativo.');
+            return;
         }
-      }
-    } catch (e) { console.error(e); }
-  },
+        
+        // COLE OS SEUS LINKS REAIS DO MERCADO PAGO AQUI:
+        const linksPagamento = {
+            'mensal': 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=SEU_ID_PLANO_MENSAL',
+            'anual': 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=SEU_ID_PLANO_ANUAL'
+        };
 
-  gerarHorarios() {
-    const horarios = [];
-    for (let hora = 8; hora < 18; hora++) {
-      horarios.push(`${String(hora).padStart(2, '0')}:00`);
-      horarios.push(`${String(hora).padStart(2, '0')}:30`);
-    }
-    horarios.push('18:00');
-    return horarios;
-  },
-
-  horarioParaIndice(horarioStr) {
-    return this.gerarHorarios().indexOf(horarioStr);
-  },
-
-  async renderAgendaGrid() {
-    const headerRow = document.getElementById('grid-header-row');
-    const body = document.getElementById('grid-horarios-body');
-    if (!headerRow || !body) return;
-
-    const dataSelecionada = document.getElementById('filtro-data-agenda')?.value || new Date().toISOString().split('T')[0];
-
-    try {
-      const { data: profissionais } = await supabaseClient.from('profissionais').select('*');
-      if (!profissionais || profissionais.length === 0) {
-        headerRow.innerHTML = `<th class="py-3 px-4 w-24">Horário</th>`;
-        body.innerHTML = `<tr><td class="py-4 px-4 text-zinc-300" colspan="2">Nenhum profissional cadastrado. Vá à aba 'Equipe'.</td></tr>`;
-        return;
-      }
-
-      headerRow.innerHTML = `<th class="py-3 px-4 w-24 sticky-time-col bg-zinc-950/70 text-white backdrop-blur-sm">Horário</th>` +
-        profissionais.map(p => `<th class="py-3 px-4 text-white uppercase">${p.nome}<br><span class="text-[10px] text-brand-500 font-normal">${p.cargo || ''}</span></th>`).join('');
-
-      const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('data', dataSelecionada);
-
-      const horarios = this.gerarHorarios();
-      const skipMatrix = {};
-      profissionais.forEach((_, pIdx) => { skipMatrix[pIdx] = {}; });
-      const agendamentosMapeados = {};
-
-      agendamentos?.forEach(item => {
-        const pIdx = profissionais.findIndex(p => p.id === item.profissional_id);
-        const hIdx = this.horarioParaIndice(item.horario);
-        if (pIdx !== -1 && hIdx !== -1) {
-          const blocos = 1;
-          agendamentosMapeados[`${pIdx}-${hIdx}`] = { ...item, blocos };
+        const link = linksPagamento[plan];
+        if (link && !link.includes('SEU_ID')) {
+            window.open(link, '_blank');
+        } else {
+            const nomePlano = plan === 'mensal' ? 'Plano Mensal (R$ 30/mês)' : 'Plano Anual - Até 20 Agendas (R$ 300/ano)';
+            alert(`A redirecionar para o checkout de ${nomePlano}. Insira os seus links oficiais do Mercado Pago no ficheiro app.js se desejar links diretos.`);
+            window.open('https://www.mercadopago.com.br', '_blank');
         }
-      });
+    },
 
-      body.innerHTML = horarios.map((hora, hIdx) => {
-        let linha = `<tr class="border-b border-white/10"><td class="py-3 px-4 font-bold text-brand-500 bg-zinc-950/30 backdrop-blur-sm">${hora}</td>`;
-        profissionais.forEach((prof, pIdx) => {
-          if (skipMatrix[pIdx][hIdx]) return;
-          const ag = agendamentosMapeados[`${pIdx}-${hIdx}`];
-          if (ag) {
-            linha += `<td rowspan="${ag.blocos}" class="py-3 px-4 bg-brand-500/25 border-l border-white/15 align-top shadow-inner backdrop-blur-md">
-              <span class="inline-block px-2 py-0.5 rounded bg-brand-500/30 text-brand-200 text-[10px] font-bold uppercase">Atendimento</span>
-              <p class="font-extrabold text-white text-xs mt-1">${ag.cliente}</p>
-              <p class="text-[11px] text-brand-300 font-medium">${ag.servico}</p>
-              </td>`;
-          } else {
-            linha += `<td class="py-3 px-4 text-zinc-400 border-l border-white/10 hover:bg-white/10 cursor-pointer transition" onclick="App.preencherAgendamento('${hora}', '${prof.id}')">+ Disponível</td>`;
-          }
-        });
-        return linha + `</tr>`;
-      }).join('');
-    } catch (e) { console.error(e); }
-  },
+    // 2. Gestão de Stock e Alertas de Validade (3 Meses / 90 Dias)
+    async renderProdutos() {
+        const lista = document.getElementById('lista-produtos');
+        const badge = document.getElementById('alerta-validade-badge');
+        if (!lista) return;
 
-  preencherAgendamento(horario, profId) {
-    UI.switchTab('aba4');
-    document.getElementById('agendamento-profissional').value = profId;
-    document.getElementById('agendamento-horario').value = horario;
-    document.getElementById('agendamento-data').value = document.getElementById('filtro-data-agenda').value;
-  },
+        try {
+            const { data: produtos, error } = await supabaseClient.from('produtos').select('*');
+            if (error) throw error;
 
-  async handleCreateAgendamento(e) {
-    e.preventDefault();
-    const data = document.getElementById('agendamento-data').value;
-    const profissional_id = document.getElementById('agendamento-profissional').value;
-    const horario = document.getElementById('agendamento-horario').value;
-    const cliente = document.getElementById('cliente-nome').value;
-    const servico = document.getElementById('cliente-servico').value;
+            const hoje = new Date();
+            const daquiTresMeses = new Date();
+            daquiTresMeses.setMonth(hoje.getMonth() + 3);
 
-    try {
-      const { error } = await supabaseClient.from('agendamentos').insert([{ data, profissional_id, horario, cliente, servico }]);
-      if (error) throw error;
-      alert('Agendamento efetuado com sucesso!');
-      e.target.reset();
-      UI.switchTab('aba3');
-    } catch (err) { alert('Erro ao agendar: ' + err.message); }
-  },
+            let totalProximosVencimento = 0;
 
-  handleFotoUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (uploadEvt) => {
-      this.fotoBase64Temp = uploadEvt.target.result;
-      const preview = document.getElementById('preview-foto-prof');
-      const icon = document.getElementById('icon-foto-prof');
-      if (preview) {
-        preview.src = this.fotoBase64Temp;
-        preview.classList.remove('hidden');
-      }
-      if (icon) icon.classList.add('hidden');
-    };
-    reader.readAsDataURL(file);
-  },
+            lista.innerHTML = produtos?.map(p => {
+                const dataVal = p.data_validade ? new Date(p.data_validade) : null;
+                const isVencendo = dataVal && dataVal <= daquiTresMeses && dataVal >= hoje;
+                const isVencido = dataVal && dataVal < hoje;
 
-  async handleCreateProfissional(e) {
-    e.preventDefault();
-    const { data: profs } = await supabaseClient.from('profissionais').select('id');
-    if (profs && profs.length >= 2) {
-      alert('Limite do plano gratuito atingido (2 profissionais).');
-      UI.switchTab('aba2');
-      return;
+                if (isVencendo || isVencido) totalProximosVencimento++;
+
+                let badgeStatus = '<span class="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase border border-emerald-500/30">Estável</span>';
+                let cardBorder = 'border-white/10 bg-zinc-950/80';
+
+                if (isVencido) {
+                    badgeStatus = '<span class="px-2.5 py-1 rounded-md bg-rose-500/20 text-rose-400 text-[10px] font-bold uppercase border border-rose-500/30">Expirado</span>';
+                    cardBorder = 'border-rose-500/40 bg-rose-950/20';
+                } else if (isVencendo) {
+                    badgeStatus = '<span class="px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-400 text-[10px] font-bold uppercase border border-amber-500/30"><i class="fa-solid fa-triangle-exclamation"></i> Promoção Sugerida (Vence em breve)</span>';
+                    cardBorder = 'border-amber-500/40 bg-amber-950/20';
+                }
+
+                return `
+                  <div class="flex items-center justify-between p-4 rounded-2xl border ${cardBorder} backdrop-blur-md transition">
+                      <div class="space-y-1">
+                          <div class="flex items-center gap-3">
+                              <h4 class="text-sm font-bold text-white uppercase">${p.nome}</h4>
+                              ${badgeStatus}
+                          </div>
+                          <p class="text-xs text-zinc-300">Preço de Venda: <span class="font-bold text-brand-500">R$ ${p.preco_venda}</span> | Stock Disponível: <span class="font-bold text-white">${p.stock} un.</span></p>
+                          <p class="text-[11px] text-zinc-400"><i class="fa-regular fa-calendar"></i> Data de Validade: <span class="text-white">${p.data_validade || 'Não informada'}</span></p>
+                      </div>
+                  </div>
+                `;
+            }).join('') || '<p class="text-xs text-zinc-500 text-center py-6">Nenhum produto cadastrado no stock.</p>';
+
+            if (badge) {
+                badge.textContent = `${totalProximosVencimento} produtos em alerta (3 meses)`;
+            }
+        } catch (e) {
+            console.error("Erro ao carregar produtos:", e);
+            lista.innerHTML = '<p class="text-xs text-rose-400 text-center py-4">Erro ao carregar dados do stock. Verifique a tabela "produtos" no Supabase.</p>';
+        }
+    },
+
+    async renderAgendaGrid() {
+        const tbody = document.getElementById('grid-horarios-body');
+        const headerRow = document.getElementById('grid-header-row');
+        const dataFiltro = document.getElementById('filtro-data-agenda')?.value || new Date().toISOString().split('T')[0];
+        if (!tbody || !headerRow) return;
+
+        try {
+            const { data: profissionais } = await supabaseClient.from('profissionais').select('*');
+            const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('data', dataFiltro);
+
+            let headerHtml = '<th class="py-3 px-4 w-28 sticky-time-col bg-zinc-950 font-bold uppercase text-zinc-400 text-xs">Horário</th>';
+            profissionais?.forEach(p => {
+                headerHtml += `<th class="py-3 px-4 font-bold uppercase text-white text-xs text-center">${p.nome}</th>`;
+            });
+            headerRow.innerHTML = headerHtml;
+
+            const horarios = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+            
+            tbody.innerHTML = horarios.map(hora => {
+                let row = `<tr class="hover:bg-white/5 transition"><td class="py-3 px-4 font-mono font-bold text-zinc-300">${hora}</td>`;
+                
+                profissionais?.forEach(prof => {
+                    const agendamento = agendamentos?.find(a => a.horario === hora && a.profissional_id === prof.id);
+                    if (agendamento) {
+                        row += `<td class="py-3 px-4 text-center">
+                            <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px] space-y-0.5">
+                                <p class="font-bold text-white">${agendamento.cliente}</p>
+                                <p class="text-brand-400">${agendamento.servico}</p>
+                            </div>
+                        </td>`;
+                    } else {
+                        row += `<td class="py-3 px-4 text-center text-zinc-600 text-[10px] uppercase font-medium">Disponível</td>`;
+                    }
+                });
+                row += `</tr>`;
+                return row;
+            }).join('');
+        } catch (e) {
+            console.error("Erro ao carregar agenda:", e);
+        }
+    },
+
+    async carregarSelectProfissionais() {
+        const select = document.getElementById('agendamento-profissional');
+        if (!select) return;
+        try {
+            const { data: profs } = await supabaseClient.from('profissionais').select('*');
+            select.innerHTML = profs?.map(p => `<option value="${p.id}">${p.nome} (${p.cargo})</option>`).join('') || '';
+            
+            const horarioSelect = document.getElementById('agendamento-horario');
+            if (horarioSelect) {
+                const horarios = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+                horarioSelect.innerHTML = horarios.map(h => `<option value="${h}">${h}</option>`).join('');
+            }
+        } catch (e) {
+            console.error("Erro ao carregar select:", e);
+        }
+    },
+
+    async handleCreateAgendamento(event) {
+        event.preventDefault();
+        const data = document.getElementById('agendamento-data').value;
+        const profissional_id = document.getElementById('agendamento-profissional').value;
+        const horario = document.getElementById('agendamento-horario').value;
+        const cliente = document.getElementById('cliente-nome').value;
+        const servico = document.getElementById('cliente-servico').value;
+
+        try {
+            const { error } = await supabaseClient.from('agendamentos').insert([{ data, profissional_id, horario, cliente, servico }]);
+            if (error) throw error;
+            UI.showToast('Agendamento realizado com sucesso!');
+            UI.switchTab('aba3');
+            this.renderAgendaGrid();
+        } catch (e) {
+            UI.showToast('Erro ao agendar: ' + e.message, 'error');
+        }
+    },
+
+    async handleCreateProfissional(event) {
+        event.preventDefault();
+        const nome = document.getElementById('prof-nome').value;
+        const cargo = document.getElementById('prof-cargo').value;
+        const cpf = document.getElementById('prof-cpf').value;
+        const rg = document.getElementById('prof-rg').value;
+        const certificado = document.getElementById('prof-certificado').value;
+        const senha = document.getElementById('prof-senha').value;
+        const foto_url = document.getElementById('preview-foto-prof').src || '';
+
+        try {
+            const { error } = await supabaseClient.from('profissionais').insert([{ nome, cargo, cpf, rg, certificado, senha, foto_url }]);
+            if (error) throw error;
+            UI.showToast('Profissional cadastrado com sucesso!');
+            event.target.reset();
+            document.getElementById('preview-foto-prof').classList.add('hidden');
+            document.getElementById('icon-foto-prof').classList.remove('hidden');
+            this.renderProfissionaisList();
+        } catch (e) {
+            UI.showToast('Erro ao cadastrar profissional: ' + e.message, 'error');
+        }
+    },
+
+    handleFotoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('preview-foto-prof');
+            const icon = document.getElementById('icon-foto-prof');
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            icon.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async renderProfissionaisList() {
+        const lista = document.getElementById('lista-profissionais');
+        const badge = document.getElementById('limite-profissionais-badge');
+        if (!lista) return;
+
+        try {
+            const { data: profs, error } = await supabaseClient.from('profissionais').select('*');
+            if (error) throw error;
+
+            if (badge) badge.textContent = `${profs?.length || 0} cadastrados`;
+
+            lista.innerHTML = profs?.map(p => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                        ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user text-zinc-600"></i>`}
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-white uppercase">${p.nome}</h4>
+                        <p class="text-[11px] text-brand-500">${p.cargo}</p>
+                        <p class="text-[10px] text-zinc-500">CPF: ${p.cpf}</p>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional cadastrado.</p>';
+        } catch (e) {
+            console.error("Erro ao listar profissionais:", e);
+        }
     }
-
-    const nome = document.getElementById('prof-nome').value;
-    const cargo = document.getElementById('prof-cargo').value;
-    const cpf = document.getElementById('prof-cpf').value;
-    const rg = document.getElementById('prof-rg').value;
-    const certificado = document.getElementById('prof-certificado').value;
-    const senha = document.getElementById('prof-senha').value;
-    const foto = this.fotoBase64Temp;
-
-    try {
-      const { error } = await supabaseClient.from('profissionais').insert([{ nome, cargo, cpf, rg, certificado, senha, foto }]);
-      if (error) throw error;
-      
-      alert('Profissional cadastrado com sucesso!');
-      e.target.reset();
-      this.fotoBase64Temp = '';
-      const preview = document.getElementById('preview-foto-prof');
-      const icon = document.getElementById('icon-foto-prof');
-      if (preview) { preview.src = ''; preview.classList.add('hidden'); }
-      if (icon) icon.classList.remove('hidden');
-
-      this.renderListaProfissionais();
-      this.carregarSelects();
-    } catch (err) { alert('Erro ao guardar profissional: ' + err.message); }
-  },
-
-  async renderListaProfissionais() {
-    const lista = document.getElementById('lista-profissionais');
-    const badge = document.getElementById('limite-profissionais-badge');
-    if (!lista) return;
-    try {
-      const { data: profissionais } = await supabaseClient.from('profissionais').select('*');
-      if (badge) {
-        badge.textContent = `${profissionais?.length || 0} / 2 Profissionais (Plano Gratuito)`;
-      }
-      lista.innerHTML = profissionais?.map(p => `
-        <div class="flex items-center justify-between p-4 rounded-2xl bg-zinc-950/85 border border-white/10 backdrop-blur-md">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-              ${p.foto ? `<img src="${p.foto}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user text-zinc-500"></i>`}
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-white uppercase">${p.nome}</h4>
-              <p class="text-[10px] text-brand-500 font-medium">${p.cargo} — CPF: ${p.cpf}</p>
-              ${p.certificado ? `<p class="text-[9px] text-zinc-400">Cert: ${p.certificado}</p>` : ''}
-            </div>
-          </div>
-        </div>
-      `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional cadastrado.</p>';
-    } catch (e) { console.error(e); }
-  }
 };
 
+// Inicialização automática ao carregar a página
 window.addEventListener('DOMContentLoaded', () => {
-  Auth.initAuth();
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      const email = session.user.email || '';
-      const name = session.user.user_metadata?.full_name || (email ? email.split('@')[0] : 'Utilizador');
-      Auth.user = { loggedIn: true, role: 'admin', name };
-      Auth.finishLogin(`Bem-vindo, ${name}!`);
-    }
-  });
+    App.init();
 });
