@@ -191,7 +191,7 @@
                         <h3 class="text-xl font-bold text-white uppercase">Plano Anual</h3>
                         <div class="text-3xl font-black text-white">R$ 300<span class="text-xs font-normal text-zinc-400">/ano</span></div>
                         <ul class="space-y-2 text-xs text-zinc-300">
-                            <li><i class="fa-solid fa-check text-brand-500"></i> Até 20 Agendas</li>
+                            <li><i class="fa-solid fa-check text-brand-500"></i> Até 20 Agendas por dia</li>
                         </ul>
                     </div>
                     <button onclick="App.setPlan('anual')" class="w-full py-3 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase">Assinar R$ 300/ano</button>
@@ -317,10 +317,41 @@
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
                         <h2 class="text-xl font-bold uppercase text-white">Gestão de Stock e Validade</h2>
-                        <p class="text-xs text-zinc-400">Controlo de inventário e alertas automáticos para produtos a vencer em até 3 meses</p>
+                        <p class="text-xs text-zinc-400">Controlo de inventário, finalidade e alertas automáticos de validade (3 meses)</p>
                     </div>
                     <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25">A verificar...</span>
                 </div>
+
+                <!-- FORMULÁRIO DE CADASTRO DE PRODUTOS -->
+                <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-zinc-950 p-6 rounded-2xl border border-white/10">
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Produto *</label>
+                        <input type="text" id="prod-nome" required placeholder="Ex: Champô Professional" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Finalidade *</label>
+                        <select id="prod-tipo" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <option value="venda">Para Venda ao Cliente</option>
+                            <option value="uso">Para Uso Interno / Salão</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
+                        <input type="number" step="0.01" id="prod-preco" required placeholder="0.00" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Quantidade em Stock *</label>
+                        <input type="number" id="prod-stock" required placeholder="0" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data de Validade *</label>
+                        <input type="date" id="prod-validade" required class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Cadastrar Produto</button>
+                    </div>
+                </form>
+
                 <div id="lista-produtos" class="grid grid-cols-1 gap-4"></div>
             </div>
         </section>
