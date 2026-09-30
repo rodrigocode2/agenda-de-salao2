@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://wahtcnoszlatqtrfcfjxe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxhdHF0cmZjZmp4ZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjIwMjU2MDAwMDB9'; // Chave pública anónima do seu projeto
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxhdHF0cmZjZmp4ZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjIwMjU2MDAwMDB9';
 
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
@@ -87,8 +87,21 @@ const App = {
 
     setPlan(plano) {
         localStorage.setItem('hairconcept_plan', plano);
-        UI.showToast(`Plano ${plano.toUpperCase()} selecionado com sucesso!`);
-        UI.switchTab('aba3');
+        
+        if (plano === 'mensal') {
+            UI.showToast('Redirecionando para o pagamento seguro do Mercado Pago (Plano Mensal)...');
+            // Substitua abaixo pelo seu link de Checkout Pro / Pagamento do Mercado Pago
+            window.location.href = 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=SEU_ID_DE_PREFERENCIA_MENSAL';
+        } 
+        else if (plano === 'anual') {
+            UI.showToast('Redirecionando para o pagamento seguro do Mercado Pago (Plano Anual)...');
+            // Substitua abaixo pelo seu link de Checkout Pro / Pagamento do Mercado Pago
+            window.location.href = 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=SEU_ID_DE_PREFERENCIA_ANUAL';
+        } 
+        else {
+            UI.showToast('Plano Gratuito selecionado com sucesso!');
+            UI.switchTab('aba3');
+        }
     },
 
     async finishLogin(msg) {
