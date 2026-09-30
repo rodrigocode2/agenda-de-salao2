@@ -154,8 +154,10 @@ const App = {
 
     // 1. Gestão de Planos & Links do Mercado Pago
     setPlan(plan) {
+        localStorage.setItem('hairconcept_plan', plan);
+
         if (plan === 'gratis') {
-            UI.showToast('Plano Gratuito ativo.');
+            UI.showToast('Plano Gratuito ativo (Limite de 2 profissionais).');
             return;
         }
         
@@ -312,17 +314,33 @@ const App = {
 
     async handleCreateProfissional(event) {
         event.preventDefault();
-        const nome = document.getElementById('prof-nome').value;
-        const cargo = document.getElementById('prof-cargo').value;
-        const cpf = document.getElementById('prof-cpf').value;
-        const rg = document.getElementById('prof-rg').value;
-        const certificado = document.getElementById('prof-certificado').value;
-        const senha = document.getElementById('prof-senha').value;
-        const foto_url = document.getElementById('preview-foto-prof').src || '';
+        
+        const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
 
         try {
+            const { count, error: countError } = await supabaseClient
+                .from('profissionais')
+                .select('*', { count: 'exact', head: true });
+
+            if (countError) throw countError;
+
+            if (planoAtual === 'gratis' && count >= 2) {
+                UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais. Faça upgrade na aba Planos.', 'error');
+                UI.switchTab('aba2');
+                return;
+            }
+
+            const nome = document.getElementById('prof-nome').value;
+            const cargo = document.getElementById('prof-cargo').value;
+            const cpf = document.getElementById('prof-cpf').value;
+            const rg = document.getElementById('prof-rg').value;
+            const certificado = document.getElementById('prof-certificado').value;
+            const senha = document.getElementById('prof-senha').value;
+            const foto_url = document.getElementById('preview-foto-prof').src || '';
+
             const { error } = await supabaseClient.from('profissionais').insert([{ nome, cargo, cpf, rg, certificado, senha, foto_url }]);
             if (error) throw error;
+            
             UI.showToast('Profissional cadastrado com sucesso!');
             event.target.reset();
             document.getElementById('preview-foto-prof').classList.add('hidden');
