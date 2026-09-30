@@ -300,8 +300,23 @@ const App = {
         const horario = document.getElementById('agendamento-horario').value;
         const cliente = document.getElementById('cliente-nome').value;
         const servico = document.getElementById('cliente-servico').value;
+        
+        const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
 
         try {
+            // Verificar limite de agendamentos para o Plano Anual (até 20 agendas por dia)
+            const { count, error: countError } = await supabaseClient
+                .from('agendamentos')
+                .select('*', { count: 'exact', head: true })
+                .eq('data', data);
+
+            if (countError) throw countError;
+
+            if (planoAtual === 'anual' && count >= 20) {
+                UI.showToast('Limite atingido! O Plano Anual permite no máximo 20 agendas por dia.', 'error');
+                return;
+            }
+
             const { error } = await supabaseClient.from('agendamentos').insert([{ data, profissional_id, horario, cliente, servico }]);
             if (error) throw error;
             UI.showToast('Agendamento realizado com sucesso!');
