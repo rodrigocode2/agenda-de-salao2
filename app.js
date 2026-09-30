@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://wahtcnoszlatqtrfcfjxe.supabase.co';
-const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI'; // Insira a sua chave anónima pública do Supabase
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxhdHF0cmZjZmp4ZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjIwMjU2MDAwMDB9'; // Chave pública anónima do seu projeto
 
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
