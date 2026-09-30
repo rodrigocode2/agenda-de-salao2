@@ -40,17 +40,19 @@
     <!-- HEADER -->
     <header id="main-header" class="hidden sticky top-0 z-40 glass-panel border-b border-white/10">
         <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0">
                     <i class="fa-solid fa-scissors text-lg"></i>
                 </div>
-                <div>
+                <div class="overflow-hidden">
                     <span class="font-syne text-xl font-extrabold text-white uppercase">HairConcept</span>
-                    <p id="saloon-name-header" class="text-[10px] text-zinc-400 font-medium tracking-wider uppercase">Painel de Gestão</p>
+                    <div class="flex items-center gap-1 overflow-hidden">
+                        <span id="saloon-name-header" class="text-[10px] text-zinc-400 font-medium tracking-wider uppercase truncate max-w-[150px] sm:max-w-xs" title="Painel de Gestão">Painel de Gestão</span>
+                    </div>
                 </div>
             </div>
 
-            <nav id="nav-menu" class="flex items-center gap-2 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10 text-xs font-semibold uppercase">
+            <nav id="nav-menu" class="hidden md:flex items-center gap-2 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10 text-xs font-semibold uppercase">
                 <button onclick="UI.switchTab('aba3')" class="px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-calendar-days text-brand-500"></i> Agenda</button>
                 <button id="nav-agendar" onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-plus text-brand-500"></i> Agendar</button>
                 <button id="nav-equipe" onclick="UI.switchTab('aba5')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
@@ -58,13 +60,13 @@
                 <button id="nav-planos" onclick="UI.switchTab('aba2')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-gem text-brand-500"></i> Planos</button>
             </nav>
 
-            <div class="flex items-center gap-3">
-                <div class="text-right">
-                    <span id="user-name-display" class="block text-xs font-bold text-white uppercase"></span>
+            <div class="flex items-center gap-3 shrink-0">
+                <div class="text-right hidden sm:block">
+                    <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[120px]"></span>
                     <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase"></span>
                 </div>
-                <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white font-bold text-xs uppercase">
-                    <i class="fa-solid fa-right-from-bracket"></i> Sair
+                <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white font-bold text-xs uppercase flex items-center gap-1.5">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden md:inline">Sair</span>
                 </button>
             </div>
         </div>
@@ -138,13 +140,17 @@
                         </div>
                     </div>
 
-                    <form onsubmit="Auth.loginProfissional(event)" class="space-y-4 pt-4">
+                    <form onsubmit="Auth.loginProfissional(event)" class="space-y-4 pt-2">
                         <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF Cadastrado</label>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Estabelecimento *</label>
+                            <input type="text" id="login-prof-estabelecimento" required placeholder="Ex: Studio Bela Hair" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF Cadastrado *</label>
                             <input type="text" id="login-prof-id" required placeholder="000.000.000-00" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso</label>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso *</label>
                             <input type="password" id="login-prof-senha" required placeholder="••••••••" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:border-brand-500 text-white font-bold text-xs uppercase transition">Acessar Minha Agenda</button>
@@ -357,6 +363,30 @@
         </section>
 
     </main>
+
+    <!-- MODAL DE PRIMEIRO ACESSO / CONFIGURAÇÃO DO SALÃO (ADMIN) -->
+    <div id="modal-setup-salao" class="fixed inset-0 z-50 flex items-center justify-center bg-darkbg-300/95 backdrop-blur-md hidden p-4">
+        <div class="glass-panel p-8 rounded-3xl border border-white/10 max-w-md w-full space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 mx-auto rounded-2xl bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold text-xl mb-3">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <h3 class="text-xl font-bold uppercase text-white">Configurar o seu Estabelecimento</h3>
+                <p class="text-xs text-zinc-400">Insira o nome do seu salão para personalizar a plataforma e isolar os seus dados.</p>
+            </div>
+            <form onsubmit="App.handleSalvarSetupSalao(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
+                    <input type="text" id="setup-nome-salao" required placeholder="Ex: Studio Bela Hair" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
+                    <input type="text" id="setup-telefone-salao" placeholder="(00) 00000-0000" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                </div>
+                <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Salvar e Aceder ao Painel</button>
+            </form>
+        </div>
+    </div>
 
     <!-- Rodapé com Copyright -->
     <footer class="w-full py-6 border-t border-white/10 text-center text-xs text-zinc-400 bg-zinc-950/40">
