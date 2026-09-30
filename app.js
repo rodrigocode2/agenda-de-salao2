@@ -397,3 +397,28 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// Efeito de Rastro no rato para a secção de Login
+const abaLogin = document.getElementById('aba-login');
+if (abaLogin) {
+    abaLogin.addEventListener('mousemove', (e) => {
+        const rect = abaLogin.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const dot = document.createElement('div');
+        dot.className = 'trail-dot';
+        dot.style.left = `${x}px`;
+        dot.style.top = `${y}px`;
+        abaLogin.appendChild(dot);
+        
+        setTimeout(() => {
+            dot.style.transform = 'scale(2)';
+            dot.style.opacity = '0';
+            dot.style.transition = 'all 0.5s ease-out';
+        }, 20);
+        
+        setTimeout(() => {
+            dot.remove();
+        }, 500);
+    });
+}
