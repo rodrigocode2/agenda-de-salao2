@@ -1,25 +1,24 @@
 /* Efeito de Ondas de Água (Water Ripple) */
 .water-ripple {
     position: fixed;
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(236, 72, 153, 0.7);
+    width: 30px;
+    height: 30px;
+    border: 2px solid rgba(236, 72, 153, 0.6);
     border-radius: 50%;
     pointer-events: none;
     transform: translate(-50%, -50%) scale(0);
-    animation: ripple-wave 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    animation: ripple-wave 0.7s ease-out forwards;
     z-index: 9999;
 }
 
 @keyframes ripple-wave {
     0% {
-        transform: translate(-50%, -50%) scale(0);
+        transform: translate(-50%, -50%) scale(0.2);
         opacity: 1;
-        border-color: rgba(236, 72, 153, 0.9);
     }
     100% {
-        transform: translate(-50%, -50%) scale(8);
+        transform: translate(-50%, -50%) scale(4);
         opacity: 0;
-        border-color: rgba(236, 72, 153, 0);
+        border-width: 1px;
     }
 }
