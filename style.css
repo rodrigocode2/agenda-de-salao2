@@ -1,28 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
-
-.glass-panel {
-    background: rgba(18, 18, 20, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+:root {
+    --x: 0px;
+    --y: 0px;
 }
 
-.agenda-bg {
-    background: radial-gradient(circle at top right, rgba(236, 72, 153, 0.05), transparent 40%),
-                radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.05), transparent 40%);
+body {
+    position: relative;
+    background-color: #09090b;
+    color: #f4f4f5;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    margin: 0;
+    overflow-x: hidden;
 }
 
-/* Scrollbar personalizada */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-::-webkit-scrollbar-track {
-    background: #030303;
-}
-::-webkit-scrollbar-thumb {
-    background: #27272a;
-    border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #ec4899;
+/* Efeito de Rastreio / Spotlight do Rato */
+.mouse-spotlight {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(600px circle at var(--x) var(--y), rgba(255, 255, 255, 0.06), transparent 40%);
+    z-index: 9999;
 }
