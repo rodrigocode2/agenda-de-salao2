@@ -5,7 +5,7 @@
 
 body {
     position: relative;
-    background-color: #09090b;
+    background-color: #030303;
     color: #f4f4f5;
     font-family: ui-sans-serif, system-ui, sans-serif;
     margin: 0;
@@ -17,6 +17,14 @@ body {
     pointer-events: none;
     position: fixed;
     inset: 0;
-    background: radial-gradient(600px circle at var(--x) var(--y), rgba(255, 255, 255, 0.06), transparent 40%);
+    background: radial-gradient(600px circle at var(--x, 0px) var(--y, 0px), rgba(236, 72, 153, 0.12), transparent 55%);
     z-index: 9999;
+}
+
+/* Estilo Glassmorphism para os painéis */
+.glass-panel {
+    background: rgba(18, 18, 24, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
