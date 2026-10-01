@@ -1,215 +1,182 @@
-// Configuração oficial do Firebase (substitui com os teus dados da consola Firebase)
-const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_AUTH_DOMAIN",
-    projectId: "hairconcept-beta",
-    storageBucket: "SEU_STORAGE_BUCKET",
-    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-    appId: "SEU_APP_ID"
-};
+// Configuração oficial do Supabase
+const SUPABASE_URL = 'https://wahtcnoszlatqtrfcfjxe.supabase.co';[cite: 247]
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxhdHF0cmZjZmp4ZSIsInJvbGUiOiJhbm9uIiwi';[cite: 247]
 
-// Inicializar Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-const db = firebase.firestore();
-const auth = firebase.auth();
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;[cite: 247]
 
 const Auth = {
     logout() {
-        localStorage.removeItem('hairconcept_estab_id');
-        localStorage.removeItem('hairconcept_prof_id');
-        auth.signOut().then(() => {
-            location.reload();
-        });
+        localStorage.removeItem('hairconcept_estab_id');[cite: 247]
+        localStorage.removeItem('hairconcept_prof_id');[cite: 247]
+        if (supabaseClient && supabaseClient.auth) {
+            supabaseClient.auth.signOut();[cite: 247]
+        }
+        location.reload();[cite: 247]
     },
-    loginSocial(providerName) {
-        UI.showToast('A redirecionar para autenticação...');
-        let provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch((error) => {
-            UI.showToast('Erro no login social: ' + error.message, 'error');
-        });
+    loginSocial(provider) {
+        UI.showToast('A redirecionar para autenticação...');[cite: 247]
+        if (supabaseClient && supabaseClient.auth) {
+            supabaseClient.auth.signInWithOAuth({ provider: provider });[cite: 247]
+        }
     },
     loginAdmin(event) {
-        event.preventDefault();
-        const email = document.getElementById('login-admin-email').value.trim();
-        const password = document.getElementById('login-admin-senha').value.trim();
-        
-        auth.signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
-                App.finishLogin('Bem-vindo ao Painel!');
-            })
-            .catch((error) => {
-                UI.showToast('Erro ao entrar: ' + error.message, 'error');
+        event.preventDefault();[cite: 247]
+        const email = document.getElementById('login-admin-email').value.trim();[cite: 247]
+        const password = document.getElementById('login-admin-senha').value.trim();[cite: 247]
+        if (supabaseClient) {
+            supabaseClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
+                if (error) {
+                    UI.showToast('Erro ao entrar: ' + error.message, 'error');[cite: 247]
+                } else {
+                    App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };[cite: 247]
+                    App.finishLogin('Bem-vindo ao Painel!');[cite: 247]
+                }
             });
+        }
     }
 };
 
 const App = {
-    user: { loggedIn: false, role: '', name: '', id: null },
-    fotoBase64Temp: '',
-
+    user: { loggedIn: false, role: '', name: '', id: null },[cite: 255]
+    fotoBase64Temp: '',[cite: 255]
     init() {
-        console.log("HairConcept inicializado com Firebase.");
-        const dataInput = document.getElementById('filtro-data-agenda');
+        console.log("HairConcept inicializado.");[cite: 255]
+        const dataInput = document.getElementById('filtro-data-agenda');[cite: 255]
         if (dataInput && !dataInput.value) {
-            dataInput.value = new Date().toISOString().split('T')[0];
+            dataInput.value = new Date().toISOString().split('T')[0];[cite: 255]
         }
+        this.renderListaProfissionais();[cite: 255]
+        this.renderProdutos();[cite: 255]
+        this.renderAgendaGrid();[cite: 255]
+        this.carregarPostIts();[cite: 255]
+        this.popularSelectProfissionais();[cite: 255]
         
-        this.renderListaProfissionais();
-        this.renderProdutos();
-        this.renderAgendaGrid();
-        this.carregarPostIts();
-        this.popularSelectProfissionais();
-
         if (this.user.role === 'profissional') {
-            document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+            document.getElementById('painel-profissional-extra')?.classList.remove('hidden');[cite: 255]
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));[cite: 255]
         } else {
-            document.getElementById('painel-profissional-extra')?.classList.add('hidden');
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+            document.getElementById('painel-profissional-extra')?.classList.add('hidden');[cite: 255]
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));[cite: 255]
         }
     },
-
     async finishLogin(msg) {
-        if (msg) UI.showToast(msg);
-        document.getElementById('aba-login')?.classList.add('hidden');
-        document.getElementById('main-header')?.classList.remove('hidden');
-        UI.switchTab('aba-agenda');
+        if (msg) UI.showToast(msg);[cite: 255]
+        document.getElementById('aba-login')?.classList.add('hidden');[cite: 255]
+        document.getElementById('main-header')?.classList.remove('hidden');[cite: 255]
+        UI.switchTab('aba-agenda');[cite: 255]
         
-        const nameDisplay = document.getElementById('user-name-display');
-        const roleDisplay = document.getElementById('user-role-display');
-        if (nameDisplay) nameDisplay.textContent = this.user.name;
-        if (roleDisplay) roleDisplay.textContent = this.user.role.toUpperCase();
-
+        const nameDisplay = document.getElementById('user-name-display');[cite: 255]
+        const roleDisplay = document.getElementById('user-role-display');[cite: 255]
+        if (nameDisplay) nameDisplay.textContent = this.user.name;[cite: 255]
+        if (roleDisplay) roleDisplay.textContent = this.user.role.toUpperCase();[cite: 255]
+        
         if (this.user.role === 'admin') {
-            await this.verificarOuCriarEstabelecimento();
+            await this.verificarOuCriarEstabelecimento();[cite: 255]
         } else {
-            this.init();
+            this.init();[cite: 255]
         }
     },
-
     async verificarOuCriarEstabelecimento() {
         try {
-            const user = auth.currentUser;
-            if (!user) return;
-            const userId = user.uid;
-            
-            const snapshot = await db.collection('estabelecimentos').where('user_id', '==', userId).get();
-            const headerSub = document.getElementById('saloon-name-header');
-
-            if (snapshot.empty) {
-                document.getElementById('modal-setup-salao')?.classList.remove('hidden');
+            const { data: { session } } = await supabaseClient.auth.getSession();[cite: 255]
+            if (!session || !session.user) return;[cite: 255]
+            const userId = session.user.id;[cite: 255]
+            const { data: estab, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('*')
+                .eq('user_id', userId)
+                .single();[cite: 255]
+            const headerSub = document.getElementById('saloon-name-header');[cite: 255]
+            if (error || !estab) {
+                document.getElementById('modal-setup-salao')?.classList.remove('hidden');[cite: 255]
             } else {
-                const estabDoc = snapshot.docs[0];
-                const estab = { id: estabDoc.id, ...estabDoc.data() };
-                localStorage.setItem('hairconcept_estab_id', estab.id);
-                if (headerSub) headerSub.textContent = estab.nome_salao;
-                this.init();
+                localStorage.setItem('hairconcept_estab_id', estab.id);[cite: 255]
+                if (headerSub) headerSub.textContent = estab.nome_salao;[cite: 255]
+                this.init();[cite: 255]
             }
         } catch (e) {
-            this.init();
+            this.init();[cite: 255]
         }
     },
-
     async handleSalvarSetupSalao(event) {
-        event.preventDefault();
-        const nomeSalao = document.getElementById('setup-nome-salao').value;
-        const telefone = document.getElementById('setup-telefone-salao').value;
-        
+        event.preventDefault();[cite: 256]
+        const nomeSalao = document.getElementById('setup-nome-salao').value;[cite: 256]
+        const telefone = document.getElementById('setup-telefone-salao').value;[cite: 256]
         try {
-            const user = auth.currentUser;
-            if (!user) return;
-            const userId = user.uid;
-
-            const docRef = await db.collection('estabelecimentos').add({
+            const { data: { session } } = await supabaseClient.auth.getSession();[cite: 256]
+            if (!session || !session.user) return;[cite: 256]
+            const userId = session.user.id;[cite: 256]
+            const { data, error } = await supabaseClient.from('estabelecimentos').insert([{
                 user_id: userId,
                 nome_salao: nomeSalao,
                 telefone: telefone
-            });
-
-            localStorage.setItem('hairconcept_estab_id', docRef.id);
-            UI.showToast('Salão configurado com sucesso!');
-            document.getElementById('modal-setup-salao')?.classList.add('hidden');
-            
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = nomeSalao;
-            
-            this.init();
+            }]).select().single();[cite: 256]
+            if (error) throw error;[cite: 256]
+            localStorage.setItem('hairconcept_estab_id', data.id);[cite: 256]
+            UI.showToast('Salão configurado com sucesso!');[cite: 256]
+            document.getElementById('modal-setup-salao')?.classList.add('hidden');[cite: 256]
+            const headerSub = document.getElementById('saloon-name-header');[cite: 256]
+            if (headerSub) headerSub.textContent = nomeSalao;[cite: 256]
+            this.init();[cite: 256]
         } catch (e) {
-            UI.showToast('Erro ao salvar estabelecimento: ' + e.message, 'error');
+            UI.showToast('Erro ao salvar estabelecimento: ' + e.message, 'error');[cite: 256]
         }
     },
-
     async loginProfissional(event) {
-        event.preventDefault();
-        const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
-        const cpf = document.getElementById('login-prof-id').value.trim();
-        const senha = document.getElementById('login-prof-senha').value.trim();
-
+        event.preventDefault();[cite: 256]
+        const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();[cite: 256]
+        const cpf = document.getElementById('login-prof-id').value.trim();[cite: 256]
+        const senha = document.getElementById('login-prof-senha').value.trim();[cite: 256]
         try {
-            const snapshot = await db.collection('profissionais')
-                .where('estabelecimento', '==', nomeEstabelecimento)
-                .where('cpf', '==', cpf)
-                .where('senha', '==', senha)
-                .get();
-
-            if (snapshot.empty) {
-                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .select('*')
+                .ilike('estabelecimento', nomeEstabelecimento)
+                .eq('cpf', cpf)
+                .eq('senha', senha)
+                .single();[cite: 256]
+            if (error || !data) {
+                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');[cite: 256]
                 return;
             }
-
-            const doc = snapshot.docs[0];
-            const data = { id: doc.id, ...doc.data() };
-
             if (data.estabelecimento_id) {
-                localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
+                localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);[cite: 256]
+                localStorage.setItem('hairconcept_prof_id', data.id);[cite: 256]
             }
-            localStorage.setItem('hairconcept_prof_id', data.id);
-            
-            this.user = { loggedIn: true, role: 'profissional', name: data.nome, id: data.id };
-            
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = data.estabelecimento || nomeEstabelecimento;
-
-            document.getElementById('prof-header-nome').textContent = data.nome;
-            document.getElementById('prof-header-cargo').textContent = data.cargo;
+            this.user = { loggedIn: true, role: 'profissional', name: data.nome, id: data.id };[cite: 256]
+            const headerSub = document.getElementById('saloon-name-header');[cite: 256]
+            if (headerSub) headerSub.textContent = data.estabelecimento || nomeEstabelecimento;[cite: 256]
+            document.getElementById('prof-header-nome').textContent = data.nome;[cite: 256]
+            document.getElementById('prof-header-cargo').textContent = data.cargo;[cite: 256]
             if (data.foto_url) {
-                document.getElementById('prof-header-foto').src = data.foto_url;
+                document.getElementById('prof-header-foto').src = data.foto_url;[cite: 256]
             }
-
-            this.finishLogin(`Bem-vindo, ${data.nome}!`);
+            this.finishLogin(`Bem-vindo, ${data.nome}!`);[cite: 256]
         } catch (e) {
-            UI.showToast('Erro ao validar login do profissional.', 'error');
+            UI.showToast('Erro ao validar login do profissional.', 'error');[cite: 256]
         }
     },
-
     async handleCreateProfissional(e) {
-        e.preventDefault();
-        const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
-        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
-        const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
-
+        e.preventDefault();[cite: 257]
+        const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';[cite: 257]
+        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');[cite: 257]
+        const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';[cite: 257]
         try {
-            const snapshot = await db.collection('profissionais')
-                .where('estabelecimento_id', '==', estabelecimentoId)
-                .get();
-
-            const count = snapshot.size;
-
+            const { count, error: countError } = await supabaseClient
+                .from('profissionais')
+                .select('*', { count: 'exact', head: true })
+                .eq('estabelecimento_id', estabelecimentoId);[cite: 257]
+            if (countError) throw countError;[cite: 257]
             if (planoAtual === 'gratis' && count >= 2) {
-                UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais.', 'error');
+                UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais.', 'error');[cite: 257]
                 return;
             }
-
-            const nome = document.getElementById('prof-nome').value;
-            const cargo = document.getElementById('prof-cargo').value;
-            const cpf = document.getElementById('prof-cpf').value;
-            const senha = document.getElementById('prof-senha').value;
-            const foto_url = this.fotoBase64Temp;
-
-            await db.collection('profissionais').add({
+            const nome = document.getElementById('prof-nome').value;[cite: 257]
+            const cargo = document.getElementById('prof-cargo').value;[cite: 257]
+            const cpf = document.getElementById('prof-cpf').value;[cite: 257]
+            const senha = document.getElementById('prof-senha').value;[cite: 257]
+            const foto_url = this.fotoBase64Temp;[cite: 257]
+            const { error } = await supabaseClient.from('profissionais').insert([{
                 estabelecimento_id: estabelecimentoId,
                 estabelecimento: nomeEstabelecimentoHeader,
                 nome,
@@ -217,68 +184,66 @@ const App = {
                 cpf,
                 senha,
                 foto_url
-            });
-
-            UI.showToast('Profissional cadastrado com sucesso!');
-            e.target.reset();
-            this.fotoBase64Temp = '';
-            document.getElementById('preview-foto-prof').classList.add('hidden');
-            document.getElementById('icon-foto-prof').classList.remove('hidden');
-            this.renderListaProfissionais();
-            this.popularSelectProfissionais();
+            }]);[cite: 257]
+            if (error) throw error;[cite: 257]
+            UI.showToast('Profissional cadastrado com sucesso!');[cite: 257]
+            e.target.reset();[cite: 257]
+            this.fotoBase64Temp = '';[cite: 257]
+            document.getElementById('preview-foto-prof').classList.add('hidden');[cite: 257]
+            document.getElementById('icon-foto-prof').classList.remove('hidden');[cite: 257]
+            this.renderListaProfissionais();[cite: 257]
+            this.popularSelectProfissionais();[cite: 257]
         } catch (err) {
-            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');
+            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');[cite: 257]
         }
     },
-
     async handleAtualizarMinhaFoto(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
+        const file = event.target.files[0];[cite: 258]
+        if (!file) return;[cite: 258]
+        const reader = new FileReader();[cite: 258]
         reader.onload = async (e) => {
-            const base64 = e.target.result;
-            const profId = localStorage.getItem('hairconcept_prof_id');
-            if (!profId) return;
-
+            const base64 = e.target.result;[cite: 258]
+            const profId = localStorage.getItem('hairconcept_prof_id');[cite: 258]
+            if (!profId) return;[cite: 258]
             try {
-                await db.collection('profissionais').doc(profId).update({ foto_url: base64 });
-                document.getElementById('prof-header-foto').src = base64;
-                UI.showToast('Foto de perfil atualizada com sucesso!');
-                this.renderListaProfissionais();
+                const { error } = await supabaseClient
+                    .from('profissionais')
+                    .update({ foto_url: base64 })
+                    .eq('id', profId);[cite: 258]
+                if (error) throw error;[cite: 258]
+                document.getElementById('prof-header-foto').src = base64;[cite: 258]
+                UI.showToast('Foto de perfil atualizada com sucesso!');[cite: 258]
+                this.renderListaProfissionais();[cite: 258]
             } catch (err) {
-                UI.showToast('Erro ao atualizar foto: ' + err.message, 'error');
+                UI.showToast('Erro ao atualizar foto: ' + err.message, 'error');[cite: 258]
             }
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(file);[cite: 258]
     },
-
     async popularSelectProfissionais() {
-        const select = document.getElementById('agendamento-profissional');
-        if (!select) return;
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const select = document.getElementById('agendamento-profissional');[cite: 258]
+        if (!select) return;[cite: 258]
+        const estabId = localStorage.getItem('hairconcept_estab_id');[cite: 258]
         try {
-            const snapshot = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const { data } = await supabaseClient.from('profissionais').select('id, nome').eq('estabelecimento_id', estabId);[cite: 258]
             if (data) {
-                select.innerHTML = data.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+                select.innerHTML = data.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');[cite: 258]
             }
         } catch (e) {
-            console.error(e);
+            console.error(e);[cite: 258]
         }
     },
-
     async handleCreateAgendamento(event) {
-        event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const data = document.getElementById('agendamento-data').value;
-        const profissional_id = document.getElementById('agendamento-profissional').value;
-        const horario = document.getElementById('agendamento-horario').value;
-        const cliente = document.getElementById('cliente-nome').value;
-        const servico = document.getElementById('cliente-servico').value;
-        const valor = parseFloat(document.getElementById('cliente-valor').value) || 0;
-
+        event.preventDefault();[cite: 259]
+        const estabId = localStorage.getItem('hairconcept_estab_id');[cite: 259]
+        const data = document.getElementById('agendamento-data').value;[cite: 259]
+        const profissional_id = document.getElementById('agendamento-profissional').value;[cite: 259]
+        const horario = document.getElementById('agendamento-horario').value;[cite: 259]
+        const cliente = document.getElementById('cliente-nome').value;[cite: 259]
+        const servico = document.getElementById('cliente-servico').value;[cite: 259]
+        const valor = parseFloat(document.getElementById('cliente-valor').value) || 0;[cite: 259]
         try {
-            await db.collection('agendamentos').add({
+            const { error } = await supabaseClient.from('agendamentos').insert([{
                 estabelecimento_id: estabId,
                 data,
                 profissional_id,
@@ -286,47 +251,35 @@ const App = {
                 cliente,
                 servico,
                 valor
-            });
-
-            UI.showToast('Agendamento efetuado com sucesso!');
-            event.target.reset();
-            UI.switchTab('aba-agenda');
-            this.renderAgendaGrid();
+            }]);[cite: 259]
+            if (error) throw error;[cite: 259]
+            UI.showToast('Agendamento efetuado com sucesso!');[cite: 259]
+            event.target.reset();[cite: 259]
+            UI.switchTab('aba-agenda');[cite: 259]
+            this.renderAgendaGrid();[cite: 259]
         } catch (e) {
-            UI.showToast('Erro ao agendar: ' + e.message, 'error');
+            UI.showToast('Erro ao agendar: ' + e.message, 'error');[cite: 259]
         }
     },
-
     async renderAgendaGrid() {
-        const tbody = document.getElementById('grid-horarios-body');
-        const headerRow = document.getElementById('grid-header-row');
-        if (!tbody || !headerRow) return;
-
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const dataFiltro = document.getElementById('filtro-data-agenda').value;
-
+        const tbody = document.getElementById('grid-horarios-body');[cite: 259]
+        const headerRow = document.getElementById('grid-header-row');[cite: 259]
+        if (!tbody || !headerRow) return;[cite: 259]
+        const estabId = localStorage.getItem('hairconcept_estab_id');[cite: 259]
+        const dataFiltro = document.getElementById('filtro-data-agenda').value;[cite: 259]
         try {
-            const profsSnap = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
-            const profs = profsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            const agendamentosSnap = await db.collection('agendamentos')
-                .where('estabelecimento_id', '==', estabId)
-                .where('data', '==', dataFiltro)
-                .get();
-            const agendamentos = agendamentosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+            const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);[cite: 259]
+            const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);[cite: 259]
             if (!profs || profs.length === 0) {
-                headerRow.innerHTML = `<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>`;
-                tbody.innerHTML = `<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipe para ver a agenda.</td></tr>`;
+                headerRow.innerHTML = '<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>';[cite: 259]
+                tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipa para ver a agenda.</td></tr>';[cite: 259]
                 return;
             }
-
-            let profsExibicao = profs;
+            let profsExibicao = profs;[cite: 259]
             if (this.user.role === 'profissional') {
-                profsExibicao = profs.filter(p => p.id == this.user.id);
+                profsExibicao = profs.filter(p => p.id == this.user.id);[cite: 259]
             }
-
-            headerRow.innerHTML = `<th class="py-3 px-4 w-24">Horário</th>` + profsExibicao.map(p => `
+            headerRow.innerHTML = '<th class="py-3 px-4 w-24">Horário</th>' + profsExibicao.map(p => `
                 <th class="py-3 px-4">
                     <div class="flex items-center gap-2">
                         <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-7 h-7 rounded-lg object-cover">
@@ -336,87 +289,76 @@ const App = {
                         </div>
                     </div>
                 </th>
-            `).join('');
+            `).join('');[cite: 259]
 
-            const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
-            let atendimentoCount = 0;
-            let totalGanhos = 0;
+            const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];[cite: 259]
+            let atendimentoCount = 0;[cite: 259]
+            let totalGanhos = 0;[cite: 259]
 
             tbody.innerHTML = horarios.map(h => {
                 return `<tr class="border-b border-white/5">
-                    <td class="py-3 px-4 text-brand-500 font-bold">${h}</td>
-                    ` + profsExibicao.map(p => {
+                    <td class="py-3 px-4 text-brand-500 font-bold">${h}</td>` +
+                    profsExibicao.map(p => {
                         const ag = (agendamentos || []).find(a => a.profissional_id == p.id && a.horario === h);
                         if (ag && this.user.role === 'profissional') {
-                            atendimentoCount++;
-                            totalGanhos += (ag.valor * 0.5);
+                            atendimentoCount++;[cite: 259]
+                            totalGanhos += (ag.valor * 0.5);[cite: 259]
                         }
-                        return `
-                            <td class="py-3 px-4">
-                                ${ag ? `
-                                    <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px]">
-                                        <strong class="text-white block">${ag.cliente}</strong>
-                                        <span class="text-zinc-300">${ag.servico}</span>
-                                        <span class="text-brand-400 block font-bold mt-0.5">R$ ${ag.valor.toFixed(2)}</span>
-                                    </div>
-                                ` : `
-                                    <span class="text-zinc-600 text-[11px]">Disponível</span>
-                                `}
-                            </td>
-                        `;
-                    }).join('') + `
-                </tr>`;
-            }).join('');
+                        return `<td class="py-3 px-4">
+                            ${ag ? `
+                                <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px]">
+                                    <strong class="text-white block">${ag.cliente}</strong>
+                                    <span class="text-zinc-300">${ag.servico}</span>
+                                    <span class="text-brand-400 block font-bold mt-0.5">R$ ${ag.valor.toFixed(2)}</span>
+                                </div>
+                            ` : '<span class="text-zinc-600 text-[11px]">Disponível</span>'}
+                        </td>`;
+                    }).join('') +
+                `</tr>`;
+            }).join('');[cite: 259]
 
             if (this.user.role === 'profissional') {
-                document.getElementById('prof-stat-atendimentos').textContent = atendimentoCount;
-                document.getElementById('prof-stat-comissao').textContent = `R$ ${totalGanhos.toFixed(2)}`;
+                document.getElementById('prof-stat-atendimentos').textContent = atendimentoCount;[cite: 259]
+                document.getElementById('prof-stat-comissao').textContent = `R$ ${totalGanhos.toFixed(2)}`;[cite: 259]
             }
-
         } catch (e) {
-            console.error(e);
+            console.error(e);[cite: 259]
         }
     },
-
     async handleCreateProduto(event) {
-        event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const nome = document.getElementById('prod-nome').value;
-        const tipo = document.getElementById('prod-tipo').value;
-        const preco_venda = parseFloat(document.getElementById('prod-preco').value) || 0;
-        const stock = parseInt(document.getElementById('prod-stock').value) || 0;
-        const data_validade = document.getElementById('prod-validade').value;
-
+        event.preventDefault();[cite: 259]
+        const estabId = localStorage.getItem('hairconcept_estab_id');[cite: 259]
+        const nome = document.getElementById('prod-nome').value;[cite: 259]
+        const tipo = document.getElementById('prod-tipo').value;[cite: 259]
+        const preco_venda = parseFloat(document.getElementById('prod-preco').value) || 0;[cite: 259]
+        const stock = parseInt(document.getElementById('prod-stock').value) || 0;[cite: 259]
+        const data_validade = document.getElementById('prod-validade').value;[cite: 259]
         try {
-            await db.collection('produtos').add({
+            const { error } = await supabaseClient.from('produtos').insert([{
                 estabelecimento_id: estabId,
                 nome,
                 tipo,
                 preco_venda,
                 stock,
                 data_validade
-            });
-
-            UI.showToast('Produto cadastrado com sucesso!');
-            event.target.reset();
-            this.renderProdutos();
+            }]);[cite: 259]
+            if (error) throw error;[cite: 259]
+            UI.showToast('Produto cadastrado com sucesso!');[cite: 259]
+            event.target.reset();[cite: 259]
+            this.renderProdutos();[cite: 259]
         } catch (e) {
-            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');
+            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');[cite: 259]
         }
     },
-
     async renderListaProfissionais() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const lista = document.getElementById('lista-profissionais');
-        const badge = document.getElementById('limite-profissionais-badge');
-        if (!lista) return;
-
+        const estabId = localStorage.getItem('hairconcept_estab_id');[cite: 260]
+        const lista = document.getElementById('lista-profissionais');[cite: 260]
+        const badge = document.getElementById('limite-profissionais-badge');[cite: 260]
+        if (!lista) return;[cite: 260]
         try {
-            const snapshot = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            if (badge) badge.textContent = `${data.length} Integrantes Ativos`;
-
+            const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);[cite: 260]
+            if (error) throw error;[cite: 260]
+            if (badge) badge.textContent = `${data.length} Integrantes Ativos`;[cite: 260]
             lista.innerHTML = data.map(p => `
                 <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -428,33 +370,27 @@ const App = {
                         </div>
                     </div>
                 </div>
-            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional registado.</p>';
+            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional registado.</p>';[cite: 260]
         } catch (e) {
-            console.error(e);
+            console.error(e);[cite: 260]
         }
     },
-
     async renderProdutos() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const lista = document.getElementById('lista-produtos');
-        const alertaBadge = document.getElementById('alerta-validade-badge');
-        if (!lista) return;
-
+        const estabId = localStorage.getItem('hairconcept_estab_id');[cite: 260]
+        const lista = document.getElementById('lista-produtos');[cite: 260]
+        const alertaBadge = document.getElementById('alerta-validade-badge');[cite: 260]
+        if (!lista) return;[cite: 260]
         try {
-            const snapshot = await db.collection('produtos').where('estabelecimento_id', '==', estabId).get();
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            const hoje = new Date();
-            const daqui3Meses = new Date();
-            daqui3Meses.setMonth(hoje.getMonth() + 3);
-
-            let alertaCount = 0;
-
+            const { data, error } = await supabaseClient.from('produtos').select('*').eq('estabelecimento_id', estabId);[cite: 260]
+            if (error) throw error;[cite: 260]
+            const hoje = new Date();[cite: 260]
+            const daqui3Meses = new Date();[cite: 260]
+            daqui3Meses.setMonth(hoje.getMonth() + 3);[cite: 260]
+            let alertaCount = 0;[cite: 260]
             lista.innerHTML = data.map(prod => {
-                const dataVal = new Date(prod.data_validade);
-                const pertoVencer = dataVal <= daqui3Meses && dataVal >= hoje;
-                if (pertoVencer) alertaCount++;
-
+                const dataVal = new Date(prod.data_validade);[cite: 260]
+                const pertoVencer = dataVal <= daqui3Meses && dataVal >= hoje;[cite: 260]
+                if (pertoVencer) alertaCount++;[cite: 260]
                 return `
                     <div class="p-3.5 rounded-2xl bg-zinc-950 border ${pertoVencer ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10'} flex justify-between items-center">
                         <div>
@@ -464,97 +400,96 @@ const App = {
                         <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda.toFixed(2)}</span>
                     </div>
                 `;
-            }).join('') || '<p class="text-xs text-zinc-500">Nenhum produto registado.</p>';
-
+            }).join('') || '<p class="text-xs text-zinc-500">Nenhum produto registado.</p>';[cite: 260]
             if (alertaBadge) {
-                alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Stock Regular';
+                alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Stock Regular';[cite: 260]
             }
         } catch (e) {
-            console.error(e);
+            console.error(e);[cite: 260]
         }
     },
-
     handleFotoUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
+        const file = event.target.files[0];[cite: 260]
+        if (!file) return;[cite: 260]
+        const reader = new FileReader();[cite: 260]
         reader.onload = (e) => {
-            this.fotoBase64Temp = e.target.result;
-            const preview = document.getElementById('preview-foto-prof');
-            const icon = document.getElementById('icon-foto-prof');
+            this.fotoBase64Temp = e.target.result;[cite: 260]
+            const preview = document.getElementById('preview-foto-prof');[cite: 260]
+            const icon = document.getElementById('icon-foto-prof');[cite: 260]
             if (preview) {
-                preview.src = this.fotoBase64Temp;
-                preview.classList.remove('hidden');
+                preview.src = this.fotoBase64Temp;[cite: 260]
+                preview.classList.remove('hidden');[cite: 260]
             }
-            if (icon) icon.classList.add('hidden');
+            if (icon) icon.classList.add('hidden');[cite: 260]
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(file);[cite: 260]
     },
-
     carregarPostIts() {
-        const container = document.getElementById('lista-postits');
-        if (!container) return;
-        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '["Ligar para fornecedor de tesouras", "Comprar novo secador de cabelo"]');
-        
+        const container = document.getElementById('lista-postits');[cite: 260]
+        if (!container) return;[cite: 260]
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '["Ligar para fornecedor de tesouras", "Comprar novo secador de cabelo"]');[cite: 260]
         container.innerHTML = postits.map((nota, index) => `
             <div class="p-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs flex justify-between items-center">
                 <span>${nota}</span>
                 <button onclick="App.removerPostIt(${index})" class="text-zinc-400 hover:text-red-400 text-xs"><i class="fa-solid fa-xmark"></i></button>
             </div>
-        `).join('') || '<p class="text-[10px] text-zinc-500">Nenhuma nota colada.</p>';
+        `).join('') || '<p class="text-[10px] text-zinc-500">Nenhuma nota colada.</p>';[cite: 261]
     },
-
     adicionarPostIt() {
-        const nota = prompt("Digite a sua nova nota ou lembrete:");
-        if (!nota || nota.trim() === '') return;
-        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
-        postits.push(nota);
-        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
-        this.carregarPostIts();
+        const nota = prompt("Digite a sua nova nota ou lembrete:");[cite: 261]
+        if (!nota || nota.trim() === '') return;[cite: 261]
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');[cite: 261]
+        postits.push(nota);[cite: 261]
+        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));[cite: 261]
+        this.carregarPostIts();[cite: 261]
     },
-
     removerPostIt(index) {
-        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
-        postits.splice(index, 1);
-        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
-        this.carregarPostIts();
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');[cite: 261]
+        postits.splice(index, 1);[cite: 261]
+        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));[cite: 261]
+        this.carregarPostIts();[cite: 261]
     },
-
     calcularGanhosPessoal() {
-        const val = parseFloat(document.getElementById('prof-calc-val').value) || 0;
-        const porc = parseFloat(document.getElementById('prof-calc-porc').value) || 50;
-        const total = (val * porc) / 100;
-        document.getElementById('prof-calc-result').textContent = `R$ ${total.toFixed(2)}`;
+        const val = parseFloat(document.getElementById('prof-calc-val').value) || 0;[cite: 261]
+        const porc = parseFloat(document.getElementById('prof-calc-porc').value) || 50;[cite: 261]
+        const total = (val * porc) / 100;[cite: 261]
+        document.getElementById('prof-calc-result').textContent = `R$ ${total.toFixed(2)}`;[cite: 261]
     },
-
     proximaFrase() {
         const frases = [
             "O sucesso é a soma de pequenos esforços repetidos.",
             "A beleza está nos detalhes e no carinho com o cliente.",
             "Um dia produtivo começa com um sorriso e foco.",
             "Transforme a sua arte em excelência todos os dias."
-        ];
-        const aleatoria = frases[Math.floor(Math.random() * frases.length)];
-        document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
+        ];[cite: 261]
+        const aleatoria = frases[Math.floor(Math.random() * frases.length)];[cite: 261]
+        document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;[cite: 261]
+    },
+    setPlan(plano) {
+        localStorage.setItem('hairconcept_plan', plano);[cite: 261]
+        UI.showToast(`Plano ${plano.toUpperCase()} selecionado com sucesso!`);[cite: 261]
+        UI.switchTab('aba-agenda');[cite: 261]
     }
 };
 
 const UI = {
     showToast(msg, type = 'success') {
-        alert(msg);
+        alert(msg);[cite: 261]
     },
     switchTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.getElementById(tabId)?.classList.remove('hidden');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));[cite: 261]
+        document.getElementById(tabId)?.classList.remove('hidden');[cite: 261]
     }
 };
 
 window.addEventListener('DOMContentLoaded', () => {
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            const name = user.displayName || user.email.split('@')[0];
-            App.user = { loggedIn: true, role: 'admin', name: name };
-            App.finishLogin(`Bem-vindo, ${name}!`);
-        }
-    });
+    if (supabaseClient && supabaseClient.auth) {
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];[cite: 261]
+                App.user = { loggedIn: true, role: 'admin', name: name };[cite: 261]
+                App.finishLogin(`Bem-vindo, ${name}!`);[cite: 261]
+            }
+        });
+    }
 });
