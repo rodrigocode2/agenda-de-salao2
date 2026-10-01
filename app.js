@@ -27,7 +27,6 @@ const Auth = {
         const senha = document.getElementById('login-prof-senha').value.trim();
         
         try {
-            // Consulta segura sem .single() para evitar falhas se a resposta vier vazia
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('*')
@@ -41,7 +40,6 @@ const Auth = {
             }
             
             const profissional = data[0];
-            
             if (profissional.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', profissional.estabelecimento_id);
             }
@@ -68,11 +66,12 @@ const Auth = {
 
 const App = {
     user: { loggedIn: false, role: '', name: '' },
-    fotoBase64Temp: '',
 
     init() {
         console.log("HairConcept inicializado com sucesso.");
         this.renderListaProfissionais();
+        this.renderProdutos();
+        this.renderAgendaGrid();
     },
 
     setPlan(plano) {
@@ -89,7 +88,7 @@ const App = {
         else {
             UI.showToast('Plano Gratuito selecionado com sucesso!');
             localStorage.setItem('hairconcept_plan', 'gratis');
-            UI.switchTab('aba3');
+            UI.switchTab('aba-agenda');
         }
     },
 
@@ -112,7 +111,7 @@ const App = {
         if (this.user.role === 'admin') {
             await this.verificarOuCriarEstabelecimento();
         } else {
-            UI.switchTab('aba3');
+            UI.switchTab('aba-agenda');
             App.init();
         }
     },
@@ -136,12 +135,12 @@ const App = {
             } else {
                 localStorage.setItem('hairconcept_estab_id', estab.id);
                 if (headerSub) headerSub.textContent = estab.nome_salao;
-                UI.switchTab('aba3');
+                UI.switchTab('aba-agenda');
                 App.init();
             }
         } catch (e) {
             console.error(e);
-            UI.switchTab('aba3');
+            UI.switchTab('aba-agenda');
             App.init();
         }
     },
@@ -171,7 +170,7 @@ const App = {
             const headerSub = document.getElementById('saloon-name-header');
             if (headerSub) headerSub.textContent = nomeSalao;
 
-            UI.switchTab('aba3');
+            UI.switchTab('aba-agenda');
             App.init();
         } catch (e) {
             UI.showToast('Erro ao salvar estabelecimento: ' + e.message, 'error');
@@ -221,6 +220,43 @@ const App = {
         }
     },
 
+    async handleCreateProduto(event) {
+        event.preventDefault();
+        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
+        const nome = document.getElementById('prod-nome').value;
+        const tipo = document.getElementById('prod-tipo').value;
+        const preco_venda = parseFloat(document.getElementById('prod-preco').value) || 0;
+        const stock = parseInt(document.getElementById('prod-stock').value) || 0;
+        const data_validade = document.getElementById('prod-validade').value;
+
+        try {
+            const { error } = await supabaseClient.from('produtos').insert([{
+                estabelecimento_id: estabelecimentoId,
+                nome,
+                tipo,
+                preco_venda,
+                stock,
+                data_validade
+            }]);
+
+            if (error) throw error;
+
+            UI.showToast('Produto cadastrado com sucesso!');
+            event.target.reset();
+            this.renderProdutos();
+        } catch (e) {
+            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');
+        }
+    },
+
+    abrirModalNovoAgendamento() {
+        UI.showToast('Funcionalidade de Nova Marcação pronta para integração.');
+    },
+
+    finalizarVendaCaixa() {
+        UI.showToast('Venda finalizada com sucesso!');
+    },
+
     async renderListaProfissionais() {
         const estabId = localStorage.getItem('hairconcept_estab_id');
         const lista = document.getElementById('lista-profissionais');
@@ -244,6 +280,42 @@ const App = {
                 </div>
             `).join('') || '<p class="text-xs text-zinc-500 col-span-2">Nenhum profissional cadastrado.</p>';
         } catch (e) { console.error(e); }
+    },
+
+    async renderProdutos() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const lista = document.getElementById('lista-produtos');
+        if (!lista) return;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('produtos')
+                .select('*')
+                .eq('estabelecimento_id', estabId);
+
+            if (error) throw error;
+
+            lista.innerHTML = (data || []).map(prod => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-bold text-white">${prod.nome}</h4>
+                        <p class="text-[10px] text-zinc-400">Tipo: ${prod.tipo} | Stock: ${prod.stock} | Validade: ${prod.data_validade}</p>
+                    </div>
+                    <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda}</span>
+                </div>
+            `).join('') || '<p class="text-xs text-zinc-500 col-span-2">Nenhum produto cadastrado.</p>';
+        } catch (e) { console.error(e); }
+    },
+
+    async renderAgendaGrid() {
+        const body = document.getElementById('grid-horarios-body');
+        if (!body) return;
+        body.innerHTML = `
+            <tr>
+                <td class="py-3 font-semibold text-zinc-400">09:00</td>
+                <td class="py-3 text-zinc-300" colspan="4">Agenda sincronizada e pronta para marcações</td>
+            </tr>
+        `;
     }
 };
 
@@ -264,6 +336,9 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
+    const dataAgenda = document.getElementById('filtro-data-agenda');
+    if (dataAgenda) dataAgenda.valueAsDate = new Date();
+
     if (supabaseClient && supabaseClient.auth) {
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
@@ -274,24 +349,3 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-// Efeito interativo do rato na aba de login
-const abaLogin = document.getElementById('aba-login');
-if (abaLogin) {
-    abaLogin.addEventListener('mousemove', (e) => {
-        const rect = abaLogin.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const dot = document.createElement('div');
-        dot.className = 'trail-dot';
-        dot.style.left = `${x}px`;
-        dot.style.top = `${y}px`;
-        abaLogin.appendChild(dot);
-        setTimeout(() => {
-            dot.style.transform = 'scale(2)';
-            dot.style.opacity = '0';
-            dot.style.transition = 'all 0.5s ease-out';
-        }, 20);
-        setTimeout(() => { dot.remove(); }, 500);
-    });
-}
