@@ -36,6 +36,7 @@ const Auth = {
         const senha = document.getElementById('login-prof-senha').value.trim();
         
         try {
+            // Consulta segura sem .single() para evitar crashes se a resposta estiver vazia
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('*')
@@ -90,15 +91,16 @@ const App = {
         localStorage.setItem('hairconcept_plan', plano);
         
         if (plano === 'mensal') {
-            UI.showToast('Redirecionando para o pagamento seguro do Mercado Pago (Plano Mensal)...');
-            window.location.href = 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=SEU_ID_DE_PREFERENCIA_MENSAL';
+            UI.showToast('A redirecionar para o pagamento seguro do Mercado Pago (Plano Mensal)...');
+            window.location.href = 'https://mpago.la/1LunQwf';
         } 
         else if (plano === 'anual') {
-            UI.showToast('Redirecionando para o pagamento seguro do Mercado Pago (Plano Anual)...');
-            window.location.href = 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=SEU_ID_DE_PREFERENCIA_ANUAL';
+            UI.showToast('A redirecionar para o pagamento seguro do Mercado Pago (Plano Anual)...');
+            window.location.href = 'https://mpago.la/1doAutJ';
         } 
         else {
             UI.showToast('Plano Gratuito selecionado com sucesso!');
+            localStorage.setItem('hairconcept_plan', 'gratis');
             UI.switchTab('aba3');
         }
     },
