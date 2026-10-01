@@ -167,10 +167,13 @@ const App = {
                 .select('*', { count: 'exact', head: true })
                 .eq('estabelecimento_id', estabelecimentoId);
             if (countError) throw countError;
-            if (planoAtual === 'gratis' && count >= 2) {
-                UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais.', 'error');
+            
+            const limiteMaximo = planoAtual === 'gratis' ? 2 : 10;
+            if (count >= limiteMaximo) {
+                UI.showToast(`Limite atingido! O plano ${planoAtual.toUpperCase()} permite apenas ${limiteMaximo} profissionais.`, 'error');
                 return;
             }
+            
             const nome = document.getElementById('prof-nome').value;
             const cargo = document.getElementById('prof-cargo').value;
             const cpf = document.getElementById('prof-cpf').value;
