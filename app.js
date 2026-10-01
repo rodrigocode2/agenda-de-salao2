@@ -41,26 +41,27 @@ const Auth = {
                 .select('*')
                 .ilike('estabelecimento', nomeEstabelecimento)
                 .eq('cpf', cpf)
-                .eq('senha', senha)
-                .single();
+                .eq('senha', senha);
 
-            if (error || !data) { 
-                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error'); 
+            if (error || !data || data.length === 0) { 
+                UI.showToast('Estabelecimento, CPF ou palavra-passe incorretos.', 'error'); 
                 return; 
             }
             
-            if (data.estabelecimento_id) {
-                localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
+            const profissional = data[0];
+            
+            if (profissional.estabelecimento_id) {
+                localStorage.setItem('hairconcept_estab_id', profissional.estabelecimento_id);
             }
             
-            App.user = { loggedIn: true, role: 'profissional', name: data.nome };
+            App.user = { loggedIn: true, role: 'profissional', name: profissional.nome };
             
             const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = data.estabelecimento || nomeEstabelecimento;
+            if (headerSub) headerSub.textContent = profissional.estabelecimento || nomeEstabelecimento;
 
-            App.finishLogin(`Bem-vindo, ${data.nome}!`);
+            App.finishLogin(`Bem-vindo, ${profissional.nome}!`);
         } catch (e) { 
-            UI.showToast('Erro ao validar login do profissional.', 'error'); 
+            UI.showToast('Erro ao validar login do profissional: ' + e.message, 'error'); 
         }
     },
 
@@ -136,7 +137,7 @@ const App = {
                 .from('estabelecimentos')
                 .select('*')
                 .eq('user_id', userId)
-                .single();
+                .maybeSingle();
 
             const headerSub = document.getElementById('saloon-name-header');
 
@@ -256,7 +257,9 @@ const App = {
 
             this.renderListaProfissionais();
             this.carregarSelects();
-        } catch (err) { UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error'); }
+        } catch (err) { 
+            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error'); 
+        }
     },
 
     async handleCreateProduto(event) {
@@ -397,7 +400,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-// Efeito de Rastro no rato para a secção de Login
+
 const abaLogin = document.getElementById('aba-login');
 if (abaLogin) {
     abaLogin.addEventListener('mousemove', (e) => {
