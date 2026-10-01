@@ -68,7 +68,6 @@ const App = {
     user: { loggedIn: false, role: '', name: '' },
 
     init() {
-        console.log("HairConcept inicializado com sucesso.");
         this.renderListaProfissionais();
         this.renderProdutos();
         this.renderAgendaGrid();
@@ -139,7 +138,6 @@ const App = {
                 App.init();
             }
         } catch (e) {
-            console.error(e);
             UI.switchTab('aba-agenda');
             App.init();
         }
@@ -250,7 +248,7 @@ const App = {
     },
 
     abrirModalNovoAgendamento() {
-        UI.showToast('Funcionalidade de Nova Marcação pronta para integração.');
+        UI.showToast('Funcionalidade de Nova Marcação pronta.');
     },
 
     finalizarVendaCaixa() {
@@ -279,7 +277,7 @@ const App = {
                     </div>
                 </div>
             `).join('') || '<p class="text-xs text-zinc-500 col-span-2">Nenhum profissional cadastrado.</p>';
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     },
 
     async renderProdutos() {
@@ -304,7 +302,7 @@ const App = {
                     <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda}</span>
                 </div>
             `).join('') || '<p class="text-xs text-zinc-500 col-span-2">Nenhum produto cadastrado.</p>';
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     },
 
     async renderAgendaGrid() {
