@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt" class="h-full bg-gray-900 text-gray-100 scroll-smooth">
+<html lang="pt" class="h-full bg-gray-900 text-gray-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HairConcept - Gestão Premium de Salão e Barbearia</title>
+    <title>HairConcept - Revolucione a Gestão do seu Salão de Beleza</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Client -->
@@ -11,190 +11,183 @@
     <!-- FontAwesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="h-full flex flex-col font-sans antialiased bg-gray-900 text-gray-100">
+<body class="h-full flex flex-col font-sans antialiased selection:bg-pink-500 selection:text-white">
 
-    <!-- Landing Page / Ecrã Inicial com Vídeo Hero e Planos -->
-    <div id="landing-screen" class="flex-1 flex flex-col">
-        <!-- Navegação Superior da Landing Page -->
-        <header class="w-full border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
+    <!-- ========================================== -->
+    <!-- 1. LANDING PAGE / PÁGINA DE APRESENTAÇÃO     -->
+    <!-- ========================================== -->
+    <div id="landing-screen" class="min-h-full flex flex-col bg-gray-900">
+        <!-- Header da Landing Page -->
+        <header class="border-b border-gray-800 px-6 py-4 flex items-center justify-between bg-gray-900/80 backdrop-blur-md sticky top-0 z-50">
             <div class="flex items-center space-x-3">
-                <div class="bg-gradient-to-r from-pink-600 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <div class="bg-gradient-to-tr from-pink-600 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
                     <i class="fa-solid fa-scissors text-lg"></i>
                 </div>
-                <h1 class="text-2xl font-black bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">HairConcept</h1>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">HairConcept</h1>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="#planos" class="hidden sm:inline-block text-sm font-medium text-gray-300 hover:text-white transition-colors">Planos</a>
-                <button onclick="mostrarLoginModal()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg transition-all">
+                <a href="#planos" class="text-sm font-medium text-gray-300 hover:text-white transition-colors hidden sm:block">Planos</a>
+                <button onclick="mostrarLogin()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-lg transition-all">
                     Aceder ao Sistema
                 </button>
             </div>
         </header>
 
-        <!-- Hero Section com Vídeo de Fundo -->
-        <section class="relative flex-1 flex items-center justify-center overflow-hidden py-20 px-6">
-            <!-- Vídeo Hero de Fundo (com fallback escuro) -->
-            <div class="absolute inset-0 z-0 overflow-hidden opacity-30 pointer-events-none">
-                <video autoplay muted loop playsinline class="w-full h-full object-cover">
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-hairdresser-cutting-a-customer-s-hair-41553-large.mp4" type="video/mp4">
-                </video>
-                <div class="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-900/80 to-gray-900"></div>
+        <!-- Hero Section -->
+        <section class="flex-1 flex flex-col items-center justify-center text-center px-4 py-20 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950">
+            <div class="inline-flex items-center gap-2 bg-pink-500/10 border border-pink-500/30 px-4 py-1.5 rounded-full text-pink-400 text-xs font-semibold mb-6 shadow-sm">
+                <i class="fa-solid fa-bolt text-pink-400"></i> Gestão Inteligente para Salões e Barbearias
             </div>
-
-            <div class="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-                <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold bg-pink-500/10 border border-pink-500/30 text-pink-400">
-                    <i class="fa-solid fa-bolt"></i> Gestão Inteligente para Salões e Barbearias
-                </span>
-                <h2 class="text-4xl sm:text-6xl font-black tracking-tight leading-tight">
-                    Revolucione a gestão do seu <span class="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">Salão de Beleza</span>
-                </h2>
-                <p class="text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">
-                    Controlo total de agendamentos, equipa, stock e comissões numa plataforma moderna, rápida e totalmente isolada por estabelecimento.
-                </p>
-                <div class="pt-4 flex flex-col sm:flex-row justify-center gap-4">
-                    <button onclick="mostrarLoginModal()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold px-8 py-4 rounded-xl shadow-xl transition-all text-base">
-                        Entrar na Plataforma
-                    </button>
-                    <a href="#planos" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold px-8 py-4 rounded-xl transition-all text-base flex items-center justify-center gap-2">
-                        Ver Planos <i class="fa-solid fa-arrow-down text-xs"></i>
-                    </a>
-                </div>
+            <h2 class="text-4xl md:text-6xl font-extrabold tracking-tight max-w-4xl text-white">
+                Revolucione a gestão do seu <span class="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">Salão de Beleza</span>
+            </h2>
+            <p class="mt-6 text-base md:text-lg text-gray-400 max-w-2xl">
+                Controlo total de agendamentos, equipa, stock e comissões numa plataforma moderna, rápida e totalmente isolada por estabelecimento.
+            </p>
+            <div class="mt-10 flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md">
+                <button onclick="mostrarLogin()" class="w-full sm:w-auto bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold px-8 py-3.5 rounded-xl shadow-xl transition-all">
+                    Entrar na Plataforma
+                </button>
+                <a href="#planos" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 font-semibold px-8 py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                    Ver Planos <i class="fa-solid fa-arrow-down text-xs"></i>
+                </a>
             </div>
         </section>
 
-        <!-- Secção de Planos de Assinatura -->
-        <section id="planos" class="py-20 px-6 bg-gray-950/50 border-t border-gray-800">
-            <div class="max-w-6xl mx-auto">
-                <div class="text-center space-y-3 mb-12">
-                    <h3 class="text-3xl font-bold">Planos ajustados ao seu negócio</h3>
-                    <p class="text-gray-400 text-sm">Escolha o plano ideal para potenciar o crescimento do seu salão.</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <!-- Plano Básico -->
+        <!-- Secção de Planos e Preços -->
+        <section id="planos" class="py-20 px-4 bg-gray-950 border-t border-gray-800">
+            <div class="max-w-6xl mx-auto text-center">
+                <h3 class="text-3xl font-bold text-white mb-4">Planos ajustados ao seu negócio</h3>
+                <p class="text-gray-400 mb-12 max-w-xl mx-auto">Escolha o plano ideal para impulsionar a produtividade do seu salão com pagamentos seguros via Mercado Pago[cite: 122].</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    <!-- Plano Mensal -->
                     <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col justify-between shadow-xl">
-                        <div class="space-y-4">
-                            <h4 class="text-xl font-bold text-gray-200">Básico</h4>
-                            <p class="text-sm text-gray-400">Ideal para profissionais autónomos ou pequenos estúdios.</p>
-                            <div class="text-3xl font-black text-white">R$ 49<span class="text-xs font-normal text-gray-400">/mês</span></div>
-                            <ul class="space-y-3 text-sm text-gray-300 pt-4 border-t border-gray-800">
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Até 2 Profissionais</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Agendamentos ilimitados</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Controlo de stock básico</li>
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-bold text-pink-400 bg-pink-500/10 px-3 py-1 rounded-full">Mensal</span>
+                            <h4 class="text-2xl font-bold text-white mt-4">Plano Mensal</h4>
+                            <p class="text-gray-400 text-sm mt-2">Acesso completo sem fidelização.</p>
+                            <div class="my-6">
+                                <span class="text-4xl font-extrabold text-white">R$ 49,90</span><span class="text-gray-400 text-sm"> / mês</span>
+                            </div>
+                            <ul class="space-y-3 text-left text-sm text-gray-300 mb-8">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Multi-tenant por Estabelecimento</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Gestão de Agenda e Equipa</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Controlo de Stock em Tempo Real</li>
                             </ul>
                         </div>
-                        <button onclick="mostrarLoginModal()" class="mt-8 w-full bg-gray-800 hover:bg-gray-700 border border-gray-700 font-semibold py-3 rounded-xl transition-all text-sm">Começar Agora</button>
+                        <a href="https://mpago.la/1LunQwf" target="_blank" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl text-center shadow-lg transition-all">
+                            Subscricao Mensal
+                        </a>
                     </div>
 
-                    <!-- Plano Profissional (Destaque) -->
-                    <div class="bg-gradient-to-b from-gray-900 to-gray-800 border-2 border-pink-500 rounded-2xl p-8 flex flex-col justify-between shadow-2xl relative">
-                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-pink-600 to-purple-600 text-white text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider">Mais Popular</div>
-                        <div class="space-y-4">
-                            <h4 class="text-xl font-bold text-white">Profissional</h4>
-                            <p class="text-sm text-gray-300">Para salões em crescimento com equipa dinâmica.</p>
-                            <div class="text-3xl font-black text-white">R$ 99<span class="text-xs font-normal text-gray-300">/mês</span></div>
-                            <ul class="space-y-3 text-sm text-gray-200 pt-4 border-t border-gray-700">
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-400"></i> Profissionais ilimitados</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-400"></i> Gestão avançada de comissões</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-400"></i> Controlo completo de stock e vendas</li>
+                    <!-- Plano Anual -->
+                    <div class="bg-gray-900 border border-pink-500/50 rounded-2xl p-8 flex flex-col justify-between shadow-2xl relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-pink-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">Mais Popular</div>
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-bold text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">Anual</span>
+                            <h4 class="text-2xl font-bold text-white mt-4">Plano Anual</h4>
+                            <p class="text-gray-400 text-sm mt-2">Desconto especial para o ano inteiro.</p>
+                            <div class="my-6">
+                                <span class="text-4xl font-extrabold text-white">R$ 490,00</span><span class="text-gray-400 text-sm"> / ano</span>
+                            </div>
+                            <ul class="space-y-3 text-left text-sm text-gray-300 mb-8">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Todas as funcionalidades do Mensal</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Suporte prioritário dedicado</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> 2 meses grátis incluídos</li>
                             </ul>
                         </div>
-                        <button onclick="mostrarLoginModal()" class="mt-8 w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm">Assinar Plano</button>
-                    </div>
-
-                    <!-- Plano Enterprise -->
-                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col justify-between shadow-xl">
-                        <div class="space-y-4">
-                            <h4 class="text-xl font-bold text-gray-200">Enterprise</h4>
-                            <p class="text-sm text-gray-400">Para redes de salões e barbearias de grande porte.</p>
-                            <div class="text-3xl font-black text-white">R$ 199<span class="text-xs font-normal text-gray-400">/mês</span></div>
-                            <ul class="space-y-3 text-sm text-gray-300 pt-4 border-t border-gray-800">
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Múltiplas filiais</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Suporte prioritário 24/7</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Relatórios financeiros avançados</li>
-                            </ul>
-                        </div>
-                        <button onclick="mostrarLoginModal()" class="mt-8 w-full bg-gray-800 hover:bg-gray-700 border border-gray-700 font-semibold py-3 rounded-xl transition-all text-sm">Contactar Equipa</button>
+                        <a href="https://mpago.la/1doAutJ" target="_blank" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 rounded-xl text-center shadow-lg transition-all">
+                            Subscricao Anual
+                        </a>
                     </div>
                 </div>
             </div>
         </section>
     </div>
 
-    <!-- Modal de Login (Aparece ao clicar em Aceder) -->
-    <div id="login-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-gray-800 border border-gray-700 rounded-2xl p-8 shadow-2xl relative">
-            <button onclick="fecharLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            <div class="text-center mb-6">
-                <h3 class="text-2xl font-bold">HairConcept Login</h3>
-                <p class="text-xs text-gray-400 mt-1">Insira os dados do seu Estabelecimento e Profissional</p>
+    <!-- ========================================== -->
+    <!-- 2. ECRÃ DE LOGIN / AUTENTICAÇÃO            -->
+    <!-- ========================================== -->
+    <div id="login-screen" class="hidden flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <div class="max-w-md w-full bg-gray-800/90 backdrop-blur-md rounded-2xl p-8 shadow-2xl border border-gray-700">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">HairConcept</h1>
+                <p class="text-sm text-gray-400 mt-2">Aceda ao seu Estabelecimento</p>
             </div>
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Nome do Salão</label>
-                    <input type="text" id="login-salao-nome" required class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-pink-500" placeholder="Ex: Studio Bella">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Nome do Salão (Estabelecimento)</label>
+                    <input type="text" id="login-salao-nome" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-pink-500 transition-colors" placeholder="Ex: Studio Bella">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">CPF do Profissional</label>
-                    <input type="text" id="login-cpf" required class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-pink-500" placeholder="000.000.000-00">
+                    <input type="text" id="login-cpf" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-pink-500 transition-colors" placeholder="000.000.000-00">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Senha</label>
-                    <input type="password" id="login-senha" required class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-pink-500" placeholder="••••••••">
+                    <input type="password" id="login-senha" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-pink-500 transition-colors" placeholder="••••••••">
                 </div>
                 <div id="login-error" class="hidden text-sm text-red-400 text-center font-medium"></div>
-                <button type="submit" id="login-btn" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all">
+                <button type="submit" id="login-btn" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg shadow-lg transition-all duration-200">
                     Entrar no Sistema
                 </button>
             </form>
+            <div class="mt-6 text-center">
+                <button onclick="voltarLanding()" class="text-xs text-gray-400 hover:text-pink-400 transition-colors">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Voltar à Página Inicial
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Aplicação Principal / Dashboard Multi-Tenant -->
-    <div id="app-screen" class="hidden h-full flex-col">
-        <!-- Cabeçalho do Painel -->
-        <header class="bg-gray-800 border-b border-gray-700 px-6 py-3.5 flex items-center justify-between shadow-md">
+    <!-- ========================================== -->
+    <!-- 3. APLICAÇÃO PRINCIPAL (DASHBOARD)         -->
+    <!-- ========================================== -->
+    <div id="app-screen" class="hidden h-full flex flex-col">
+        <!-- Cabeçalho Responsivo -->
+        <header class="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between shadow-md">
             <div class="flex items-center space-x-3">
-                <div class="bg-pink-600 p-2 rounded-xl text-white shadow">
+                <div class="bg-pink-600 p-2 rounded-lg text-white shadow">
                     <i class="fa-solid fa-scissors"></i>
                 </div>
                 <div>
-                    <!-- Nome do Salão com Truncagem Adaptativa para Telemóveis -->
                     <h2 id="header-salao-nome" class="font-bold text-base md:text-lg truncate max-w-[150px] sm:max-w-xs" title="Estabelecimento">A carregar...</h2>
                     <span class="text-xs text-green-400 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Online</span>
                 </div>
             </div>
             <div class="flex items-center space-x-2 md:space-x-4">
                 <nav class="hidden md:flex space-x-1">
-                    <button onclick="switchTab('agenda')" class="px-3.5 py-2 rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors text-pink-400 tab-btn" data-tab="agenda">Agenda</button>
-                    <button onclick="switchTab('equipa')" class="px-3.5 py-2 rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors text-gray-300 tab-btn" data-tab="equipa">Equipa</button>
-                    <button onclick="switchTab('stock')" class="px-3.5 py-2 rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors text-gray-300 tab-btn" data-tab="stock">Stock</button>
+                    <button onclick="switchTab('agenda')" class="px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-pink-400 tab-btn" data-tab="agenda">Agenda</button>
+                    <button onclick="switchTab('equipa')" class="px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-gray-300 tab-btn" data-tab="equipa">Equipa</button>
+                    <button onclick="switchTab('stock')" class="px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-gray-300 tab-btn" data-tab="stock">Stock</button>
                 </nav>
-                <div id="user-info-badge" class="hidden sm:flex items-center text-xs bg-gray-700/60 px-3 py-1.5 rounded-xl border border-gray-600 text-gray-300">
+                <div id="user-info-badge" class="hidden sm:flex items-center text-xs bg-gray-700/60 px-3 py-1.5 rounded-lg border border-gray-600 text-gray-300">
                     <i class="fa-solid fa-user-tie mr-1.5 text-pink-400"></i><span id="header-prof-nome">Profissional</span>
                 </div>
-                <button onclick="logout()" class="bg-gray-700 hover:bg-red-600/20 hover:text-red-400 text-gray-300 p-2.5 rounded-xl transition-all" title="Terminar Sessão">
+                <button onclick="logout()" class="bg-gray-700 hover:bg-red-600/20 hover:text-red-400 text-gray-300 p-2.5 rounded-lg transition-all" title="Terminar Sessão">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </header>
 
         <!-- Navegação Inferior para Telemóveis -->
-        <div class="md:hidden bg-gray-800 border-t border-gray-700 flex justify-around py-2.5 px-4 fixed bottom-0 left-0 right-0 z-50">
+        <div class="md:hidden bg-gray-800 border-t border-gray-700 flex justify-around py-2 px-4 fixed bottom-0 left-0 right-0 z-50">
             <button onclick="switchTab('agenda')" class="flex flex-col items-center text-xs text-pink-400 tab-btn" data-tab="agenda"><i class="fa-solid fa-calendar-days text-lg mb-0.5"></i>Agenda</button>
             <button onclick="switchTab('equipa')" class="flex flex-col items-center text-xs text-gray-400 tab-btn" data-tab="equipa"><i class="fa-solid fa-users text-lg mb-0.5"></i>Equipa</button>
             <button onclick="switchTab('stock')" class="flex flex-col items-center text-xs text-gray-400 tab-btn" data-tab="stock"><i class="fa-solid fa-boxes-stacked text-lg mb-0.5"></i>Stock</button>
         </div>
 
-        <!-- Conteúdo Dinâmico das Abas do Painel -->
+        <!-- Conteúdo Dinâmico das Abas -->
         <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
             <!-- Aba Agenda -->
             <div id="tab-agenda" class="tab-content space-y-4">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xl font-bold">Agendamentos</h3>
-                    <button onclick="carregarAgenda()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-xl text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
+                    <button onclick="carregarAgenda()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-lg text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
                 </div>
                 <div id="lista-agendamentos" class="space-y-3">
-                    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center text-gray-400">A carregar agendamentos...</div>
+                    <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar agendamentos...</div>
                 </div>
             </div>
 
@@ -202,7 +195,7 @@
             <div id="tab-equipa" class="tab-content space-y-4 hidden">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xl font-bold">Equipa do Salão</h3>
-                    <button onclick="carregarEquipa()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-xl text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
+                    <button onclick="carregarEquipa()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-lg text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
                 </div>
                 <div id="lista-profissionais" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
@@ -211,25 +204,29 @@
             <div id="tab-stock" class="tab-content space-y-4 hidden">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xl font-bold">Gestão de Stock</h3>
-                    <button onclick="carregarStock()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-xl text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
+                    <button onclick="carregarStock()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-lg text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
                 </div>
                 <div id="lista-stock" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
         </main>
     </div>
 
-    <!-- Script de Gestão e Lógica -->
+    <!-- ========================================== -->
+    <!-- 4. SCRIPT DE SUPABASE E LÓGICA DE NAVEGAÇÃO -->
+    <!-- ========================================== -->
     <script>
         const SUPABASE_URL = 'SUA_SUPABASE_URL_AQUI';
         const SUPABASE_ANON_KEY = 'SUA_SUPABASE_ANON_KEY_AQUI';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        function mostrarLoginModal() {
-            document.getElementById('login-modal').classList.remove('hidden');
+        function mostrarLogin() {
+            document.getElementById('landing-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
         }
 
-        function fecharLoginModal() {
-            document.getElementById('login-modal').classList.add('hidden');
+        function voltarLanding() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('landing-screen').classList.remove('hidden');
         }
 
         function switchTab(tabName) {
@@ -270,7 +267,9 @@
                     .ilike('nome_salao', nomeSalaoInput)
                     .single();
 
-                if (estabError || !estabData) throw new Error('Estabelecimento não encontrado.');
+                if (estabError || !estabData) {
+                    throw new Error('Estabelecimento não encontrado.');
+                }
 
                 const { data: profData, error: profError } = await supabaseClient
                     .from('profissionais')
@@ -280,13 +279,16 @@
                     .eq('senha', senhaInput)
                     .single();
 
-                if (profError || !profData) throw new Error('CPF ou senha inválidos para este salão.');
+                if (profError || !profData) {
+                    throw new Error('CPF ou senha inválidos para este salão.');
+                }
 
                 localStorage.setItem('hairconcept_estab_id', estabData.id);
                 localStorage.setItem('hairconcept_estab_nome', estabData.nome_salao);
                 localStorage.setItem('hairconcept_prof_nome', profData.estabelecimento || 'Profissional');
 
                 iniciarApp();
+
             } catch (err) {
                 errorDiv.textContent = err.message || 'Erro ao efetuar login.';
                 errorDiv.classList.remove('hidden');
@@ -297,14 +299,15 @@
         });
 
         function iniciarApp() {
-            document.getElementById('login-modal').classList.add('hidden');
+            const nomeSalao = localStorage.getItem('hairconcept_estab_nome') || 'HairConcept';
+            const nomeProf = localStorage.getItem('hairconcept_prof_nome') || 'Colaborador';
+            
+            document.getElementById('header-salao-nome').textContent = nomeSalao;
+            document.getElementById('header-prof-nome').textContent = nomeProf;
+            
             document.getElementById('landing-screen').classList.add('hidden');
-            const appScreen = document.getElementById('app-screen');
-            appScreen.classList.remove('hidden');
-            appScreen.classList.add('flex');
-
-            document.getElementById('header-salao-nome').textContent = localStorage.getItem('hairconcept_estab_nome') || 'HairConcept';
-            document.getElementById('header-prof-nome').textContent = localStorage.getItem('hairconcept_prof_nome') || 'Colaborador';
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
 
             carregarAgenda();
         }
@@ -312,27 +315,36 @@
         function logout() {
             localStorage.clear();
             document.getElementById('app-screen').classList.add('hidden');
-            document.getElementById('app-screen').classList.remove('flex');
             document.getElementById('landing-screen').classList.remove('hidden');
         }
 
         async function carregarAgenda() {
+            const estabId = localStorage.getItem('hairconcept_estab_id');
             const container = document.getElementById('lista-agendamentos');
-            container.innerHTML = '<div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center text-gray-400">A carregar agendamentos...</div>';
-            
-            const { data, error } = await supabaseClient.from('agendamentos').select('*').order('data', { ascending: true });
-            if (error || !data || data.length === 0) {
-                container.innerHTML = '<div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center text-gray-400">Nenhum agendamento registado.</div>';
+            container.innerHTML = '<div class="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar agendamentos...</div>';
+
+            const { data, error } = await supabaseClient
+                .from('agendamentos')
+                .select('*')
+                .order('data', { ascending: true });
+
+            if (error) {
+                container.innerHTML = `<div class="bg-red-900/20 border border-red-700 rounded-xl p-4 text-center text-red-400">Erro: ${error.message}</div>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">Nenhum agendamento registado.</div>';
                 return;
             }
 
             container.innerHTML = data.map(item => `
-                <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 flex justify-between items-center shadow">
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex justify-between items-center shadow">
                     <div>
                         <h4 class="font-bold text-white"><i class="fa-solid fa-user mr-2 text-pink-400"></i>${item.cliente || 'Cliente'}</h4>
                         <p class="text-sm text-gray-400"><i class="fa-solid fa-scissors mr-1.5 text-gray-500"></i>${item.servico || 'Serviço'} • <i class="fa-solid fa-clock ml-2 mr-1 text-gray-500"></i>${item.horario || '--:--'} (${item.data || ''})</p>
                     </div>
-                    <span class="bg-pink-600/20 text-pink-400 border border-pink-500/30 text-xs px-3 py-1 rounded-xl font-medium">Agendado</span>
+                    <span class="bg-pink-600/20 text-pink-400 border border-pink-500/30 text-xs px-2.5 py-1 rounded-lg font-medium">Agendado</span>
                 </div>
             `).join('');
         }
@@ -340,22 +352,32 @@
         async function carregarEquipa() {
             const estabId = localStorage.getItem('hairconcept_estab_id');
             const container = document.getElementById('lista-profissionais');
-            container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center text-gray-400">A carregar equipa...</div>';
+            container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar equipa...</div>';
 
-            const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
-            if (error || !data || data.length === 0) {
-                container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center text-gray-400">Nenhum profissional encontrado.</div>';
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .select('*')
+                .eq('estabelecimento_id', estabId);
+
+            if (error) {
+                container.innerHTML = `<div class="col-span-full bg-red-900/20 border border-red-700 rounded-xl p-4 text-center text-red-400">Erro: ${error.message}</div>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">Nenhum profissional encontrado.</div>';
                 return;
             }
 
             container.innerHTML = data.map(prof => `
-                <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 flex items-center space-x-4 shadow">
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center space-x-4 shadow">
                     <div class="w-12 h-12 rounded-full bg-pink-600/20 border border-pink-500 flex items-center justify-center text-pink-400 font-bold text-lg">
                         ${(prof.estabelecimento || 'P').charAt(0).toUpperCase()}
                     </div>
                     <div>
                         <h4 class="font-bold text-white">${prof.estabelecimento || 'Profissional'}</h4>
                         <p class="text-xs text-gray-400">Cargo: ${prof.cargo || 'Cabeleireiro(a)'}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Comissão: ${prof.comissao_pct || 0}%</p>
                     </div>
                 </div>
             `).join('');
@@ -364,16 +386,25 @@
         async function carregarStock() {
             const estabId = localStorage.getItem('hairconcept_estab_id');
             const container = document.getElementById('lista-stock');
-            container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center text-gray-400">A carregar stock...</div>';
+            container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar stock...</div>';
 
-            const { data, error } = await supabaseClient.from('produtos').select('*').eq('estabelecimento_id', estabId);
-            if (error || !data || data.length === 0) {
-                container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center text-gray-400">Nenhum produto registado.</div>';
+            const { data, error } = await supabaseClient
+                .from('produtos')
+                .select('*')
+                .eq('estabelecimento_id', estabId);
+
+            if (error) {
+                container.innerHTML = `<div class="col-span-full bg-red-900/20 border border-red-700 rounded-xl p-4 text-center text-red-400">Erro: ${error.message}</div>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">Nenhum produto registado.</div>';
                 return;
             }
 
             container.innerHTML = data.map(prod => `
-                <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 flex flex-col justify-between shadow">
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col justify-between shadow">
                     <div>
                         <h4 class="font-bold text-white text-base">${prod.nome || 'Produto'}</h4>
                         <p class="text-xs text-gray-400 mt-1">Tipo: ${prod.tipo || 'Geral'}</p>
