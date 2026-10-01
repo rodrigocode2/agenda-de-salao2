@@ -496,3 +496,43 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// Calculadora pessoal em tempo real
+    calcularGanhosPessoal() {
+        const val = parseFloat(document.getElementById('prof-calc-val').value) || 0;
+        const porc = parseFloat(document.getElementById('prof-calc-porc').value) || 50;
+        const total = (val * porc) / 100;
+        const resEl = document.getElementById('prof-calc-result');
+        if (resEl) resEl.textContent = `R$ ${total.toFixed(2)}`;
+    },
+
+    // Enviar recado/notificação do profissional para o salão
+    async enviarRecadoProfissional() {
+        const texto = document.getElementById('prof-recado-texto').value.trim();
+        if (!texto) {
+            alert('Por favor, escreva uma mensagem antes de enviar.');
+            return;
+        }
+        
+        const profNome = localStorage.getItem('hairconcept_user_name') || 'Profissional';
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        try {
+            // Guarda o recado na base local ou tabela dedicada para o Admin consultar
+            const chaveStorage = `hairconcept_recados_${estabId}`;
+            const recados = JSON.parse(localStorage.getItem(chaveStorage) || '[]');
+            
+            recados.unshift({
+                remetente: profNome,
+                texto: texto,
+                data: new Date().toLocaleString('pt-BR'),
+                lido: false
+            });
+            
+            localStorage.setItem(chaveStorage, JSON.stringify(recados));
+            
+            alert('Recado enviado com sucesso para a administração do salão!');
+            document.getElementById('prof-recado-texto').value = '';
+        } catch (e) {
+            alert('Erro ao enviar o recado. Tente novamente.');
+        }
+    }
