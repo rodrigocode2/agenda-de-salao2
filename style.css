@@ -12,7 +12,6 @@ body {
     overflow-x: hidden;
 }
 
-/* Efeito Spotlight do Rato */
 .mouse-spotlight {
     pointer-events: none;
     position: fixed;
@@ -21,7 +20,6 @@ body {
     z-index: 9999;
 }
 
-/* Animação da Gota de Água ao Clicar */
 @keyframes waterDrop {
     0% {
         transform: translate(-50%, -50%) scale(0.2);
@@ -47,7 +45,6 @@ body {
     z-index: 10000;
 }
 
-/* Estilo Glassmorphism para os painéis */
 .glass-panel {
     background: rgba(18, 18, 24, 0.85);
     backdrop-filter: blur(16px);
