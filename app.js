@@ -1,3 +1,7 @@
+// ==========================================
+// HAIRCONCEPT - SCRIPT DE CONTROLE PRINCIPAL
+// ==========================================
+
 const SUPABASE_URL = 'https://wahtcnoszlatqtrfcfjxe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxhdHF0cmZjZmp4ZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjIwMjU2MDAwMDB9';
 
