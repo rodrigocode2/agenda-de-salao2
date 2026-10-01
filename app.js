@@ -1,37 +1,48 @@
-// Configuração oficial do Supabase
-const SUPABASE_URL = 'https://wahtcnoszlatqtrfcfjxe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxhdHF0cmZjZmp4ZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjIwMjU2MDAwMDB9';
-const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+// Configuração oficial do Firebase (substitui com os teus dados da consola Firebase)
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_AUTH_DOMAIN",
+    projectId: "hairconcept-beta",
+    storageBucket: "SEU_STORAGE_BUCKET",
+    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+    appId: "SEU_APP_ID"
+};
+
+// Inicializar Firebase
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+const auth = firebase.auth();
 
 const Auth = {
     logout() {
         localStorage.removeItem('hairconcept_estab_id');
         localStorage.removeItem('hairconcept_prof_id');
-        if (supabaseClient && supabaseClient.auth) {
-            supabaseClient.auth.signOut();
-        }
-        location.reload();
+        auth.signOut().then(() => {
+            location.reload();
+        });
     },
-    loginSocial(provider) {
+    loginSocial(providerName) {
         UI.showToast('A redirecionar para autenticação...');
-        if (supabaseClient && supabaseClient.auth) {
-            supabaseClient.auth.signInWithOAuth({ provider: provider });
-        }
+        let provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch((error) => {
+            UI.showToast('Erro no login social: ' + error.message, 'error');
+        });
     },
     loginAdmin(event) {
         event.preventDefault();
         const email = document.getElementById('login-admin-email').value.trim();
         const password = document.getElementById('login-admin-senha').value.trim();
-        if (supabaseClient) {
-            supabaseClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
-                if (error) {
-                    UI.showToast('Erro ao entrar: ' + error.message, 'error');
-                } else {
-                    App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
-                    App.finishLogin('Bem-vindo ao Painel!');
-                }
+        
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
+                App.finishLogin('Bem-vindo ao Painel!');
+            })
+            .catch((error) => {
+                UI.showToast('Erro ao entrar: ' + error.message, 'error');
             });
-        }
     }
 };
 
@@ -40,7 +51,7 @@ const App = {
     fotoBase64Temp: '',
 
     init() {
-        console.log("HairConcept inicializado.");
+        console.log("HairConcept inicializado com Firebase.");
         const dataInput = document.getElementById('filtro-data-agenda');
         if (dataInput && !dataInput.value) {
             dataInput.value = new Date().toISOString().split('T')[0];
@@ -81,21 +92,18 @@ const App = {
 
     async verificarOuCriarEstabelecimento() {
         try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session || !session.user) return;
-            const userId = session.user.id;
+            const user = auth.currentUser;
+            if (!user) return;
+            const userId = user.uid;
             
-            const { data: estab, error } = await supabaseClient
-                .from('estabelecimentos')
-                .select('*')
-                .eq('user_id', userId)
-                .single();
-
+            const snapshot = await db.collection('estabelecimentos').where('user_id', '==', userId).get();
             const headerSub = document.getElementById('saloon-name-header');
 
-            if (error || !estab) {
+            if (snapshot.empty) {
                 document.getElementById('modal-setup-salao')?.classList.remove('hidden');
             } else {
+                const estabDoc = snapshot.docs[0];
+                const estab = { id: estabDoc.id, ...estabDoc.data() };
                 localStorage.setItem('hairconcept_estab_id', estab.id);
                 if (headerSub) headerSub.textContent = estab.nome_salao;
                 this.init();
@@ -111,19 +119,17 @@ const App = {
         const telefone = document.getElementById('setup-telefone-salao').value;
         
         try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session || !session.user) return;
-            const userId = session.user.id;
+            const user = auth.currentUser;
+            if (!user) return;
+            const userId = user.uid;
 
-            const { data, error } = await supabaseClient.from('estabelecimentos').insert([{
+            const docRef = await db.collection('estabelecimentos').add({
                 user_id: userId,
                 nome_salao: nomeSalao,
                 telefone: telefone
-            }]).select().single();
+            });
 
-            if (error) throw error;
-
-            localStorage.setItem('hairconcept_estab_id', data.id);
+            localStorage.setItem('hairconcept_estab_id', docRef.id);
             UI.showToast('Salão configurado com sucesso!');
             document.getElementById('modal-setup-salao')?.classList.add('hidden');
             
@@ -143,18 +149,19 @@ const App = {
         const senha = document.getElementById('login-prof-senha').value.trim();
 
         try {
-            const { data, error } = await supabaseClient
-                .from('profissionais')
-                .select('*')
-                .ilike('estabelecimento', nomeEstabelecimento)
-                .eq('cpf', cpf)
-                .eq('senha', senha)
-                .single();
+            const snapshot = await db.collection('profissionais')
+                .where('estabelecimento', '==', nomeEstabelecimento)
+                .where('cpf', '==', cpf)
+                .where('senha', '==', senha)
+                .get();
 
-            if (error || !data) {
+            if (snapshot.empty) {
                 UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
                 return;
             }
+
+            const doc = snapshot.docs[0];
+            const data = { id: doc.id, ...doc.data() };
 
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
@@ -185,12 +192,11 @@ const App = {
         const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
 
         try {
-            const { count, error: countError } = await supabaseClient
-                .from('profissionais')
-                .select('*', { count: 'exact', head: true })
-                .eq('estabelecimento_id', estabelecimentoId);
+            const snapshot = await db.collection('profissionais')
+                .where('estabelecimento_id', '==', estabelecimentoId)
+                .get();
 
-            if (countError) throw countError;
+            const count = snapshot.size;
 
             if (planoAtual === 'gratis' && count >= 2) {
                 UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais.', 'error');
@@ -203,7 +209,7 @@ const App = {
             const senha = document.getElementById('prof-senha').value;
             const foto_url = this.fotoBase64Temp;
 
-            const { error } = await supabaseClient.from('profissionais').insert([{
+            await db.collection('profissionais').add({
                 estabelecimento_id: estabelecimentoId,
                 estabelecimento: nomeEstabelecimentoHeader,
                 nome,
@@ -211,9 +217,7 @@ const App = {
                 cpf,
                 senha,
                 foto_url
-            }]);
-
-            if (error) throw error;
+            });
 
             UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
@@ -237,13 +241,7 @@ const App = {
             if (!profId) return;
 
             try {
-                const { error } = await supabaseClient
-                    .from('profissionais')
-                    .update({ foto_url: base64 })
-                    .eq('id', profId);
-
-                if (error) throw error;
-
+                await db.collection('profissionais').doc(profId).update({ foto_url: base64 });
                 document.getElementById('prof-header-foto').src = base64;
                 UI.showToast('Foto de perfil atualizada com sucesso!');
                 this.renderListaProfissionais();
@@ -259,7 +257,8 @@ const App = {
         if (!select) return;
         const estabId = localStorage.getItem('hairconcept_estab_id');
         try {
-            const { data } = await supabaseClient.from('profissionais').select('id, nome').eq('estabelecimento_id', estabId);
+            const snapshot = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (data) {
                 select.innerHTML = data.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
             }
@@ -279,7 +278,7 @@ const App = {
         const valor = parseFloat(document.getElementById('cliente-valor').value) || 0;
 
         try {
-            const { error } = await supabaseClient.from('agendamentos').insert([{
+            await db.collection('agendamentos').add({
                 estabelecimento_id: estabId,
                 data,
                 profissional_id,
@@ -287,9 +286,7 @@ const App = {
                 cliente,
                 servico,
                 valor
-            }]);
-
-            if (error) throw error;
+            });
 
             UI.showToast('Agendamento efetuado com sucesso!');
             event.target.reset();
@@ -309,8 +306,14 @@ const App = {
         const dataFiltro = document.getElementById('filtro-data-agenda').value;
 
         try {
-            const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
-            const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
+            const profsSnap = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
+            const profs = profsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            const agendamentosSnap = await db.collection('agendamentos')
+                .where('estabelecimento_id', '==', estabId)
+                .where('data', '==', dataFiltro)
+                .get();
+            const agendamentos = agendamentosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
             if (!profs || profs.length === 0) {
                 headerRow.innerHTML = `<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>`;
@@ -385,16 +388,14 @@ const App = {
         const data_validade = document.getElementById('prod-validade').value;
 
         try {
-            const { error } = await supabaseClient.from('produtos').insert([{
+            await db.collection('produtos').add({
                 estabelecimento_id: estabId,
                 nome,
                 tipo,
                 preco_venda,
                 stock,
                 data_validade
-            }]);
-
-            if (error) throw error;
+            });
 
             UI.showToast('Produto cadastrado com sucesso!');
             event.target.reset();
@@ -411,8 +412,8 @@ const App = {
         if (!lista) return;
 
         try {
-            const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
-            if (error) throw error;
+            const snapshot = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
             if (badge) badge.textContent = `${data.length} Integrantes Ativos`;
 
@@ -440,8 +441,8 @@ const App = {
         if (!lista) return;
 
         try {
-            const { data, error } = await supabaseClient.from('produtos').select('*').eq('estabelecimento_id', estabId);
-            if (error) throw error;
+            const snapshot = await db.collection('produtos').where('estabelecimento_id', '==', estabId).get();
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
             const hoje = new Date();
             const daqui3Meses = new Date();
@@ -535,12 +536,6 @@ const App = {
         ];
         const aleatoria = frases[Math.floor(Math.random() * frases.length)];
         document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
-    },
-
-    setPlan(plano) {
-        localStorage.setItem('hairconcept_plan', plano);
-        UI.showToast(`Plano ${plano.toUpperCase()} selecionado com sucesso!`);
-        UI.switchTab('aba-agenda');
     }
 };
 
@@ -555,18 +550,11 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('mousemove', (e) => {
-        document.documentElement.style.setProperty('--x', `${e.clientX}px`);
-        document.documentElement.style.setProperty('--y', `${e.clientY}px`);
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            const name = user.displayName || user.email.split('@')[0];
+            App.user = { loggedIn: true, role: 'admin', name: name };
+            App.finishLogin(`Bem-vindo, ${name}!`);
+        }
     });
-
-    if (supabaseClient && supabaseClient.auth) {
-        supabaseClient.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                App.user = { loggedIn: true, role: 'admin', name: name };
-                App.finishLogin(`Bem-vindo, ${name}!`);
-            }
-        });
-    }
 });
