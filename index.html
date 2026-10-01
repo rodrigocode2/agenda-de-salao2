@@ -1,577 +1,346 @@
-// Configuração oficial do Firebase (substitui os dados do Supabase)
-const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_AUTH_DOMAIN",
-    projectId: "hairconcept-beta",
-    storageBucket: "SEU_STORAGE_BUCKET",
-    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-    appId: "SEU_APP_ID"
-};
-
-// Inicializar Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-const Auth = {
-    logout() {
-        localStorage.removeItem('hairconcept_estab_id');
-        localStorage.removeItem('hairconcept_prof_id');
-        auth.signOut().then(() => {
-            location.reload();
-        });
-    },
-    loginSocial(providerName) {
-        UI.showToast('A redirecionar para autenticação...');
-        let provider;
-        if (providerName === 'google') {
-            provider = new firebase.auth.GoogleAuthProvider();
-        } else {
-            provider = new firebase.auth.GoogleAuthProvider();
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HairConcept - Gestão de Salões</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        }
+                    }
+                }
+            }
         }
-        auth.signInWithPopup(provider).catch((error) => {
-            UI.showToast('Erro no login social: ' + error.message, 'error');
-        });
-    },
-    loginAdmin(event) {
-        event.preventDefault();
-        const email = document.getElementById('login-admin-email').value.trim();
-        const password = document.getElementById('login-admin-senha').value.trim();
+    </script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col font-sans">
+
+    <!-- CABEÇALHO PRINCIPAL (Oculto no Login) -->
+    <header id="main-header" class="hidden border-b border-white/10 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-400 font-bold text-lg">
+                HC
+            </div>
+            <div>
+                <h1 class="font-bold text-sm tracking-wide text-white">HairConcept</h1>
+                <p id="saloon-name-header" class="text-xs text-zinc-400">A carregar salão...</p>
+            </div>
+        </div>
         
-        auth.signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
-                App.finishLogin('Bem-vindo ao Painel!');
-            })
-            .catch((error) => {
-                UI.showToast('Erro ao entrar: ' + error.message, 'error');
-            });
-    }
-};
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <span id="user-name-display" class="block text-xs font-bold text-white">Utilizador</span>
+                <span id="user-role-display" class="text-[10px] text-brand-400 uppercase tracking-widest">Cargo</span>
+            </div>
+            <button onclick="Auth.logout()" class="p-2 rounded-xl bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition" title="Terminar Sessão">
+                <i class="fa-solid fa-power-off text-sm"></i>
+            </button>
+        </div>
+    </header>
 
-const App = {
-    user: { loggedIn: false, role: '', name: '', id: null },
-    fotoBase64Temp: '',
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6">
 
-    init() {
-        console.log("HairConcept inicializado com Firebase.");
-        const dataInput = document.getElementById('filtro-data-agenda');
-        if (dataInput && !dataInput.value) {
-            dataInput.value = new Date().toISOString().split('T')[0];
-        }
-        
-        this.renderListaProfissionais();
-        this.renderProdutos();
-        this.renderAgendaGrid();
-        this.carregarPostIts();
-        this.popularSelectProfissionais();
+        <!-- 1. TELA DE LOGIN -->
+        <section id="aba-login" class="max-w-md mx-auto mt-12 p-8 rounded-3xl bg-zinc-900 border border-white/10 shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="w-12 h-12 rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-400 font-bold text-xl mx-auto mb-3">
+                    HC
+                </div>
+                <h2 class="text-xl font-bold text-white">Bem-vindo ao HairConcept</h2>
+                <p class="text-xs text-zinc-400 mt-1">Faça login para gerir o seu espaço</p>
+            </div>
 
-        if (this.user.role === 'profissional') {
-            document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
-        } else {
-            document.getElementById('painel-profissional-extra')?.classList.add('hidden');
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-        }
-    },
+            <!-- Login Admin / Dono -->
+            <form onsubmit="Auth.loginAdmin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">E-mail Administrativo</label>
+                    <input type="email" id="login-admin-email" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="admin@hairconcept.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">Palavra-passe</label>
+                    <input type="password" id="login-admin-senha" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition shadow-lg shadow-brand-500/20">
+                    Entrar como Administrador
+                </button>
+            </form>
 
-    async finishLogin(msg) {
-        if (msg) UI.showToast(msg);
-        document.getElementById('aba-login')?.classList.add('hidden');
-        document.getElementById('main-header')?.classList.remove('hidden');
-        UI.switchTab('aba-agenda');
-        
-        const nameDisplay = document.getElementById('user-name-display');
-        const roleDisplay = document.getElementById('user-role-display');
-        if (nameDisplay) nameDisplay.textContent = this.user.name;
-        if (roleDisplay) roleDisplay.textContent = this.user.role.toUpperCase();
+            <div class="relative my-6 text-center">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
+                <span class="relative px-3 bg-zinc-900 text-[10px] text-zinc-500 uppercase tracking-wider">ou acesso profissional</span>
+            </div>
 
-        if (this.user.role === 'admin') {
-            await this.verificarOuCriarEstabelecimento();
-        } else {
-            this.init();
-        }
-    },
+            <!-- Login Profissional -->
+            <form onsubmit="App.loginProfissional(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">Nome do Estabelecimento</label>
+                    <input type="text" id="login-prof-estabelecimento" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="Ex: Salão Elegance">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">CPF / Identificação</label>
+                    <input type="text" id="login-prof-id" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="000.000.000-00">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">Senha de Acesso</label>
+                    <input type="password" id="login-prof-senha" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition">
+                    Entrar como Profissional
+                </button>
+            </form>
 
-    async verificarOuCriarEstabelecimento() {
-        try {
-            const user = auth.currentUser;
-            if (!user) return;
-            const userId = user.uid;
-            
-            const snapshot = await db.collection('estabelecimentos').where('user_id', '==', userId).get();
-            const headerSub = document.getElementById('saloon-name-header');
+            <div class="mt-6 text-center">
+                <button onclick="Auth.loginSocial('google')" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-medium flex items-center justify-center gap-2 transition">
+                    <i class="fa-brands fa-google text-brand-400"></i> Entrar com Google
+                </button>
+            </div>
+        </section>
 
-            if (snapshot.empty) {
-                document.getElementById('modal-setup-salao')?.classList.remove('hidden');
-            } else {
-                const estabDoc = snapshot.docs[0];
-                const estab = { id: estabDoc.id, ...estabDoc.data() };
-                localStorage.setItem('hairconcept_estab_id', estab.id);
-                if (headerSub) headerSub.textContent = estab.nome_salao;
-                this.init();
-            }
-        } catch (e) {
-            this.init();
-        }
-    },
+        <!-- MENU DE NAVEGAÇÃO INTERNA (Aparece após o login) -->
+        <nav class="flex gap-2 mb-6 border-b border-white/10 pb-4 overflow-x-auto">
+            <button onclick="UI.switchTab('aba-agenda')" class="px-4 py-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-400 font-bold text-xs hover:bg-brand-500/20 transition">Agenda</button>
+            <button onclick="UI.switchTab('aba-equipe')" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 font-bold text-xs hover:text-white transition admin-only">Equipe</button>
+            <button onclick="UI.switchTab('aba-produtos')" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 font-bold text-xs hover:text-white transition">Produtos & Stock</button>
+            <button onclick="UI.switchTab('aba-perfil')" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 font-bold text-xs hover:text-white transition">Painel Pessoal</button>
+        </nav>
 
-    async handleSalvarSetupSalao(event) {
-        event.preventDefault();
-        const nomeSalao = document.getElementById('setup-nome-salao').value;
-        const telefone = document.getElementById('setup-telefone-salao').value;
-        
-        try {
-            const user = auth.currentUser;
-            if (!user) return;
-            const userId = user.uid;
+        <!-- 2. ABA AGENDA -->
+        <section id="aba-agenda" class="tab-content hidden space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-zinc-900 p-4 rounded-2xl border border-white/10">
+                <div class="flex items-center gap-3">
+                    <label class="text-xs text-zinc-400 font-medium">Data:</label>
+                    <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <!-- Formulário rápido de novo agendamento -->
+                <form onsubmit="App.handleCreateAgendamento(event)" class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <select id="agendamento-profissional" required class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                        <option value="">Selecione Profissional</option>
+                    </select>
+                    <input type="time" id="agendamento-horario" required class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none">
+                    <input type="text" id="cliente-nome" placeholder="Nome do Cliente" required class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white">
+                    <input type="text" id="cliente-servico" placeholder="Serviço" required class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white">
+                    <input type="number" step="0.01" id="cliente-valor" placeholder="Valor (R$)" required class="w-24 bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white">
+                    <button type="submit" class="px-4 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition">Agendar</button>
+                </form>
+            </div>
 
-            const docRef = await db.collection('estabelecimentos').add({
-                user_id: userId,
-                nome_salao: nomeSalao,
-                telefone: telefone
-            });
+            <!-- GRELHA DA AGENDA -->
+            <div class="bg-zinc-900 rounded-2xl border border-white/10 overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr id="grid-header-row" class="border-b border-white/10 text-zinc-400">
+                            <th class="py-3 px-4 w-24">Horário</th>
+                            <th class="py-3 px-4">A carregar profissionais...</th>
+                        </tr>
+                    </thead>
+                    <tbody id="grid-horarios-body">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-            localStorage.setItem('hairconcept_estab_id', docRef.id);
-            UI.showToast('Salão configurado com sucesso!');
-            document.getElementById('modal-setup-salao')?.classList.add('hidden');
-            
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = nomeSalao;
-            
-            this.init();
-        } catch (e) {
-            UI.showToast('Erro ao salvar estabelecimento: ' + e.message, 'error');
-        }
-    },
-
-    async loginProfissional(event) {
-        event.preventDefault();
-        const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
-        const cpf = document.getElementById('login-prof-id').value.trim();
-        const senha = document.getElementById('login-prof-senha').value.trim();
-
-        try {
-            const snapshot = await db.collection('profissionais')
-                .where('estabelecimento', '==', nomeEstabelecimento)
-                .where('cpf', '==', cpf)
-                .where('senha', '==', senha)
-                .get();
-
-            if (snapshot.empty) {
-                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
-                return;
-            }
-
-            const doc = snapshot.docs[0];
-            const data = { id: doc.id, ...doc.data() };
-
-            if (data.estabelecimento_id) {
-                localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
-            }
-            localStorage.setItem('hairconcept_prof_id', data.id);
-            
-            this.user = { loggedIn: true, role: 'profissional', name: data.nome, id: data.id };
-            
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = data.estabelecimento || nomeEstabelecimento;
-
-            document.getElementById('prof-header-nome').textContent = data.nome;
-            document.getElementById('prof-header-cargo').textContent = data.cargo;
-            if (data.foto_url) {
-                document.getElementById('prof-header-foto').src = data.foto_url;
-            }
-
-            this.finishLogin(`Bem-vindo, ${data.nome}!`);
-        } catch (e) {
-            UI.showToast('Erro ao validar login do profissional.', 'error');
-        }
-    },
-
-    async handleCreateProfissional(e) {
-        e.preventDefault();
-        const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
-        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
-        const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
-
-        try {
-            const snapshot = await db.collection('profissionais')
-                .where('estabelecimento_id', '==', estabelecimentoId)
-                .get();
-
-            const count = snapshot.size;
-
-            if (planoAtual === 'gratis' && count >= 2) {
-                UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais.', 'error');
-                return;
-            }
-
-            const nome = document.getElementById('prof-nome').value;
-            const cargo = document.getElementById('prof-cargo').value;
-            const cpf = document.getElementById('prof-cpf').value;
-            const senha = document.getElementById('prof-senha').value;
-            const foto_url = this.fotoBase64Temp;
-
-            await db.collection('profissionais').add({
-                estabelecimento_id: estabelecimentoId,
-                estabelecimento: nomeEstabelecimentoHeader,
-                nome,
-                cargo,
-                cpf,
-                senha,
-                foto_url
-            });
-
-            UI.showToast('Profissional cadastrado com sucesso!');
-            e.target.reset();
-            this.fotoBase64Temp = '';
-            document.getElementById('preview-foto-prof').classList.add('hidden');
-            document.getElementById('icon-foto-prof').classList.remove('hidden');
-            this.renderListaProfissionais();
-            this.popularSelectProfissionais();
-        } catch (err) {
-            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');
-        }
-    },
-
-    async handleAtualizarMinhaFoto(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = e.target.result;
-            const profId = localStorage.getItem('hairconcept_prof_id');
-            if (!profId) return;
-
-            try {
-                await db.collection('profissionais').doc(profId).update({ foto_url: base64 });
-
-                document.getElementById('prof-header-foto').src = base64;
-                UI.showToast('Foto de perfil atualizada com sucesso!');
-                this.renderListaProfissionais();
-            } catch (err) {
-                UI.showToast('Erro ao atualizar foto: ' + err.message, 'error');
-            }
-        };
-        reader.readAsDataURL(file);
-    },
-
-    async popularSelectProfissionais() {
-        const select = document.getElementById('agendamento-profissional');
-        if (!select) return;
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        try {
-            const snapshot = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (data) {
-                select.innerHTML = data.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    },
-
-    async handleCreateAgendamento(event) {
-        event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const data = document.getElementById('agendamento-data').value;
-        const profissional_id = document.getElementById('agendamento-profissional').value;
-        const horario = document.getElementById('agendamento-horario').value;
-        const cliente = document.getElementById('cliente-nome').value;
-        const servico = document.getElementById('cliente-servico').value;
-        const valor = parseFloat(document.getElementById('cliente-valor').value) || 0;
-
-        try {
-            await db.collection('agendamentos').add({
-                estabelecimento_id: estabId,
-                data,
-                profissional_id,
-                horario,
-                cliente,
-                servico,
-                valor
-            });
-
-            UI.showToast('Agendamento efetuado com sucesso!');
-            event.target.reset();
-            UI.switchTab('aba-agenda');
-            this.renderAgendaGrid();
-        } catch (e) {
-            UI.showToast('Erro ao agendar: ' + e.message, 'error');
-        }
-    },
-
-    async renderAgendaGrid() {
-        const tbody = document.getElementById('grid-horarios-body');
-        const headerRow = document.getElementById('grid-header-row');
-        if (!tbody || !headerRow) return;
-
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const dataFiltro = document.getElementById('filtro-data-agenda').value;
-
-        try {
-            const profsSnap = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
-            const profs = profsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            const agendamentosSnap = await db.collection('agendamentos')
-                .where('estabelecimento_id', '==', estabId)
-                .where('data', '==', dataFiltro)
-                .get();
-            const agendamentos = agendamentosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            if (!profs || profs.length === 0) {
-                headerRow.innerHTML = `<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>`;
-                tbody.innerHTML = `<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipe para ver a agenda.</td></tr>`;
-                return;
-            }
-
-            let profsExibicao = profs;
-            if (this.user.role === 'profissional') {
-                profsExibicao = profs.filter(p => p.id == this.user.id);
-            }
-
-            headerRow.innerHTML = `<th class="py-3 px-4 w-24">Horário</th>` + profsExibicao.map(p => `
-                <th class="py-3 px-4">
-                    <div class="flex items-center gap-2">
-                        <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-7 h-7 rounded-lg object-cover">
-                        <div>
-                            <span class="block text-white font-bold">${p.nome}</span>
-                            <span class="text-[9px] text-zinc-400">${p.cargo}</span>
+        <!-- 3. ABA EQUIPE (Admin Only) -->
+        <section id="aba-equipe" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-zinc-900 p-6 rounded-2xl border border-white/10 space-y-4">
+                <h3 class="font-bold text-sm text-white">Adicionar Profissional</h3>
+                <form onsubmit="App.handleCreateProfissional(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Nome Completo</label>
+                        <input type="text" id="prof-nome" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Cargo / Especialidade</label>
+                        <input type="text" id="prof-cargo" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" placeholder="Ex: Barbeiro / Estilista">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">CPF</label>
+                        <input type="text" id="prof-cpf" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Senha de Acesso</label>
+                        <input type="password" id="prof-senha" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Foto de Perfil</label>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-white font-medium transition">
+                                Carregar Imagem
+                                <input type="file" accept="image/*" onchange="App.handleFotoUpload(event)" class="hidden">
+                            </label>
+                            <span id="icon-foto-prof" class="text-zinc-500 text-xs">Nenhuma escolhida</span>
+                            <img id="preview-foto-prof" class="w-8 h-8 rounded-lg object-cover hidden">
                         </div>
                     </div>
-                </th>
-            `).join('');
+                    <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition">Registar Profissional</button>
+                </form>
+            </div>
 
-            const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
-            let atendimentoCount = 0;
-            let totalGanhos = 0;
+            <div class="md:col-span-2 bg-zinc-900 p-6 rounded-2xl border border-white/10 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-white">Equipa Registada</h3>
+                    <span id="limite-profissionais-badge" class="text-[10px] bg-brand-500/20 text-brand-400 px-2.5 py-1 rounded-full font-bold">A carregar...</span>
+                </div>
+                <div id="lista-profissionais" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+        </section>
 
-            tbody.innerHTML = horarios.map(h => {
-                return `<tr class="border-b border-white/5">
-                    <td class="py-3 px-4 text-brand-500 font-bold">${h}</td>
-                    ` + profsExibicao.map(p => {
-                        const ag = (agendamentos || []).find(a => a.profissional_id == p.id && a.horario === h);
-                        if (ag && this.user.role === 'profissional') {
-                            atendimentoCount++;
-                            totalGanhos += (ag.valor * 0.5);
-                        }
-                        return `
-                            <td class="py-3 px-4">
-                                ${ag ? `
-                                    <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px]">
-                                        <strong class="text-white block">${ag.cliente}</strong>
-                                        <span class="text-zinc-300">${ag.servico}</span>
-                                        <span class="text-brand-400 block font-bold mt-0.5">R$ ${ag.valor.toFixed(2)}</span>
-                                    </div>
-                                ` : `
-                                    <span class="text-zinc-600 text-[11px]">Disponível</span>
-                                `}
-                            </td>
-                        `;
-                    }).join('') + `
-                </tr>`;
-            }).join('');
+        <!-- 4. ABA PRODUTOS -->
+        <section id="aba-produtos" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-zinc-900 p-6 rounded-2xl border border-white/10 space-y-4 admin-only">
+                <h3 class="font-bold text-sm text-white">Registar Produto</h3>
+                <form onsubmit="App.handleCreateProduto(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Nome do Produto</label>
+                        <input type="text" id="prod-nome" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Tipo / Categoria</label>
+                        <input type="text" id="prod-tipo" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" placeholder="Ex: Coloração / Champô">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Preço de Venda (R$)</label>
+                        <input type="number" step="0.01" id="prod-preco" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Quantidade em Stock</label>
+                        <input type="number" id="prod-stock" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Data de Validade</label>
+                        <input type="date" id="prod-validade" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition">Salvar Produto</button>
+                </form>
+            </div>
 
-            if (this.user.role === 'profissional') {
-                document.getElementById('prof-stat-atendimentos').textContent = atendimentoCount;
-                document.getElementById('prof-stat-comissao').textContent = `R$ ${totalGanhos.toFixed(2)}`;
-            }
+            <div class="md:col-span-2 bg-zinc-900 p-6 rounded-2xl border border-white/10 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-white">Gestão de Stock</h3>
+                    <span id="alerta-validade-badge" class="text-[10px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full font-bold">Verificando...</span>
+                </div>
+                <div id="lista-produtos" class="space-y-3">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+        </section>
 
-        } catch (e) {
-            console.error(e);
-        }
-    },
+        <!-- 5. ABA PERFIL / PAINEL PESSOAL (Profissional) -->
+        <section id="aba-perfil" class="tab-content hidden space-y-6">
+            <div id="painel-profissional-extra" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Informações do Profissional Logado -->
+                <div class="bg-zinc-900 p-6 rounded-2xl border border-white/10 flex flex-col items-center text-center space-y-3">
+                    <img id="prof-header-foto" src="https://via.placeholder.com/150" class="w-20 h-20 rounded-2xl object-cover border border-white/10">
+                    <div>
+                        <h3 id="prof-header-nome" class="font-bold text-sm text-white">Nome</h3>
+                        <p id="prof-header-cargo" class="text-xs text-brand-400">Cargo</p>
+                    </div>
+                    <label class="w-full py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-white font-medium cursor-pointer transition">
+                        Atualizar Foto
+                        <input type="file" accept="image/*" onchange="App.handleAtualizarMinhaFoto(event)" class="hidden">
+                    </label>
+                </div>
 
-    async handleCreateProduto(event) {
-        event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const nome = document.getElementById('prod-nome').value;
-        const tipo = document.getElementById('prod-tipo').value;
-        const preco_venda = parseFloat(document.getElementById('prod-preco').value) || 0;
-        const stock = parseInt(document.getElementById('prod-stock').value) || 0;
-        const data_validade = document.getElementById('prod-validade').value;
-
-        try {
-            await db.collection('produtos').add({
-                estabelecimento_id: estabId,
-                nome,
-                tipo,
-                preco_venda,
-                stock,
-                data_validade
-            });
-
-            UI.showToast('Produto cadastrado com sucesso!');
-            event.target.reset();
-            this.renderProdutos();
-        } catch (e) {
-            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');
-        }
-    },
-
-    async renderListaProfissionais() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const lista = document.getElementById('lista-profissionais');
-        const badge = document.getElementById('limite-profissionais-badge');
-        if (!lista) return;
-
-        try {
-            const snapshot = await db.collection('profissionais').where('estabelecimento_id', '==', estabId).get();
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            if (badge) badge.textContent = `${data.length} Integrantes Ativos`;
-
-            lista.innerHTML = data.map(p => `
-                <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-xl object-cover">
-                        <div>
-                            <h4 class="text-xs font-bold text-white">${p.nome}</h4>
-                            <p class="text-[10px] text-brand-500">${p.cargo}</p>
-                            <p class="text-[9px] text-zinc-500">CPF: ${p.cpf}</p>
+                <!-- Estatísticas do Profissional -->
+                <div class="bg-zinc-900 p-6 rounded-2xl border border-white/10 space-y-4">
+                    <h3 class="font-bold text-sm text-white">Resumo do Dia</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 rounded-xl bg-zinc-950 border border-white/5">
+                            <span class="block text-[10px] text-zinc-500 uppercase">Atendimentos</span>
+                            <span id="prof-stat-atendimentos" class="text-lg font-bold text-white">0</span>
+                        </div>
+                        <div class="p-4 rounded-xl bg-zinc-950 border border-white/5">
+                            <span class="block text-[10px] text-zinc-500 uppercase">Comissão Estimada</span>
+                            <span id="prof-stat-comissao" class="text-lg font-bold text-brand-400">R$ 0.00</span>
                         </div>
                     </div>
                 </div>
-            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional registado.</p>';
-        } catch (e) {
-            console.error(e);
-        }
-    },
 
-    async renderProdutos() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const lista = document.getElementById('lista-produtos');
-        const alertaBadge = document.getElementById('alerta-validade-badge');
-        if (!lista) return;
-
-        try {
-            const snapshot = await db.collection('produtos').where('estabelecimento_id', '==', estabId).get();
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            const hoje = new Date();
-            const daqui3Meses = new Date();
-            daqui3Meses.setMonth(hoje.getMonth() + 3);
-
-            let alertaCount = 0;
-
-            lista.innerHTML = data.map(prod => {
-                const dataVal = new Date(prod.data_validade);
-                const pertoVencer = dataVal <= daqui3Meses && dataVal >= hoje;
-                if (pertoVencer) alertaCount++;
-
-                return `
-                    <div class="p-3.5 rounded-2xl bg-zinc-950 border ${pertoVencer ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10'} flex justify-between items-center">
-                        <div>
-                            <h4 class="text-xs font-bold text-white">${prod.nome} ${pertoVencer ? '<span class="text-[9px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full ml-2">Validade Próxima (&lt; 3 meses)</span>' : ''}</h4>
-                            <p class="text-[10px] text-zinc-400">Stock: ${prod.stock} | Validade: ${prod.data_validade} | Tipo: ${prod.tipo}</p>
-                        </div>
-                        <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda.toFixed(2)}</span>
+                <!-- Calculadora de Ganhos -->
+                <div class="bg-zinc-900 p-6 rounded-2xl border border-white/10 space-y-3">
+                    <h3 class="font-bold text-sm text-white">Calculadora de Ganhos</h3>
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Valor do Serviço (R$)</label>
+                        <input type="number" id="prof-calc-val" oninput="App.calcularGanhosPessoal()" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="100.00">
                     </div>
-                `;
-            }).join('') || '<p class="text-xs text-zinc-500">Nenhum produto registado.</p>';
-
-            if (alertaBadge) {
-                alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Stock Regular';
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    },
-
-    handleFotoUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            this.fotoBase64Temp = e.target.result;
-            const preview = document.getElementById('preview-foto-prof');
-            const icon = document.getElementById('icon-foto-prof');
-            if (preview) {
-                preview.src = this.fotoBase64Temp;
-                preview.classList.remove('hidden');
-            }
-            if (icon) icon.classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
-    },
-
-    carregarPostIts() {
-        const container = document.getElementById('lista-postits');
-        if (!container) return;
-        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '["Ligar para fornecedor de tesouras", "Comprar novo secador de cabelo"]');
-        
-        container.innerHTML = postits.map((nota, index) => `
-            <div class="p-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs flex justify-between items-center">
-                <span>${nota}</span>
-                <button onclick="App.removerPostIt(${index})" class="text-zinc-400 hover:text-red-400 text-xs"><i class="fa-solid fa-xmark"></i></button>
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Sua Porcentagem (%)</label>
+                        <input type="number" id="prof-calc-porc" value="50" oninput="App.calcularGanhosPessoal()" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white">
+                    </div>
+                    <div class="pt-2 flex justify-between items-center border-t border-white/10">
+                        <span class="text-xs text-zinc-400">Receberá:</span>
+                        <span id="prof-calc-result" class="text-sm font-bold text-brand-400">R$ 0.00</span>
+                    </div>
+                </div>
             </div>
-        `).join('') || '<p class="text-[10px] text-zinc-500">Nenhuma nota colada.</p>';
-    },
 
-    adicionarPostIt() {
-        const nota = prompt("Digite a sua nova nota ou lembrete:");
-        if (!nota || nota.trim() === '') return;
-        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
-        postits.push(nota);
-        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
-        this.carregarPostIts();
-    },
+            <!-- Bloco de Post-its e Frase Motivacional -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-zinc-900 p-6 rounded-2xl border border-white/10 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-sm text-white">Notas e Lembretes</h3>
+                        <button onclick="App.adicionarPostIt()" class="px-3 py-1 rounded-xl bg-brand-500/20 text-brand-400 text-xs font-bold hover:bg-brand-500/30 transition">+ Nota</button>
+                    </div>
+                    <div id="lista-postits" class="space-y-2">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
 
-    removerPostIt(index) {
-        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
-        postits.splice(index, 1);
-        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
-        this.carregarPostIts();
-    },
+                <div class="bg-zinc-900 p-6 rounded-2xl border border-white/10 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-sm text-white mb-2">Inspiração do Dia</h3>
+                        <p id="frase-motivacional" class="text-xs italic text-zinc-400">"O sucesso é a soma de pequenos esforços repetidos."</p>
+                    </div>
+                    <button onclick="App.proximaFrase()" class="mt-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs text-white font-medium transition">Próxima Frase</button>
+                </div>
+            </div>
+        </section>
 
-    calcularGanhosPessoal() {
-        const val = parseFloat(document.getElementById('prof-calc-val').value) || 0;
-        const porc = parseFloat(document.getElementById('prof-calc-porc').value) || 50;
-        const total = (val * porc) / 100;
-        document.getElementById('prof-calc-result').textContent = `R$ ${total.toFixed(2)}`;
-    },
+    </main>
 
-    proximaFrase() {
-        const frases = [
-            "O sucesso é a soma de pequenos esforços repetidos.",
-            "A beleza está nos detalhes e no carinho com o cliente.",
-            "Um dia produtivo começa com um sorriso e foco.",
-            "Transforme a sua arte em excelência todos os dias."
-        ];
-        const aleatoria = frases[Math.floor(Math.random() * frases.length)];
-        document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
-    },
+    <!-- MODAL DE CONFIGURAÇÃO INICIAL DO SALÃO (PRIMEIRO LOGIN ADMIN) -->
+    <div id="modal-setup-salao" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-white/10 max-w-md w-full p-8 rounded-3xl space-y-6 shadow-2xl">
+            <div class="text-center">
+                <h3 class="text-lg font-bold text-white">Configurar Estabelecimento</h3>
+                <p class="text-xs text-zinc-400 mt-1">Insira os dados do seu salão para começar</p>
+            </div>
+            <form onsubmit="App.handleSalvarSetupSalao(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">Nome do Salão</label>
+                    <input type="text" id="setup-nome-salao" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="Ex: Studio Hair Vip">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-zinc-400 mb-1">Telefone de Contato</label>
+                    <input type="text" id="setup-telefone-salao" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500" placeholder="(00) 00000-0000">
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition shadow-lg shadow-brand-500/20">
+                    Concluir Configuração
+                </button>
+            </form>
+        </div>
+    </div>
 
-    setPlan(plano) {
-        localStorage.setItem('hairconcept_plan', plano);
-        UI.showToast(`Plano ${plano.toUpperCase()} selecionado com sucesso!`);
-        UI.switchTab('aba-agenda');
-    }
-};
+    <!-- FIREBASE COMPAT SDKs (OBRIGATÓRIO) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-const UI = {
-    showToast(msg, type = 'success') {
-        alert(msg);
-    },
-    switchTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.getElementById(tabId)?.classList.remove('hidden');
-    }
-};
-
-window.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('mousemove', (e) => {
-        document.documentElement.style.setProperty('--x', `${e.clientX}px`);
-        document.documentElement.style.setProperty('--y', `${e.clientY}px`);
-    });
-
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            const name = user.displayName || user.email.split('@')[0];
-            App.user = { loggedIn: true, role: 'admin', name: name };
-            App.finishLogin(`Bem-vindo, ${name}!`);
-        }
-    });
-});
+    <!-- O SEU SCRIPT PRINCIPAL -->
+    <script src="app.js"></script>
+</body>
+</html>
