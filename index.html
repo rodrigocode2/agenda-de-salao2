@@ -428,5 +428,12 @@
         <p>&copy; 2026 HairConcept. Criado por rodrigo-n-s@live.com, rodrigocode2</p>
     </footer>
     <script src="app.js"></script>
+ <script>
+    // Atualiza as coordenadas do rato para o efeito Spotlight
+    window.addEventListener('mousemove', (e) => {
+        document.documentElement.style.setProperty('--x', `${e.clientX}px`);
+        document.documentElement.style.setProperty('--y', `${e.clientY}px`);
+    });
+</script>
 </body>
 </html>
