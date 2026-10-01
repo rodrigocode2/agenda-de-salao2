@@ -1,121 +1,69 @@
-// ==========================================
-// HAIRCONCEPT - SCRIPT DE CONTROLE PRINCIPAL
-// ==========================================
-
+// Configuração oficial do Supabase
 const SUPABASE_URL = 'https://wahtcnoszlatqtrfcfjxe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhaHRjbm9zemxhdHF0cmZjZmp4ZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjIwMjU2MDAwMDB9';
-
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const Auth = {
-    async loginAdmin(e) {
-        e.preventDefault();
-        const email = document.getElementById('login-admin-email').value;
-        const senha = document.getElementById('login-admin-senha').value;
-
-        try {
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
-            if (error) throw error;
-            const name = data.user.user_metadata?.full_name || email.split('@')[0];
-            App.user = { loggedIn: true, role: 'admin', name: name };
-            App.finishLogin(`Bem-vindo, ${name}!`);
-        } catch (err) {
-            UI.showToast('Erro ao entrar: ' + err.message, 'error');
-        }
-    },
-
-    async loginProfissional(event) {
-        event.preventDefault();
-        const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
-        const cpf = document.getElementById('login-prof-id').value.trim();
-        const senha = document.getElementById('login-prof-senha').value.trim();
-        
-        try {
-            const { data, error } = await supabaseClient
-                .from('profissionais')
-                .select('*')
-                .ilike('estabelecimento', nomeEstabelecimento)
-                .eq('cpf', cpf)
-                .eq('senha', senha);
-
-            if (error || !data || data.length === 0) { 
-                UI.showToast('Estabelecimento, CPF ou palavra-passe incorretos.', 'error'); 
-                return; 
-            }
-            
-            const profissional = data[0];
-            if (profissional.estabelecimento_id) {
-                localStorage.setItem('hairconcept_estab_id', profissional.estabelecimento_id);
-            }
-            
-            App.user = { loggedIn: true, role: 'profissional', name: profissional.nome };
-            
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = profissional.estabelecimento || nomeEstabelecimento;
-
-            App.finishLogin(`Bem-vindo, ${profissional.nome}!`);
-        } catch (e) { 
-            UI.showToast('Erro ao validar login do profissional: ' + e.message, 'error'); 
-        }
-    },
-
     logout() {
         localStorage.removeItem('hairconcept_estab_id');
         if (supabaseClient && supabaseClient.auth) {
             supabaseClient.auth.signOut();
         }
         location.reload();
+    },
+    loginSocial(provider) {
+        UI.showToast('Redirecionando para autenticação...');
+        if (supabaseClient && supabaseClient.auth) {
+            supabaseClient.auth.signInWithOAuth({ provider: provider });
+        }
+    },
+    loginAdmin(event) {
+        event.preventDefault();
+        const email = document.getElementById('login-admin-email').value.trim();
+        const password = document.getElementById('login-admin-senha').value.trim();
+        if (supabaseClient) {
+            supabaseClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
+                if (error) {
+                    UI.showToast('Erro ao entrar: ' + error.message, 'error');
+                } else {
+                    App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
+                    App.finishLogin('Bem-vindo ao Painel!');
+                }
+            });
+        }
     }
 };
 
 const App = {
     user: { loggedIn: false, role: '', name: '' },
+    fotoBase64Temp: '',
 
     init() {
+        console.log("HairConcept inicializado com sucesso.");
         this.renderListaProfissionais();
         this.renderProdutos();
-        this.renderAgendaGrid();
+        this.carregarSelects();
     },
 
-    setPlan(plano) {
-        localStorage.setItem('hairconcept_plan', plano);
-        
-        if (plano === 'mensal') {
-            UI.showToast('A redirecionar para o pagamento seguro do Mercado Pago (Plano Mensal)...');
-            window.location.href = 'https://mpago.la/1LunQwf';
-        } 
-        else if (plano === 'anual') {
-            UI.showToast('A redirecionar para o pagamento seguro do Mercado Pago (Plano Anual)...');
-            window.location.href = 'https://mpago.la/1doAutJ';
-        } 
-        else {
-            UI.showToast('Plano Gratuito selecionado com sucesso!');
-            localStorage.setItem('hairconcept_plan', 'gratis');
-            UI.switchTab('aba-agenda');
-        }
+    carregarSelects() {
+        // Carregamento de selects se necessário
     },
 
     async finishLogin(msg) {
         if (msg) UI.showToast(msg);
         document.getElementById('aba-login')?.classList.add('hidden');
         document.getElementById('main-header')?.classList.remove('hidden');
+        document.getElementById('aba3')?.classList.remove('hidden'); // Abre na agenda por defeito
         
         const nameDisplay = document.getElementById('user-name-display');
         const roleDisplay = document.getElementById('user-role-display');
         if (nameDisplay) nameDisplay.textContent = this.user.name;
         if (roleDisplay) roleDisplay.textContent = this.user.role.toUpperCase();
 
-        if (this.user.role === 'profissional') {
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
-        } else {
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-        }
-
         if (this.user.role === 'admin') {
             await this.verificarOuCriarEstabelecimento();
         } else {
-            UI.switchTab('aba-agenda');
-            App.init();
+            this.init();
         }
     },
 
@@ -123,13 +71,13 @@ const App = {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return;
-
             const userId = session.user.id;
+            
             const { data: estab, error } = await supabaseClient
                 .from('estabelecimentos')
                 .select('*')
                 .eq('user_id', userId)
-                .maybeSingle();
+                .single();
 
             const headerSub = document.getElementById('saloon-name-header');
 
@@ -138,12 +86,11 @@ const App = {
             } else {
                 localStorage.setItem('hairconcept_estab_id', estab.id);
                 if (headerSub) headerSub.textContent = estab.nome_salao;
-                UI.switchTab('aba-agenda');
-                App.init();
+                this.init();
             }
         } catch (e) {
-            UI.switchTab('aba-agenda');
-            App.init();
+            console.error("Erro ao verificar estabelecimento:", e);
+            this.init();
         }
     },
 
@@ -151,12 +98,12 @@ const App = {
         event.preventDefault();
         const nomeSalao = document.getElementById('setup-nome-salao').value;
         const telefone = document.getElementById('setup-telefone-salao').value;
-
+        
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return;
-
             const userId = session.user.id;
+
             const { data, error } = await supabaseClient.from('estabelecimentos').insert([{
                 user_id: userId,
                 nome_salao: nomeSalao,
@@ -168,14 +115,49 @@ const App = {
             localStorage.setItem('hairconcept_estab_id', data.id);
             UI.showToast('Salão configurado com sucesso!');
             document.getElementById('modal-setup-salao')?.classList.add('hidden');
-
+            
             const headerSub = document.getElementById('saloon-name-header');
             if (headerSub) headerSub.textContent = nomeSalao;
-
-            UI.switchTab('aba-agenda');
-            App.init();
+            
+            this.init();
         } catch (e) {
             UI.showToast('Erro ao salvar estabelecimento: ' + e.message, 'error');
+        }
+    },
+
+    async loginProfissional(event) {
+        event.preventDefault();
+        const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
+        const cpf = document.getElementById('login-prof-id').value.trim();
+        const senha = document.getElementById('login-prof-senha').value.trim();
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .select('*')
+                .ilike('estabelecimento', nomeEstabelecimento)
+                .eq('cpf', cpf)
+                .eq('senha', senha)
+                .single();
+
+            if (error || !data) {
+                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
+                return;
+            }
+
+            if (data.estabelecimento_id) {
+                localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
+            }
+            
+            this.user = { loggedIn: true, role: 'profissional', name: data.nome };
+            
+            const headerSub = document.getElementById('saloon-name-header');
+            if (headerSub) headerSub.textContent = data.estabelecimento || nomeEstabelecimento;
+
+            this.finishLogin(`Bem-vindo, ${data.nome}!`);
+        } catch (e) {
+            console.error(e);
+            UI.showToast('Erro ao validar login do profissional.', 'error');
         }
     },
 
@@ -201,24 +183,33 @@ const App = {
             const nome = document.getElementById('prof-nome').value;
             const cargo = document.getElementById('prof-cargo').value;
             const cpf = document.getElementById('prof-cpf').value;
+            const rg = document.getElementById('prof-rg').value;
+            const certificado = document.getElementById('prof-certificado').value;
             const senha = document.getElementById('prof-senha').value;
+            const foto_url = this.fotoBase64Temp;
 
-            const { error } = await supabaseClient.from('profissionais').insert([{ 
+            const { error } = await supabaseClient.from('profissionais').insert([{
                 estabelecimento_id: estabelecimentoId,
                 estabelecimento: nomeEstabelecimentoHeader,
-                nome, 
-                cargo, 
-                cpf, 
-                senha 
+                nome,
+                cargo,
+                cpf,
+                rg,
+                certificado,
+                senha,
+                foto_url
             }]);
 
             if (error) throw error;
-            
+
             UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
+            this.fotoBase64Temp = '';
+            document.getElementById('preview-foto-prof').classList.add('hidden');
+            document.getElementById('icon-foto-prof').classList.remove('hidden');
             this.renderListaProfissionais();
-        } catch (err) { 
-            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error'); 
+        } catch (err) {
+            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');
         }
     },
 
@@ -251,19 +242,11 @@ const App = {
         }
     },
 
-    abrirModalNovoAgendamento() {
-        UI.showToast('Funcionalidade de Nova Marcação pronta.');
-    },
-
-    finalizarVendaCaixa() {
-        UI.showToast('Venda finalizada com sucesso!');
-    },
-
     async renderListaProfissionais() {
         const estabId = localStorage.getItem('hairconcept_estab_id');
         const lista = document.getElementById('lista-profissionais');
         if (!lista) return;
-        
+
         try {
             const { data, error } = await supabaseClient
                 .from('profissionais')
@@ -272,16 +255,21 @@ const App = {
 
             if (error) throw error;
 
-            lista.innerHTML = (data || []).map(p => `
-                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
-                    <div>
-                        <h4 class="text-xs font-bold text-white">${p.nome}</h4>
-                        <p class="text-[10px] text-brand-500">${p.cargo}</p>
-                        <p class="text-[9px] text-zinc-500">CPF: ${p.cpf}</p>
+            lista.innerHTML = data.map(p => `
+                <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-xl object-cover">
+                        <div>
+                            <h4 class="text-xs font-bold text-white">${p.nome}</h4>
+                            <p class="text-[10px] text-brand-500">${p.cargo}</p>
+                            <p class="text-[9px] text-zinc-500">CPF: ${p.cpf}</p>
+                        </div>
                     </div>
                 </div>
-            `).join('') || '<p class="text-xs text-zinc-500 col-span-2">Nenhum profissional cadastrado.</p>';
-        } catch (e) {}
+            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional registado.</p>';
+        } catch (e) {
+            console.error(e);
+        }
     },
 
     async renderProdutos() {
@@ -297,39 +285,64 @@ const App = {
 
             if (error) throw error;
 
-            lista.innerHTML = (data || []).map(prod => `
-                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
+            lista.innerHTML = data.map(prod => `
+                <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
                     <div>
                         <h4 class="text-xs font-bold text-white">${prod.nome}</h4>
-                        <p class="text-[10px] text-zinc-400">Tipo: ${prod.tipo} | Stock: ${prod.stock} | Validade: ${prod.data_validade}</p>
+                        <p class="text-[10px] text-zinc-400">Stock: ${prod.stock} | Validade: ${prod.data_validade}</p>
                     </div>
                     <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda}</span>
                 </div>
-            `).join('') || '<p class="text-xs text-zinc-500 col-span-2">Nenhum produto cadastrado.</p>';
-        } catch (e) {}
+            `).join('') || '<p class="text-xs text-zinc-500">Nenhum produto registado.</p>';
+        } catch (e) {
+            console.error(e);
+        }
     },
 
-    async renderAgendaGrid() {
-        const body = document.getElementById('grid-horarios-body');
-        if (!body) return;
-        body.innerHTML = `
-            <tr>
-                <td class="py-3 font-semibold text-zinc-400">09:00</td>
-                <td class="py-3 text-zinc-300" colspan="4">Agenda sincronizada e pronta para marcações</td>
-            </tr>
-        `;
+    handleFotoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.fotoBase64Temp = e.target.result;
+            const preview = document.getElementById('preview-foto-prof');
+            const icon = document.getElementById('icon-foto-prof');
+            if (preview) {
+                preview.src = this.fotoBase64Temp;
+                preview.classList.remove('hidden');
+            }
+            if (icon) icon.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    },
+
+    // Direcionamentos de planos com links de pagamento do Mercado Pago preservados
+    setPlan(plano) {
+        localStorage.setItem('hairconcept_plan', plano);
+        if (plano === 'mensal') {
+            window.location.href = 'https://mpago.la/1LunQwf';
+        } else if (plano === 'anual') {
+            window.location.href = 'https://mpago.la/1doAutJ';
+        } else {
+            UI.showToast(`Plano ${plano.toUpperCase()} selecionado com sucesso!`);
+            UI.switchTab('aba3');
+        }
+    },
+
+    renderAgendaGrid() {
+        // Renderização da agenda
+    },
+
+    handleCreateAgendamento(event) {
+        event.preventDefault();
+        UI.showToast('Agendamento simulado com sucesso!');
+        event.target.reset();
     }
 };
 
 const UI = {
     showToast(msg, type = 'success') {
-        const container = document.getElementById('toast-container');
-        if (!container) { alert(msg); return; }
-        const toast = document.createElement('div');
-        toast.className = `p-4 rounded-2xl bg-zinc-900 border text-xs font-bold text-white shadow-2xl transition duration-300 ${type === 'error' ? 'border-red-500/50 text-red-400' : 'border-brand-500/50 text-brand-500'}`;
-        toast.textContent = msg;
-        container.appendChild(toast);
-        setTimeout(() => { toast.remove(); }, 3500);
+        alert(msg);
     },
     switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -338,9 +351,6 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
-    const dataAgenda = document.getElementById('filtro-data-agenda');
-    if (dataAgenda) dataAgenda.valueAsDate = new Date();
-
     if (supabaseClient && supabaseClient.auth) {
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
