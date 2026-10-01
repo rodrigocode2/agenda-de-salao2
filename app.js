@@ -351,6 +351,12 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
+    // Captura o movimento do rato para atualizar as coordenadas do spotlight CSS
+    document.addEventListener('mousemove', (e) => {
+        document.documentElement.style.setProperty('--x', `${e.clientX}px`);
+        document.documentElement.style.setProperty('--y', `${e.clientY}px`);
+    });
+
     if (supabaseClient && supabaseClient.auth) {
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
