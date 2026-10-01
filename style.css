@@ -1,29 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
 
-.glass-panel {
-    background: rgba(24, 24, 27, 0.65);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+body {
+    font-family: 'Inter', sans-serif;
 }
 
-.agenda-bg {
-    background: radial-gradient(circle at top right, rgba(236, 72, 153, 0.05), transparent 40%),
-                radial-gradient(circle at bottom left, rgba(24, 24, 27, 0.8), #030303);
-}
-
-.sticky-time-col {
-    position: sticky;
-    left: 0;
-    z-index: 10;
-    background-color: #09090b;
-}
-
+/* Efeito de rasto interativo no login */
 .trail-dot {
     position: absolute;
-    width: 8px;
-    height: 8px;
-    background: rgba(236, 72, 153, 0.6);
+    width: 6px;
+    height: 6px;
+    background-color: #ec4899;
     border-radius: 50%;
     pointer-events: none;
-    transform: translate(-50%, -50%);
+    transform: scale(1);
+    opacity: 0.8;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #09090b;
+}
+::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
 }
