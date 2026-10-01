@@ -1,430 +1,352 @@
 <!DOCTYPE html>
-<html lang="pt" class="h-full bg-gray-900 text-gray-100">
+<html lang="pt-BR" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HairConcept - Gestão Premium de Salão de Beleza</title>
-    <!-- Tailwind CSS -->
+    <title>HairConcept - Gestão Integrada</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- FontAwesome para Ícones -->
+    <script type="text/javascript">
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#ec4899',
+                            600: '#db2777'
+                        },
+                        darkbg: {
+                            300: '#030303'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'sans-serif'],
+                        syne: ['Syne', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="h-full flex flex-col font-sans antialiased selection:bg-pink-500 selection:text-white">
+<body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
-    <!-- ========================================== -->
-    <!-- 1. LANDING PAGE COM VÍDEO NA HERO SECTION  -->
-    <!-- ========================================== -->
-    <div id="landing-screen" class="min-h-full flex flex-col bg-gray-900 relative overflow-hidden">
-        <!-- Vídeo de Fundo na Hero (Substitua o src pelo link do seu vídeo) -->
-        <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-            <video autoplay muted loop playsinline class="w-full h-full object-cover opacity-20">
-                <source src="https://assets.mixkit.co/videos/preview/mixkit-hairdresser-cutting-a-client-s-hair-41270-large.mp4" type="video/mp4">
-            </video>
-            <div class="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/90 to-gray-950"></div>
-        </div>
-
-        <!-- Header da Landing Page -->
-        <header class="border-b border-gray-800/80 px-6 py-4 flex items-center justify-between bg-gray-900/60 backdrop-blur-md sticky top-0 z-50">
-            <div class="flex items-center space-x-3">
-                <div class="bg-gradient-to-tr from-pink-600 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+    <!-- HEADER -->
+    <header id="main-header" class="hidden sticky top-0 z-40 glass-panel border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500">
                     <i class="fa-solid fa-scissors text-lg"></i>
                 </div>
-                <h1 class="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">HairConcept</h1>
-            </div>
-            <div class="flex items-center space-x-4 z-10">
-                <a href="#planos" class="text-sm font-medium text-gray-300 hover:text-white transition-colors hidden sm:block">Planos</a>
-                <button onclick="mostrarLogin()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-lg transition-all">
-                    Aceder ao Sistema
-                </button>
-            </div>
-        </header>
-
-        <!-- Hero Section -->
-        <section class="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 relative z-10">
-            <div class="inline-flex items-center gap-2 bg-pink-500/10 border border-pink-500/30 px-4 py-1.5 rounded-full text-pink-400 text-xs font-semibold mb-6 shadow-sm">
-                <i class="fa-solid fa-bolt text-pink-400"></i> Gestão Inteligente para Salões e Barbearias
-            </div>
-            <h2 class="text-4xl md:text-6xl font-extrabold tracking-tight max-w-4xl text-white">
-                Revolucione a gestão do seu <span class="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">Salão de Beleza</span>
-            </h2>
-            <p class="mt-6 text-base md:text-lg text-gray-300 max-w-2xl">
-                Controlo total de agendamentos, equipa, stock e comissões numa plataforma moderna, rápida e totalmente isolada por estabelecimento.
-            </p>
-            <div class="mt-10 flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md">
-                <button onclick="mostrarLogin()" class="w-full sm:w-auto bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold px-8 py-3.5 rounded-xl shadow-xl transition-all">
-                    Entrar na Plataforma
-                </button>
-                <a href="#planos" class="w-full sm:w-auto bg-gray-800/80 hover:bg-gray-700/80 border border-gray-700 text-gray-200 font-semibold px-8 py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 backdrop-blur-sm">
-                    Ver Planos <i class="fa-solid fa-arrow-down text-xs"></i>
-                </a>
-            </div>
-        </section>
-
-        <!-- Secção de Planos e Preços (Mercado Pago) -->
-        <section id="planos" class="py-20 px-4 bg-gray-950 border-t border-gray-800/80 relative z-10">
-            <div class="max-w-6xl mx-auto text-center">
-                <h3 class="text-3xl font-bold text-white mb-4">Planos ajustados ao seu negócio</h3>
-                <p class="text-gray-400 mb-12 max-w-xl mx-auto">Escolha o plano ideal para impulsionar o seu salão com pagamentos seguros via Mercado Pago.</p>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    <!-- Plano Mensal -->
-                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col justify-between shadow-xl">
-                        <div>
-                            <span class="text-xs uppercase tracking-wider font-bold text-pink-400 bg-pink-500/10 px-3 py-1 rounded-full">Mensal</span>
-                            <h4 class="text-2xl font-bold text-white mt-4">Plano Mensal</h4>
-                            <p class="text-gray-400 text-sm mt-2">Acesso completo sem fidelização.</p>
-                            <div class="my-6">
-                                <span class="text-4xl font-extrabold text-white">R$ 49,90</span><span class="text-gray-400 text-sm"> / mês</span>
-                            </div>
-                            <ul class="space-y-3 text-left text-sm text-gray-300 mb-8">
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Multi-tenant por Estabelecimento</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Gestão de Agenda e Equipa</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Controlo de Stock em Tempo Real</li>
-                            </ul>
-                        </div>
-                        <a href="https://mpago.la/1LunQwf" target="_blank" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl text-center shadow-lg transition-all">
-                            Subscrição Mensal
-                        </a>
-                    </div>
-
-                    <!-- Plano Anual -->
-                    <div class="bg-gray-900 border border-pink-500/50 rounded-2xl p-8 flex flex-col justify-between shadow-2xl relative">
-                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-pink-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">Mais Popular</div>
-                        <div>
-                            <span class="text-xs uppercase tracking-wider font-bold text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">Anual</span>
-                            <h4 class="text-2xl font-bold text-white mt-4">Plano Anual</h4>
-                            <p class="text-gray-400 text-sm mt-2">Desconto especial para o ano inteiro.</p>
-                            <div class="my-6">
-                                <span class="text-4xl font-extrabold text-white">R$ 490,00</span><span class="text-gray-400 text-sm"> / ano</span>
-                            </div>
-                            <ul class="space-y-3 text-left text-sm text-gray-300 mb-8">
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Todas as funcionalidades do Mensal</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> Suporte prioritário dedicado</li>
-                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-pink-500"></i> 2 meses grátis incluídos</li>
-                            </ul>
-                        </div>
-                        <a href="https://mpago.la/1doAutJ" target="_blank" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 rounded-xl text-center shadow-lg transition-all">
-                            Subscrição Anual
-                        </a>
+                <div class="overflow-hidden">
+                    <span class="font-syne text-xl font-extrabold text-white uppercase">HairConcept</span>
+                    <div class="flex items-center gap-1 overflow-hidden">
+                        <span id="saloon-name-header" class="text-[10px] text-zinc-400 font-medium tracking-wider uppercase truncate max-w-[150px] sm:max-w-xs">Painel de Gestão</span>
                     </div>
                 </div>
             </div>
-        </section>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 2. ECRÃ DE LOGIN / AUTENTICAÇÃO            -->
-    <!-- ========================================== -->
-    <div id="login-screen" class="hidden flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-        <div class="max-w-md w-full bg-gray-800/90 backdrop-blur-md rounded-2xl p-8 shadow-2xl border border-gray-700">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">HairConcept</h1>
-                <p class="text-sm text-gray-400 mt-2">Aceda ao seu Estabelecimento</p>
-            </div>
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Nome do Salão (Estabelecimento)</label>
-                    <input type="text" id="login-salao-nome" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-pink-500 transition-colors" placeholder="Ex: Studio Bella">
+            <nav id="nav-menu" class="hidden md:flex items-center gap-2 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10 text-xs font-semibold uppercase">
+                <button onclick="UI.switchTab('aba3')" class="px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-calendar-days text-brand-500"></i> Agenda</button>
+                <button id="nav-agendar" onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-plus text-brand-500"></i> Agendar</button>
+                <button id="nav-equipe" onclick="UI.switchTab('aba5')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
+                <button id="nav-produtos" onclick="UI.switchTab('aba-produtos')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-boxes-stacked text-brand-500"></i> Stock</button>
+                <button id="nav-planos" onclick="UI.switchTab('aba2')" class="admin-only px-4 py-2 text-zinc-400 hover:text-white"><i class="fa-solid fa-gem text-brand-500"></i> Planos</button>
+            </nav>
+            <div class="flex items-center gap-3 shrink-0">
+                <div class="text-right hidden sm:block">
+                    <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[120px]">Utilizador</span>
+                    <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase">Cargo</span>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">CPF do Profissional</label>
-                    <input type="text" id="login-cpf" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-pink-500 transition-colors" placeholder="000.000.000-00">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Senha</label>
-                    <input type="password" id="login-senha" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-pink-500 transition-colors" placeholder="••••••••">
-                </div>
-                <div id="login-error" class="hidden text-sm text-red-400 text-center font-medium"></div>
-                <button type="submit" id="login-btn" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg shadow-lg transition-all duration-200">
-                    Entrar no Sistema
+                <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white font-bold text-xs uppercase">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden md:inline">Sair</span>
                 </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
+        <!-- LOGIN INICIAL COM VÍDEO HERO -->
+        <section id="aba-login" class="tab-content relative overflow-hidden rounded-3xl p-8 md:p-16 border border-white/10 space-y-12">
+            <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-60 filter brightness-90"></video>
+                <div class="absolute inset-0 bg-gradient-to-b from-darkbg-300/60 via-darkbg-300/40 to-darkbg-300"></div>
+            </div>
+            <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
+                <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase">Gratuito para até 2 Profissionais</span>
+                <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white">HairConcept <span class="text-brand-500">Gestão</span></h1>
+                <p class="text-zinc-300 text-sm">Acesse sua conta para visualizar a agenda ou gerenciar o estabelecimento.</p>
+            </div>
+            <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <!-- LOGIN ESTABELECIMENTO -->
+                <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold uppercase text-white">Login Estabelecimento</h3>
+                            <p class="text-[11px] text-zinc-400">Dono do Salão / Admin</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="Auth.loginSocial('google')" type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold text-white hover:border-brand-500 transition">
+                            <i class="fa-brands fa-google text-rose-500"></i> Google
+                        </button>
+                        <button onclick="Auth.loginSocial('facebook')" type="button" class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold text-white hover:border-brand-500 transition">
+                            <i class="fa-brands fa-facebook text-blue-500"></i> Facebook
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-3 text-zinc-600 text-[10px] uppercase font-bold">
+                        <div class="flex-grow border-t border-white/10"></div>
+                        Ou e-mail
+                        <div class="flex-grow border-t border-white/10"></div>
+                    </div>
+                    <form onsubmit="Auth.loginAdmin(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail do Salão</label>
+                            <input type="email" id="login-admin-email" required placeholder="salao@email.com" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha</label>
+                            <input type="password" id="login-admin-senha" required placeholder="........" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase transition hover:bg-brand-600">Entrar no Painel Geral</button>
+                    </form>
+                </div>
+
+                <!-- LOGIN PROFISSIONAL -->
+                <div class="glass-panel p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold uppercase text-white">Login Profissional</h3>
+                            <p class="text-[11px] text-zinc-400">Cabeleireiros / Manicures / Esteticistas</p>
+                        </div>
+                    </div>
+                    <form onsubmit="Auth.loginProfissional(event)" class="space-y-4 pt-2">
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Estabelecimento *</label>
+                            <input type="text" id="login-prof-estabelecimento" required placeholder="Ex: Studio Bela Hair" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF Cadastrado *</label>
+                            <input type="text" id="login-prof-id" required placeholder="000.000.000-00" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso *</label>
+                            <input type="password" id="login-prof-senha" required placeholder="........" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:border-brand-500 text-white font-bold text-xs uppercase transition">Acessar Minha Agenda</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- PLANOS -->
+        <section id="aba2" class="tab-content hidden space-y-8">
+            <div class="text-center max-w-2xl mx-auto space-y-2">
+                <h2 class="text-3xl font-black text-white uppercase">Planos de Assinatura</h2>
+                <p class="text-xs text-zinc-400">Plano Gratuito permite até 2 profissionais cadastrados.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <div class="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-6">
+                    <div class="space-y-4">
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase">Gratuito</span>
+                        <h3 class="text-xl font-bold text-white uppercase">Grátis</h3>
+                        <div class="text-3xl font-black text-white">R$ 0<span class="text-xs font-normal text-zinc-400">/mês</span></div>
+                        <ul class="space-y-2 text-xs text-zinc-300">
+                            <li><i class="fa-solid fa-check text-brand-500"></i> Até 2 Profissionais ativos</li>
+                        </ul>
+                    </div>
+                    <button onclick="App.setPlan('gratis')" class="w-full py-3 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase">Manter Grátis</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- AGENDA -->
+        <section id="aba3" class="tab-content hidden space-y-6 agenda-bg p-6 rounded-3xl border border-white/10">
+            <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <span class="text-xs font-bold text-white uppercase">Grade de Horários</span>
+                    <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="bg-zinc-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white">
+                </div>
+                <button onclick="UI.switchTab('aba4')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">+ Novo Agendamento</button>
+            </div>
+            <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                        <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] font-bold uppercase">
+                            <th class="py-3 px-4 w-24 sticky-time-col">Horário</th>
+                        </tr>
+                    </thead>
+                    <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- AGENDAR -->
+        <section id="aba4" class="tab-content hidden max-w-xl mx-auto">
+            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+                <h2 class="text-xl font-bold uppercase text-white">Marcar Atendimento</h2>
+                <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
+                        <input id="agendamento-data" type="date" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional *</label>
+                        <select id="agendamento-profissional" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
+                        <select id="agendamento-horario" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cliente *</label>
+                        <input id="cliente-nome" type="text" required placeholder="Nome do Cliente" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
+                        <input id="cliente-servico" type="text" required placeholder="Ex: Corte / Manicure" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">Confirmar Agendamento</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- EQUIPE -->
+        <section id="aba5" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold uppercase text-white">Cadastrar Profissional</h2>
+                        <p class="text-xs text-zinc-400">Preencha os dados completos do integrante da equipe</p>
+                    </div>
+                    <span id="limite-profissionais-badge" class="text-xs font-bold text-brand-500 uppercase px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20"></span>
+                </div>
+                <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
+                    <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
+                        <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                            <img id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
+                            <i id="icon-foto-prof" class="fa-solid fa-user text-zinc-600 text-2xl"></i>
+                        </div>
+                        <div class="flex-grow space-y-1">
+                            <label class="block text-xs uppercase font-bold text-zinc-400">Foto de Perfil</label>
+                            <input type="file" id="prof-foto-file" accept="image/*" onchange="App.handleFotoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-brand-500 cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo *</label>
+                            <input type="text" id="prof-nome" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Especialidade / Cargo *</label>
+                            <input type="text" id="prof-cargo" placeholder="Ex: Cabeleireiro, Manicure" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF *</label>
+                            <input type="text" id="prof-cpf" placeholder="000.000.000-00" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Identidade (RG) *</label>
+                            <input type="text" id="prof-rg" required class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Certificado/Reg. Profissional</label>
+                            <input type="text" id="prof-certificado" placeholder="Ex: Certificação Senac nº 1234" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso *</label>
+                            <input type="password" id="prof-senha" required placeholder="Senha do profissional" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">Salvar e Cadastrar Integrante</button>
+                </form>
+                <div class="border-t border-white/10 pt-6 space-y-4">
+                    <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
+                    <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PRODUTOS/STOCK -->
+        <section id="aba-produtos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+            <div class="glass-panel rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold uppercase text-white">Gestão de Stock e Validade</h2>
+                        <p class="text-xs text-zinc-400">Controlo de inventário, finalidade e alertas automáticos de validade (3 meses)</p>
+                    </div>
+                    <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25">A verificar...</span>
+                </div>
+                <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-zinc-950 p-6 rounded-2xl border border-white/10">
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Produto *</label>
+                        <input type="text" id="prod-nome" required placeholder="Ex: Champô Professional" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Finalidade *</label>
+                        <select id="prod-tipo" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <option value="venda">Para Venda ao Cliente</option>
+                            <option value="uso">Para Uso Interno / Salão</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
+                        <input type="number" step="0.01" id="prod-preco" required placeholder="0.00" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Quantidade em Stock *</label>
+                        <input type="number" id="prod-stock" required placeholder="0" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data de Validade *</label>
+                        <input type="date" id="prod-validade" required class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition">Cadastrar Produto</button>
+                    </div>
+                </form>
+                <div id="lista-produtos" class="grid grid-cols-1 gap-4"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL DE PRIMEIRO ACESSO / CONFIGURAÇÃO DO SALÃO -->
+    <div id="modal-setup-salao" class="fixed inset-0 z-50 flex items-center justify-center bg-darkbg-300/95 backdrop-blur-md hidden">
+        <div class="glass-panel p-8 rounded-3xl border border-white/10 max-w-md w-full space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 mx-auto rounded-2xl bg-brand-500/20 text-brand-500 flex items-center justify-center">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <h3 class="text-xl font-bold uppercase text-white">Configurar o seu Estabelecimento</h3>
+                <p class="text-xs text-zinc-400">Insira o nome do seu salão para personalizar a plataforma e começar a gerir</p>
+            </div>
+            <form onsubmit="App.handleSalvarSetupSalao(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
+                    <input type="text" id="setup-nome-salao" required placeholder="Ex: Studio Bela Hair" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
+                    <input type="text" id="setup-telefone-salao" placeholder="(00) 00000-0000" class="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
+                </div>
+                <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase">Salvar e Continuar</button>
             </form>
-            <div class="mt-6 text-center">
-                <button onclick="voltarLanding()" class="text-xs text-gray-400 hover:text-pink-400 transition-colors">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> Voltar à Página Inicial
-                </button>
-            </div>
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 3. APLICAÇÃO PRINCIPAL (DASHBOARD)         -->
-    <!-- ========================================== -->
-    <div id="app-screen" class="hidden h-full flex flex-col">
-        <header class="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between shadow-md">
-            <div class="flex items-center space-x-3">
-                <div class="bg-pink-600 p-2 rounded-lg text-white shadow">
-                    <i class="fa-solid fa-scissors"></i>
-                </div>
-                <div>
-                    <h2 id="header-salao-nome" class="font-bold text-base md:text-lg truncate max-w-[150px] sm:max-w-xs">A carregar...</h2>
-                    <span class="text-xs text-green-400 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Online</span>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2 md:space-x-4">
-                <nav class="hidden md:flex space-x-1">
-                    <button onclick="switchTab('agenda')" class="px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-pink-400 tab-btn" data-tab="agenda">Agenda</button>
-                    <button onclick="switchTab('equipa')" class="px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-gray-300 tab-btn" data-tab="equipa">Equipa</button>
-                    <button onclick="switchTab('stock')" class="px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-gray-300 tab-btn" data-tab="stock">Stock</button>
-                </nav>
-                <div id="user-info-badge" class="hidden sm:flex items-center text-xs bg-gray-700/60 px-3 py-1.5 rounded-lg border border-gray-600 text-gray-300">
-                    <i class="fa-solid fa-user-tie mr-1.5 text-pink-400"></i><span id="header-prof-nome">Profissional</span>
-                </div>
-                <button onclick="logout()" class="bg-gray-700 hover:bg-red-600/20 hover:text-red-400 text-gray-300 p-2.5 rounded-lg transition-all" title="Terminar Sessão">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- Navegação Inferior para Telemóveis -->
-        <div class="md:hidden bg-gray-800 border-t border-gray-700 flex justify-around py-2 px-4 fixed bottom-0 left-0 right-0 z-50">
-            <button onclick="switchTab('agenda')" class="flex flex-col items-center text-xs text-pink-400 tab-btn" data-tab="agenda"><i class="fa-solid fa-calendar-days text-lg mb-0.5"></i>Agenda</button>
-            <button onclick="switchTab('equipa')" class="flex flex-col items-center text-xs text-gray-400 tab-btn" data-tab="equipa"><i class="fa-solid fa-users text-lg mb-0.5"></i>Equipa</button>
-            <button onclick="switchTab('stock')" class="flex flex-col items-center text-xs text-gray-400 tab-btn" data-tab="stock"><i class="fa-solid fa-boxes-stacked text-lg mb-0.5"></i>Stock</button>
-        </div>
-
-        <!-- Conteúdo Dinâmico das Abas -->
-        <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-            <div id="tab-agenda" class="tab-content space-y-4">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold">Agendamentos</h3>
-                    <button onclick="carregarAgenda()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-lg text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
-                </div>
-                <div id="lista-agendamentos" class="space-y-3">
-                    <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar agendamentos...</div>
-                </div>
-            </div>
-
-            <div id="tab-equipa" class="tab-content space-y-4 hidden">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold">Equipa do Salão</h3>
-                    <button onclick="carregarEquipa()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-lg text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
-                </div>
-                <div id="lista-profissionais" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
-
-            <div id="tab-stock" class="tab-content space-y-4 hidden">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold">Gestão de Stock</h3>
-                    <button onclick="carregarStock()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-lg text-xs text-gray-300"><i class="fa-solid fa-rotate mr-1"></i> Atualizar</button>
-                </div>
-                <div id="lista-stock" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
-        </main>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- 4. LÓGICA JAVASCRIPT & SUPABASE            -->
-    <!-- ========================================== -->
-    <script>
-        const SUPABASE_URL = 'SUA_SUPABASE_URL_AQUI';
-        const SUPABASE_ANON_KEY = 'SUA_SUPABASE_ANON_KEY_AQUI';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        function mostrarLogin() {
-            document.getElementById('landing-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.remove('hidden');
-        }
-
-        function voltarLanding() {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('landing-screen').classList.remove('hidden');
-        }
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-            
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                if(btn.dataset.tab === tabName) {
-                    btn.classList.add('text-pink-400');
-                    btn.classList.remove('text-gray-300', 'text-gray-400');
-                } else {
-                    btn.classList.remove('text-pink-400');
-                    btn.classList.add('text-gray-300', 'text-gray-400');
-                }
-            });
-
-            if(tabName === 'agenda') carregarAgenda();
-            if(tabName === 'equipa') carregarEquipa();
-            if(tabName === 'stock') carregarStock();
-        }
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nomeSalaoInput = document.getElementById('login-salao-nome').value.trim();
-            const cpfInput = document.getElementById('login-cpf').value.trim();
-            const senhaInput = document.getElementById('login-senha').value.trim();
-            const errorDiv = document.getElementById('login-error');
-            const loginBtn = document.getElementById('login-btn');
-
-            errorDiv.classList.add('hidden');
-            loginBtn.textContent = 'A validar...';
-            loginBtn.disabled = true;
-
-            try {
-                const { data: estabData, error: estabError } = await supabaseClient
-                    .from('estabelecimentos')
-                    .select('id, nome_salao')
-                    .ilike('nome_salao', nomeSalaoInput)
-                    .single();
-
-                if (estabError || !estabData) {
-                    throw new Error('Estabelecimento não encontrado.');
-                }
-
-                const { data: profData, error: profError } = await supabaseClient
-                    .from('profissionais')
-                    .select('*')
-                    .eq('estabelecimento_id', estabData.id)
-                    .eq('cpf', cpfInput)
-                    .eq('senha', senhaInput)
-                    .single();
-
-                if (profError || !profData) {
-                    throw new Error('CPF ou senha inválidos para este salão.');
-                }
-
-                localStorage.setItem('hairconcept_estab_id', estabData.id);
-                localStorage.setItem('hairconcept_estab_nome', estabData.nome_salao);
-                localStorage.setItem('hairconcept_prof_nome', profData.estabelecimento || 'Profissional');
-
-                iniciarApp();
-
-            } catch (err) {
-                errorDiv.textContent = err.message || 'Erro ao efetuar login.';
-                errorDiv.classList.remove('hidden');
-            } finally {
-                loginBtn.textContent = 'Entrar no Sistema';
-                loginBtn.disabled = false;
-            }
-        });
-
-        function iniciarApp() {
-            const nomeSalao = localStorage.getItem('hairconcept_estab_nome') || 'HairConcept';
-            const nomeProf = localStorage.getItem('hairconcept_prof_nome') || 'Colaborador';
-            
-            document.getElementById('header-salao-nome').textContent = nomeSalao;
-            document.getElementById('header-prof-nome').textContent = nomeProf;
-            
-            document.getElementById('landing-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-screen').classList.remove('hidden');
-
-            carregarAgenda();
-        }
-
-        function logout() {
-            localStorage.clear();
-            document.getElementById('app-screen').classList.add('hidden');
-            document.getElementById('landing-screen').classList.remove('hidden');
-        }
-
-        async function carregarAgenda() {
-            const container = document.getElementById('lista-agendamentos');
-            container.innerHTML = '<div class="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar agendamentos...</div>';
-
-            const { data, error } = await supabaseClient
-                .from('agendamentos')
-                .select('*')
-                .order('data', { ascending: true });
-
-            if (error) {
-                container.innerHTML = `<div class="bg-red-900/20 border border-red-700 rounded-xl p-4 text-center text-red-400">Erro: ${error.message}</div>`;
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">Nenhum agendamento registado.</div>';
-                return;
-            }
-
-            container.innerHTML = data.map(item => `
-                <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex justify-between items-center shadow">
-                    <div>
-                        <h4 class="font-bold text-white"><i class="fa-solid fa-user mr-2 text-pink-400"></i>${item.cliente || 'Cliente'}</h4>
-                        <p class="text-sm text-gray-400"><i class="fa-solid fa-scissors mr-1.5 text-gray-500"></i>${item.servico || 'Serviço'} • <i class="fa-solid fa-clock ml-2 mr-1 text-gray-500"></i>${item.horario || '--:--'} (${item.data || ''})</p>
-                    </div>
-                    <span class="bg-pink-600/20 text-pink-400 border border-pink-500/30 text-xs px-2.5 py-1 rounded-lg font-medium">Agendado</span>
-                </div>
-            `).join('');
-        }
-
-        async function carregarEquipa() {
-            const estabId = localStorage.getItem('hairconcept_estab_id');
-            const container = document.getElementById('lista-profissionais');
-            container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar equipa...</div>';
-
-            const { data, error } = await supabaseClient
-                .from('profissionais')
-                .select('*')
-                .eq('estabelecimento_id', estabId);
-
-            if (error) {
-                container.innerHTML = `<div class="col-span-full bg-red-900/20 border border-red-700 rounded-xl p-4 text-center text-red-400">Erro: ${error.message}</div>`;
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">Nenhum profissional encontrado.</div>';
-                return;
-            }
-
-            container.innerHTML = data.map(prof => `
-                <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center space-x-4 shadow">
-                    <div class="w-12 h-12 rounded-full bg-pink-600/20 border border-pink-500 flex items-center justify-center text-pink-400 font-bold text-lg">
-                        ${(prof.estabelecimento || 'P').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-white">${prof.estabelecimento || 'Profissional'}</h4>
-                        <p class="text-xs text-gray-400">Cargo: ${prof.cargo || 'Cabeleireiro(a)'}</p>
-                        <p class="text-xs text-gray-500 mt-0.5">Comissão: ${prof.comissao_pct || 0}%</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function carregarStock() {
-            const estabId = localStorage.getItem('hairconcept_estab_id');
-            const container = document.getElementById('lista-stock');
-            container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">A carregar stock...</div>';
-
-            const { data, error } = await supabaseClient
-                .from('produtos')
-                .select('*')
-                .eq('estabelecimento_id', estabId);
-
-            if (error) {
-                container.innerHTML = `<div class="col-span-full bg-red-900/20 border border-red-700 rounded-xl p-4 text-center text-red-400">Erro: ${error.message}</div>`;
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="col-span-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-gray-400">Nenhum produto registado.</div>';
-                return;
-            }
-
-            container.innerHTML = data.map(prod => `
-                <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col justify-between shadow">
-                    <div>
-                        <h4 class="font-bold text-white text-base">${prod.nome || 'Produto'}</h4>
-                        <p class="text-xs text-gray-400 mt-1">Tipo: ${prod.tipo || 'Geral'}</p>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-gray-700 flex justify-between items-center text-sm">
-                        <span class="text-gray-300">Qtd: <strong class="text-white">${prod.quantidade || 0}</strong></span>
-                        <span class="text-pink-400 font-semibold">R$ ${(prod.preco_venda || 0).toFixed(2)}</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if(localStorage.getItem('hairconcept_estab_id')) {
-                iniciarApp();
-            }
-        });
-    </script>
+    <!-- Rodapé com Copyright -->
+    <footer class="w-full py-6 border-t border-white/10 text-center text-xs text-zinc-400 bg-zinc-950/40">
+        <p>&copy; 2026 HairConcept. Criado por rodrigo-n-s@live.com, rodrigocode2</p>
+    </footer>
+    <script src="app.js"></script>
 </body>
 </html>
