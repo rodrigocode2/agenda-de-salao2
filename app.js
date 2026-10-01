@@ -166,7 +166,6 @@ const App = {
             const headerSub = document.getElementById('saloon-name-header');
             if (headerSub) headerSub.textContent = data.estabelecimento || nomeEstabelecimento;
 
-            // Configurar dados visuais do profissional
             document.getElementById('prof-header-nome').textContent = data.nome;
             document.getElementById('prof-header-cargo').textContent = data.cargo;
             if (data.foto_url) {
@@ -319,7 +318,6 @@ const App = {
                 return;
             }
 
-            // Se for profissional, filtra apenas a agenda dele
             let profsExibicao = profs;
             if (this.user.role === 'profissional') {
                 profsExibicao = profs.filter(p => p.id == this.user.id);
@@ -348,7 +346,7 @@ const App = {
                         const ag = (agendamentos || []).find(a => a.profissional_id == p.id && a.horario === h);
                         if (ag && this.user.role === 'profissional') {
                             atendimentoCount++;
-                            totalGanhos += (ag.valor * 0.5); // Comissão estimada de 50%
+                            totalGanhos += (ag.valor * 0.5);
                         }
                         return `
                             <td class="py-3 px-4">
@@ -492,7 +490,6 @@ const App = {
         reader.readAsDataURL(file);
     },
 
-    // Funções do Painel de Post-its do Profissional
     carregarPostIts() {
         const container = document.getElementById('lista-postits');
         if (!container) return;
