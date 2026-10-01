@@ -430,10 +430,44 @@
     <script src="app.js"></script>
  <script>
     // Atualiza as coordenadas do rato para o efeito Spotlight
+<script>
+    let lastRippleTime = 0;
+
+    function createRipple(x, y) {
+        const now = Date.now();
+        // Controla a frequência para criar ondas fluidas sem sobrecarregar o site
+        if (now - lastRippleTime < 70) return; 
+        lastRippleTime = now;
+
+        const ripple = document.createElement('div');
+        ripple.classList.add('water-ripple');
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        document.body.appendChild(ripple);
+
+        // Remove o elemento após a animação terminar
+        setTimeout(() => {
+            ripple.remove();
+        }, 700);
+    }
+
+    // Dispara com o movimento do rato
     window.addEventListener('mousemove', (e) => {
-        document.documentElement.style.setProperty('--x', `${e.clientX}px`);
-        document.documentElement.style.setProperty('--y', `${e.clientY}px`);
+        createRipple(e.clientX, e.clientY);
     });
+
+    // Dispara ao tocar e arrastar no ecrã (Telemóveis / Touch)
+    window.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+            createRipple(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) {
+            createRipple(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    }, { passive: true });
 </script>
 </body>
 </html>
