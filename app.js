@@ -20,15 +20,6 @@ const Auth = {
         }
     },
 
-    async loginSocial(provider) {
-        try {
-            const { error } = await supabaseClient.auth.signInWithOAuth({ provider });
-            if (error) throw error;
-        } catch (err) {
-            UI.showToast('Erro no login social: ' + err.message, 'error');
-        }
-    },
-
     async loginProfissional(event) {
         event.preventDefault();
         const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
@@ -36,7 +27,7 @@ const Auth = {
         const senha = document.getElementById('login-prof-senha').value.trim();
         
         try {
-            // Consulta segura sem .single() para evitar crashes se a resposta estiver vazia
+            // Consulta segura sem .single() para evitar falhas se a resposta vier vazia
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('*')
@@ -82,9 +73,6 @@ const App = {
     init() {
         console.log("HairConcept inicializado com sucesso.");
         this.renderListaProfissionais();
-        this.renderProdutos();
-        this.renderAgendaGrid();
-        this.carregarSelects();
     },
 
     setPlan(plano) {
@@ -190,23 +178,6 @@ const App = {
         }
     },
 
-    handleFotoUpload(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => {
-            this.fotoBase64Temp = uploadEvent.target.result;
-            const preview = document.getElementById('preview-foto-prof');
-            const icon = document.getElementById('icon-foto-prof');
-            if (preview) {
-                preview.src = this.fotoBase64Temp;
-                preview.classList.remove('hidden');
-            }
-            if (icon) icon.classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
-    },
-
     async handleCreateProfissional(e) {
         e.preventDefault();
         const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
@@ -223,17 +194,13 @@ const App = {
 
             if (planoAtual === 'gratis' && count >= 2) {
                 UI.showToast('Limite atingido! O Plano Gratuito permite apenas 2 profissionais.', 'error');
-                UI.switchTab('aba2');
                 return;
             }
 
             const nome = document.getElementById('prof-nome').value;
             const cargo = document.getElementById('prof-cargo').value;
             const cpf = document.getElementById('prof-cpf').value;
-            const rg = document.getElementById('prof-rg').value;
-            const certificado = document.getElementById('prof-certificado').value;
             const senha = document.getElementById('prof-senha').value;
-            const foto_url = this.fotoBase64Temp;
 
             const { error } = await supabaseClient.from('profissionais').insert([{ 
                 estabelecimento_id: estabelecimentoId,
@@ -241,55 +208,16 @@ const App = {
                 nome, 
                 cargo, 
                 cpf, 
-                rg, 
-                certificado, 
-                senha, 
-                foto_url 
+                senha 
             }]);
 
             if (error) throw error;
             
             UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
-            this.fotoBase64Temp = '';
-            const preview = document.getElementById('preview-foto-prof');
-            const icon = document.getElementById('icon-foto-prof');
-            if (preview) { preview.src = ''; preview.classList.add('hidden'); }
-            if (icon) icon.classList.remove('hidden');
-
             this.renderListaProfissionais();
-            this.carregarSelects();
         } catch (err) { 
             UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error'); 
-        }
-    },
-
-    async handleCreateProduto(event) {
-        event.preventDefault();
-        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
-        const nome = document.getElementById('prod-nome').value;
-        const tipo = document.getElementById('prod-tipo').value;
-        const preco_venda = parseFloat(document.getElementById('prod-preco').value) || 0;
-        const stock = parseInt(document.getElementById('prod-stock').value) || 0;
-        const data_validade = document.getElementById('prod-validade').value;
-
-        try {
-            const { error } = await supabaseClient.from('produtos').insert([{
-                estabelecimento_id: estabelecimentoId,
-                nome,
-                tipo,
-                preco_venda,
-                stock,
-                data_validade
-            }]);
-
-            if (error) throw error;
-
-            UI.showToast('Produto cadastrado com sucesso!');
-            event.target.reset();
-            this.renderProdutos();
-        } catch (e) {
-            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');
         }
     },
 
@@ -306,67 +234,16 @@ const App = {
 
             if (error) throw error;
 
-            lista.innerHTML = data.map(p => `
+            lista.innerHTML = (data || []).map(p => `
                 <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-12 h-12 rounded-xl object-cover">
-                        <div>
-                            <h4 class="text-xs font-bold text-white">${p.nome}</h4>
-                            <p class="text-[10px] text-brand-500">${p.cargo}</p>
-                            <p class="text-[9px] text-zinc-500">CPF: ${p.cpf}</p>
-                        </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-white">${p.nome}</h4>
+                        <p class="text-[10px] text-brand-500">${p.cargo}</p>
+                        <p class="text-[9px] text-zinc-500">CPF: ${p.cpf}</p>
                     </div>
                 </div>
             `).join('') || '<p class="text-xs text-zinc-500 col-span-2">Nenhum profissional cadastrado.</p>';
         } catch (e) { console.error(e); }
-    },
-
-    async renderProdutos() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const lista = document.getElementById('lista-produtos');
-        if (!lista) return;
-
-        try {
-            const { data, error } = await supabaseClient
-                .from('produtos')
-                .select('*')
-                .eq('estabelecimento_id', estabId);
-
-            if (error) throw error;
-
-            lista.innerHTML = data.map(prod => `
-                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
-                    <div>
-                        <h4 class="text-xs font-bold text-white">${prod.nome}</h4>
-                        <p class="text-[10px] text-zinc-400">Tipo: ${prod.tipo} | Stock: ${prod.stock} | Validade: ${prod.data_validade}</p>
-                    </div>
-                    <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda}</span>
-                </div>
-            `).join('') || '<p class="text-xs text-zinc-500">Nenhum produto cadastrado.</p>';
-        } catch (e) { console.error(e); }
-    },
-
-    async renderAgendaGrid() {
-        const body = document.getElementById('grid-horarios-body');
-        if (!body) return;
-        body.innerHTML = `<tr><td colspan="2" class="py-4 text-center text-zinc-500">Agenda sincronizada.</td></tr>`;
-    },
-
-    async carregarSelects() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const select = document.getElementById('agendamento-profissional');
-        if (!select) return;
-
-        try {
-            const { data } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
-            select.innerHTML = (data || []).map(p => `<option value="${p.id}">${p.nome} (${p.cargo})</option>`).join('');
-        } catch (e) { console.error(e); }
-    },
-
-    async handleCreateAgendamento(e) {
-        e.preventDefault();
-        UI.showToast('Agendamento simulado com sucesso!');
-        e.target.reset();
     }
 };
 
@@ -375,7 +252,7 @@ const UI = {
         const container = document.getElementById('toast-container');
         if (!container) { alert(msg); return; }
         const toast = document.createElement('div');
-        toast.className = `p-4 rounded-2xl bg-zinc-900 border border-white/10 text-xs font-bold text-white shadow-2xl pointer-events-auto transition duration-300 ${type === 'error' ? 'border-red-500/50 text-red-400' : 'border-brand-500/50 text-brand-500'}`;
+        toast.className = `p-4 rounded-2xl bg-zinc-900 border text-xs font-bold text-white shadow-2xl transition duration-300 ${type === 'error' ? 'border-red-500/50 text-red-400' : 'border-brand-500/50 text-brand-500'}`;
         toast.textContent = msg;
         container.appendChild(toast);
         setTimeout(() => { toast.remove(); }, 3500);
@@ -387,11 +264,6 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
-    const hoje = document.getElementById('agendamento-data');
-    if (hoje) hoje.valueAsDate = new Date();
-    const dataAgenda = document.getElementById('filtro-data-agenda');
-    if (dataAgenda) dataAgenda.valueAsDate = new Date();
-
     if (supabaseClient && supabaseClient.auth) {
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
@@ -403,27 +275,23 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Efeito interativo do rato na aba de login
 const abaLogin = document.getElementById('aba-login');
 if (abaLogin) {
     abaLogin.addEventListener('mousemove', (e) => {
         const rect = abaLogin.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
         const dot = document.createElement('div');
         dot.className = 'trail-dot';
         dot.style.left = `${x}px`;
         dot.style.top = `${y}px`;
         abaLogin.appendChild(dot);
-        
         setTimeout(() => {
             dot.style.transform = 'scale(2)';
             dot.style.opacity = '0';
             dot.style.transition = 'all 0.5s ease-out';
         }, 20);
-        
-        setTimeout(() => {
-            dot.remove();
-        }, 500);
+        setTimeout(() => { dot.remove(); }, 500);
     });
 }
