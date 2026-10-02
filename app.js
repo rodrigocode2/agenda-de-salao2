@@ -1,7 +1,7 @@
-const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';[cite: 78]
-const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';[cite: 78]
+const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
-const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;[cite: 78]
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const Auth = {
     logout() {
@@ -294,47 +294,6 @@ const App = {
             UI.showToast('Erro ao agendar: ' + e.message, 'error');
         }
     },
-    async handleCreateServico(event) {
-        event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const nome = document.getElementById('serv-nome').value;
-        const preco = parseFloat(document.getElementById('serv-preco').value) || 0;
-        const comissao = parseFloat(document.getElementById('serv-comissao').value) || 50;
-        try {
-            const { error } = await supabaseClient.from('servicos').insert([{
-                estabelecimento_id: estabId,
-                nome,
-                preco,
-                comissao
-            }]);
-            if (error) throw error;
-            UI.showToast('Serviço registado com sucesso!');
-            event.target.reset();
-            this.renderServicos();
-        } catch (e) {
-            UI.showToast('Erro ao registar serviço: ' + e.message, 'error');
-        }
-    },
-    async renderServicos() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const lista = document.getElementById('lista-servicos');
-        if (!lista) return;
-        try {
-            const { data, error } = await supabaseClient.from('servicos').select('*').eq('estabelecimento_id', estabId);
-            if (error) throw error;
-            lista.innerHTML = (data || []).map(s => `
-                <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
-                    <div>
-                        <h4 class="text-xs font-bold text-white">${s.nome}</h4>
-                        <p class="text-[10px] text-zinc-400">Comissão: ${s.comissao}%</p>
-                    </div>
-                    <span class="text-xs font-bold text-brand-500">R$ ${s.preco.toFixed(2)}</span>
-                </div>
-            `).join('') || '<p class="text-xs text-zinc-500">Nenhum serviço registado.</p>';
-        } catch (e) {
-            console.error(e);
-        }
-    },
     async renderAgendaGrid() {
         const tbody = document.getElementById('grid-horarios-body');
         const headerRow = document.getElementById('grid-header-row');
@@ -365,7 +324,8 @@ const App = {
                 </th>
             `).join('');
 
-            const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
+            // Horários atualizados das 08:00 às 18:00
+            const horarios = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
             let atendimentoCount = 0;
             let totalGanhos = 0;
 
@@ -422,6 +382,61 @@ const App = {
             this.renderProdutos();
         } catch (e) {
             UI.showToast('Erro ao registar produto: ' + e.message, 'error');
+        }
+    },
+    async handleCreateServico(event) {
+        event.preventDefault();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const nome = document.getElementById('serv-nome').value;
+        const preco = parseFloat(document.getElementById('serv-preco').value) || 0;
+        const comissao = parseFloat(document.getElementById('serv-comissao').value) || 50;
+        try {
+            const { error } = await supabaseClient.from('servicos').insert([{
+                estabelecimento_id: estabId,
+                nome,
+                preco,
+                comissao
+            }]);
+            if (error) throw error;
+            UI.showToast('Serviço adicionado com sucesso!');
+            event.target.reset();
+            this.renderServicos();
+        } catch (e) {
+            UI.showToast('Erro ao registar serviço: ' + e.message, 'error');
+        }
+    },
+    async renderServicos() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const lista = document.getElementById('lista-servicos');
+        if (!lista) return;
+        try {
+            const { data, error } = await supabaseClient.from('servicos').select('*').eq('estabelecimento_id', estabId);
+            if (error) throw error;
+            lista.innerHTML = data && data.length > 0 ? data.map(s => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-bold text-white uppercase">${s.nome}</h4>
+                        <p class="text-[10px] text-zinc-400 mt-0.5">Comissão: ${s.comissao}%</p>
+                    </div>
+                    <div class="text-right flex items-center gap-3">
+                        <span class="text-xs font-bold text-brand-500">R$ ${s.preco.toFixed(2)}</span>
+                        <button onclick="App.excluirServico('${s.id}')" class="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition">Excluir</button>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-xs text-zinc-500 md:col-span-2">Nenhum serviço registado.</p>';
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async excluirServico(id) {
+        if (!confirm("Tem a certeza que deseja excluir este serviço?")) return;
+        try {
+            const { error } = await supabaseClient.from('servicos').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Serviço excluído com sucesso!');
+            this.renderServicos();
+        } catch (e) {
+            UI.showToast('Erro ao excluir serviço: ' + e.message, 'error');
         }
     },
     async renderListaProfissionais() {
