@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark scroll-smooth">
+<html lang="pt-PT" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -75,7 +75,7 @@
                 <button onclick="UI.switchTab('aba-agenda')" class="px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-calendar-days text-brand-500"></i> Agenda</button>
                 <button onclick="UI.switchTab('aba-agendar')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-plus text-brand-500"></i> Agendar</button>
                 <button onclick="UI.switchTab('aba-servicos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-wand-magic-sparkles text-brand-500"></i> Serviços</button>
-                <button onclick="UI.switchTab('aba-equipe')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
+                <button onclick="UI.switchTab('aba-equipe')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipa</button>
                 <button onclick="UI.switchTab('aba-produtos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-boxes-stacked text-brand-500"></i> Stock</button>
                 <button onclick="UI.switchTab('aba-planos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-crown text-brand-500"></i> Planos</button>
                 <button onclick="UI.switchTab('aba-avaliacoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-star text-brand-500"></i> Avaliações</button>
@@ -97,7 +97,7 @@
     <!-- CONTEÚDO PRINCIPAL -->
     <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
         
-        <!-- TELA DE LOGIN -->
+        <!-- ECRÃ DE LOGIN -->
         <section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 glass-water border border-white/10 space-y-12">
             <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-30 filter brightness-90"></video>
@@ -107,7 +107,7 @@
             <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
                 <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase tracking-wider">Plataforma de Gestão Integrada</span>
                 <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white">HairConcept <span class="text-brand-500">Gestão</span></h1>
-                <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento.</p>
+                <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerir o estabelecimento.</p>
             </div>
 
             <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -163,13 +163,13 @@
                         </div>
                     </div>
 
-                    <form onsubmit="Auth.loginProfissional(event)" class="space-y-4 pt-2">
+                    <form onsubmit="App.loginProfissional(event)" class="space-y-4 pt-2">
                         <div>
                             <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Estabelecimento *</label>
                             <input type="text" id="login-prof-estabelecimento" required placeholder="Ex: Studio Bela Hair" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
-                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF Cadastrado *</label>
+                            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF (Chave de Acesso) *</label>
                             <input type="text" id="login-prof-id" required placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
                         </div>
                         <div>
@@ -185,6 +185,7 @@
         <!-- AGENDA / PAINEL PRINCIPAL -->
         <section id="aba-agenda" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 glass-water">
             
+            <!-- PAINEL EXCLUSIVO DO PROFISSIONAL -->
             <div id="painel-profissional-extra" class="hidden space-y-6 pb-6 border-b border-white/10">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-zinc-950 border border-white/10">
                     <div class="flex items-center gap-4">
@@ -214,6 +215,7 @@
                     </div>
                 </div>
 
+                <!-- FERRAMENTAS DO PROFISSIONAL -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
                         <div class="flex justify-between items-center">
@@ -254,18 +256,18 @@
                 </div>
             </div>
 
-            <!-- CONTROLO DE CALENDÁRIO -->
+            <!-- CONTROLO DE CALENDÁRIO & NAVEGAÇÃO -->
             <div class="glass-water p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500"></i> Data:</span>
                     
-                    <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer">
+                    <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer" title="Dia Anterior">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
 
                     <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
 
-                    <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer">
+                    <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer" title="Próximo Dia">
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
 
@@ -315,9 +317,7 @@
                     </div>
                     <div>
                         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
-                        <select id="agendamento-servico-select" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-                            <option value="Serviço Padrão">Serviço Padrão</option>
-                        </select>
+                        <input id="cliente-servico" type="text" required placeholder="Ex: Corte de Cabelo / Barba" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
                     </div>
                     <div>
                         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
@@ -343,28 +343,45 @@
             </div>
         </section>
 
-        <!-- CATÁLOGO DE SERVIÇOS -->
+        <!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
         <section id="aba-servicos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
                         <h2 class="text-xl font-bold uppercase text-white">Catálogo de Serviços & Comissões</h2>
-                        <p class="text-xs text-zinc-400">Registo de procedimentos, duração e comissão percentual</p>
+                        <p class="text-xs text-zinc-400">Registo de procedimentos e comissão percentual</p>
                     </div>
                 </div>
-                <div id="lista-servicos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <p class="text-xs text-zinc-500">Módulo de serviços ativo.</p>
-                </div>
+
+                <form onsubmit="App.handleCreateServico(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-zinc-950 p-6 rounded-2xl border border-white/10">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Serviço *</label>
+                        <input type="text" id="serv-nome" required placeholder="Ex: Progressiva / Corte" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
+                        <input type="number" step="0.01" id="serv-preco" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Comissão (%)</label>
+                        <input type="number" id="serv-comissao" value="50" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    </div>
+                    <div class="md:col-span-4 flex items-end">
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition cursor-pointer">Adicionar Serviço</button>
+                    </div>
+                </form>
+
+                <div id="lista-servicos" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
         </section>
 
-        <!-- EQUIPE -->
+        <!-- EQUIPA -->
         <section id="aba-equipe" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
-                        <h2 class="text-xl font-bold uppercase text-white">Gestão de Equipe e Turnos</h2>
-                        <p class="text-xs text-zinc-400">Controlo de fotos e colaboradores</p>
+                        <h2 class="text-xl font-bold uppercase text-white">Gestão de Equipa e Turnos</h2>
+                        <p class="text-xs text-zinc-400">Controlo de fotos, credenciais de acesso por CPF e exclusão segura</p>
                     </div>
                 </div>
 
@@ -403,7 +420,7 @@
                 </form>
 
                 <div class="border-t border-white/10 pt-6 space-y-4">
-                    <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
+                    <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipa Registada</h3>
                     <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
             </div>
@@ -415,7 +432,7 @@
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
                         <h2 class="text-xl font-bold uppercase text-white">Stock e Alertas de Validade</h2>
-                        <p class="text-xs text-zinc-400">Controlo de inventário</p>
+                        <p class="text-xs text-zinc-400">Controlo de inventário para venda e uso interno</p>
                     </div>
                     <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25">A verificar...</span>
                 </div>
@@ -423,7 +440,7 @@
                 <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-zinc-950 p-6 rounded-2xl border border-white/10">
                     <div>
                         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Produto *</label>
-                        <input type="text" id="prod-nome" required placeholder="Ex: Máscara" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+                        <input type="text" id="prod-nome" required placeholder="Ex: Máscara Hidratação" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
                     </div>
                     <div>
                         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Finalidade *</label>
@@ -453,38 +470,38 @@
             </div>
         </section>
 
-        <!-- ABA DE PLANOS COM LINKS DIRETOS DO MERCADO PAGO -->
+        <!-- PLANOS & MERCADO PAGO (COM VALORES E LINKS OFICIAIS EXATOS) -->
         <section id="aba-planos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="text-center space-y-2 mb-6">
-                    <h2 class="text-xl font-bold uppercase text-white">Planos e Assinaturas (Mercado Pago)</h2>
-                    <p class="text-xs text-zinc-400">Escolha o plano ideal para gerir o seu salão</p>
+                    <h2 class="text-xl font-bold uppercase text-white">Planos Oficiais do Salão</h2>
+                    <p class="text-xs text-zinc-400">Escolha o plano ideal com integração direta ao Mercado Pago</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Plano Gratuito -->
+                    <!-- Plano Grátis -->
                     <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
                         <span class="px-3 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase rounded-full">Gratuito</span>
-                        <h4 class="text-base font-bold text-white uppercase">Iniciante</h4>
-                        <p class="text-2xl font-black text-brand-500">R$ 0<span class="text-xs text-zinc-400">/mês</span></p>
-                        <p class="text-xs text-zinc-400">Até 2 profissionais na equipa com agenda individual.</p>
+                        <h4 class="text-base font-bold text-white uppercase">Plano Grátis</h4>
+                        <p class="text-2xl font-black text-brand-500">R$ 0</p>
+                        <p class="text-xs text-zinc-400">Até 2 profissionais na equipa.</p>
                         <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Ativar Grátis</button>
                     </div>
-                    <!-- Plano Profissional (Com link direto do Mercado Pago configurado) -->
+                    <!-- Plano Mensal (Mercado Pago Oficial) -->
                     <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative overflow-hidden shadow-xl shadow-brand-500/10">
                         <div class="absolute -right-12 top-6 bg-brand-500 text-white text-[9px] font-bold uppercase py-1 px-12 rotate-45">Popular</div>
-                        <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Profissional</span>
-                        <h4 class="text-base font-bold text-white uppercase">Salão Completo</h4>
-                        <p class="text-2xl font-black text-white">R$ 97<span class="text-xs text-zinc-400">/mês</span></p>
-                        <p class="text-xs text-zinc-400">Profissionais ilimitados, relatórios e comissões avançadas.</p>
-                        <a href="https://mpago.la/1LunQwf" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition text-center">Assinar via Mercado Pago</a>
+                        <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Mensal</span>
+                        <h4 class="text-base font-bold text-white uppercase">Plano Mensal</h4>
+                        <p class="text-2xl font-black text-white">R$ 30,00<span class="text-xs text-zinc-400">/mês</span></p>
+                        <p class="text-xs text-zinc-400">Até 10 profissionais na equipa.</p>
+                        <a href="https://mpago.la/1LunQwf" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition text-center">Assinar Mensal</a>
                     </div>
-                    <!-- Plano Enterprise (Com link direto do Mercado Pago configurado) -->
+                    <!-- Plano Anual (Mercado Pago Oficial) -->
                     <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
-                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Enterprise</span>
-                        <h4 class="text-base font-bold text-white uppercase">Rede de Salões</h4>
-                        <p class="text-2xl font-black text-blue-400">R$ 197<span class="text-xs text-zinc-400">/mês</span></p>
-                        <p class="text-xs text-zinc-400">Múltiplas unidades, suporte prioritário e API dedicada.</p>
-                        <a href="https://mpago.la/1doAutJ" target="_blank" class="block w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition text-center">Assinar via Mercado Pago</a>
+                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Anual</span>
+                        <h4 class="text-base font-bold text-white uppercase">Plano Anual</h4>
+                        <p class="text-2xl font-black text-blue-400">R$ 300,00<span class="text-xs text-zinc-400">/ano</span></p>
+                        <p class="text-xs text-zinc-400">20 ou mais profissionais.</p>
+                        <a href="https://mpago.la/1doAutJ" target="_blank" class="block w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition text-center">Assinar Anual</a>
                     </div>
                 </div>
             </div>
@@ -495,7 +512,7 @@
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
-                        <h2 class="text-xl font-bold uppercase text-white">Avaliações e Feedback dos Clientes</h2>
+                        <h2 class="text-xl font-bold uppercase text-white">Avaliações e Feedback</h2>
                         <p class="text-xs text-zinc-400">Moderação de notas pós-atendimento</p>
                     </div>
                 </div>
@@ -519,22 +536,22 @@
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <div>
-                        <h2 class="text-xl font-bold uppercase text-white">Relatórios Gerenciais e Clientes</h2>
-                        <p class="text-xs text-zinc-400">Histórico de caixa</p>
+                        <h2 class="text-xl font-bold uppercase text-white">Relatórios Gerenciais</h2>
+                        <p class="text-xs text-zinc-400">Histórico de caixa e indicadores</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-                        <span class="text-[10px] text-zinc-400 uppercase font-bold">Faturamento Total do Mês</span>
+                        <span class="text-[10px] text-zinc-400 uppercase font-bold">Faturamento Total</span>
                         <h3 id="relatorio-faturamento" class="text-xl font-black text-emerald-400">R$ 0,00</h3>
                     </div>
                     <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-                        <span class="text-[10px] text-zinc-400 uppercase font-bold">Total de Atendimentos</span>
+                        <span class="text-[10px] text-zinc-400 uppercase font-bold">Atendimentos</span>
                         <h3 id="relatorio-atendimentos" class="text-xl font-black text-brand-500">0</h3>
                     </div>
                     <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-                        <span class="text-[10px] text-zinc-400 uppercase font-bold">Clientes Atendidos</span>
+                        <span class="text-[10px] text-zinc-400 uppercase font-bold">Clientes</span>
                         <h3 id="relatorio-clientes" class="text-xl font-black text-white">0</h3>
                     </div>
                 </div>
