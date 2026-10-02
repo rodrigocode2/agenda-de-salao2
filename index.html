@@ -33,7 +33,6 @@
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Estilo Gota de Água / Glassmorphism */
         .glass-water {
             background: rgba(24, 24, 27, 0.45);
             backdrop-filter: blur(16px);
@@ -57,30 +56,6 @@
     <!-- Toast Container -->
     <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
-    <!-- MODAL DE SETUP DO ESTABELECIMENTO (PRIMEIRO ACESSO ADMIN) -->
-    <div id="modal-setup-salao" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-        <div class="glass-water p-8 rounded-3xl border border-white/10 max-w-md w-full space-y-6 shadow-2xl">
-            <div class="text-center space-y-2">
-                <div class="w-12 h-12 mx-auto rounded-2xl bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold text-xl">
-                    <i class="fa-solid fa-store"></i>
-                </div>
-                <h3 class="text-xl font-bold uppercase text-white">Configurar Salão</h3>
-                <p class="text-xs text-zinc-400">Insira o nome do seu estabelecimento para iniciar o painel administrativo.</p>
-            </div>
-            <form onsubmit="App.handleSalvarSetupSalao(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
-                    <input type="text" id="setup-nome-salao" required placeholder="Ex: Studio Bella Hair" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-                </div>
-                <div>
-                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp *</label>
-                    <input type="text" id="setup-telefone-salao" required placeholder="(11) 99999-9999" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-                </div>
-                <button type="submit" class="w-full py-3 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase transition hover:bg-brand-600 cursor-pointer">Salvar e Aceder</button>
-            </form>
-        </div>
-    </div>
-
     <!-- HEADER -->
     <header id="main-header" class="hidden sticky top-0 z-40 glass-water border-b border-white/10">
         <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
@@ -102,6 +77,7 @@
                 <button onclick="UI.switchTab('aba-servicos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-wand-magic-sparkles text-brand-500"></i> Serviços</button>
                 <button onclick="UI.switchTab('aba-equipe')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-users-gear text-brand-500"></i> Equipe</button>
                 <button onclick="UI.switchTab('aba-produtos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-boxes-stacked text-brand-500"></i> Stock</button>
+                <button onclick="UI.switchTab('aba-planos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-crown text-brand-500"></i> Planos</button>
                 <button onclick="UI.switchTab('aba-avaliacoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-star text-brand-500"></i> Avaliações</button>
                 <button onclick="UI.switchTab('aba-relatorios')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer transition"><i class="fa-solid fa-chart-line text-brand-500"></i> Relatórios</button>
             </nav>
@@ -121,16 +97,17 @@
     <!-- CONTEÚDO PRINCIPAL -->
     <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
         
-        <!-- 1. TELA DE LOGIN & PLANOS MERCADO PAGO -->
+        <!-- 1. TELA DE LOGIN LIMPA (SEM PLANOS NA ENTRADA) -->
         <section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 glass-water border border-white/10 space-y-12">
             <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-30 filter brightness-90"></video>
                 <div class="absolute inset-0 bg-gradient-to-b from-darkbg-300/60 via-darkbg-300/40 to-darkbg-300"></div>
             </div>
 
             <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
                 <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase tracking-wider">Plataforma de Gestão Integrada</span>
                 <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white">HairConcept <span class="text-brand-500">Gestão</span></h1>
-                <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento[cite: 114].</p>
+                <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento.</p>
             </div>
 
             <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -201,41 +178,6 @@
                         </div>
                         <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:border-brand-500 text-white font-bold text-xs uppercase transition cursor-pointer">Aceder à Minha Agenda</button>
                     </form>
-                </div>
-            </div>
-
-            <!-- PLANOS DE ASSINATURA & MERCADO PAGO -->
-            <div class="relative z-10 max-w-4xl mx-auto pt-8 border-t border-white/10">
-                <div class="text-center space-y-2 mb-8">
-                    <h3 class="text-lg font-bold uppercase text-white">Planos e Assinaturas (Mercado Pago)[cite: 114]</h3>
-                    <p class="text-xs text-zinc-400">Escolha o plano ideal para gerir o seu salão com automação completa</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Plano Gratuito -->
-                    <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
-                        <span class="px-3 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase rounded-full">Gratuito</span>
-                        <h4 class="text-base font-bold text-white uppercase">Iniciante</h4>
-                        <p class="text-2xl font-black text-brand-500">R$ 0<span class="text-xs text-zinc-400">/mês</span></p>
-                        <p class="text-xs text-zinc-400">Até 2 profissionais na equipa com agenda individual.</p>
-                        <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Selecionar Grátis</button>
-                    </div>
-                    <!-- Plano Profissional Mercado Pago -->
-                    <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative overflow-hidden shadow-xl shadow-brand-500/10">
-                        <div class="absolute -right-12 top-6 bg-brand-500 text-white text-[9px] font-bold uppercase py-1 px-12 rotate-45">Popular</div>
-                        <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Profissional</span>
-                        <h4 class="text-base font-bold text-white uppercase">Salão Completo</h4>
-                        <p class="text-2xl font-black text-white">R$ 97<span class="text-xs text-zinc-400">/mês</span></p>
-                        <p class="text-xs text-zinc-400">Profissionais ilimitados, relatórios e comissões avançadas.</p>
-                        <button onclick="App.setPlan('mensal')" class="w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition cursor-pointer">Assinar Mensal</button>
-                    </div>
-                    <!-- Plano Premium -->
-                    <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
-                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Enterprise</span>
-                        <h4 class="text-base font-bold text-white uppercase">Rede de Salões</h4>
-                        <p class="text-2xl font-black text-blue-400">R$ 197<span class="text-xs text-zinc-400">/mês</span></p>
-                        <p class="text-xs text-zinc-400">Múltiplas unidades, suporte prioritário e API dedicada.</p>
-                        <button onclick="App.setPlan('anual')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Assinar Enterprise</button>
-                    </div>
                 </div>
             </div>
         </section>
@@ -347,7 +289,7 @@
                 </div>
             </div>
 
-            <!-- TABELA / GRELHA DA AGENDA -->
+            <!-- TABELA DA AGENDA -->
             <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
                 <table class="w-full text-left border-collapse min-w-[800px]">
                     <thead>
@@ -540,6 +482,43 @@
             </div>
         </section>
 
+        <!-- ABA DE PLANOS (EXCLUSIVA DENTRO DO PAINEL) -->
+        <section id="aba-planos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+            <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+                <div class="text-center space-y-2 mb-6">
+                    <h2 class="text-xl font-bold uppercase text-white">Planos e Assinaturas (Mercado Pago)</h2>
+                    <p class="text-xs text-zinc-400">Escolha ou altere o plano ideal para gerir o seu salão com automação completa</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Plano Gratuito -->
+                    <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
+                        <span class="px-3 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase rounded-full">Gratuito</span>
+                        <h4 class="text-base font-bold text-white uppercase">Iniciante</h4>
+                        <p class="text-2xl font-black text-brand-500">R$ 0<span class="text-xs text-zinc-400">/mês</span></p>
+                        <p class="text-xs text-zinc-400">Até 2 profissionais na equipa com agenda individual.</p>
+                        <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Ativar Grátis</button>
+                    </div>
+                    <!-- Plano Profissional Mercado Pago -->
+                    <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative overflow-hidden shadow-xl shadow-brand-500/10">
+                        <div class="absolute -right-12 top-6 bg-brand-500 text-white text-[9px] font-bold uppercase py-1 px-12 rotate-45">Popular</div>
+                        <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Profissional</span>
+                        <h4 class="text-base font-bold text-white uppercase">Salão Completo</h4>
+                        <p class="text-2xl font-black text-white">R$ 97<span class="text-xs text-zinc-400">/mês</span></p>
+                        <p class="text-xs text-zinc-400">Profissionais ilimitados, relatórios e comissões avançadas.</p>
+                        <a href="https://www.mercadopago.com.br" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition text-center">Assinar via Mercado Pago</a>
+                    </div>
+                    <!-- Plano Premium -->
+                    <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
+                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Enterprise</span>
+                        <h4 class="text-base font-bold text-white uppercase">Rede de Salões</h4>
+                        <p class="text-2xl font-black text-blue-400">R$ 197<span class="text-xs text-zinc-400">/mês</span></p>
+                        <p class="text-xs text-zinc-400">Múltiplas unidades, suporte prioritário e API dedicada.</p>
+                        <a href="https://www.mercadopago.com.br" target="_blank" class="block w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition text-center">Assinar via Mercado Pago</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- AVALIAÇÕES E FEEDBACK -->
         <section id="aba-avaliacoes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
@@ -596,7 +575,7 @@
 
     </main>
 
-    <!-- Script Principal ligado ao Supabase -->
+    <!-- Script Principal -->
     <script src="app.js"></script>
 </body>
 </html>
