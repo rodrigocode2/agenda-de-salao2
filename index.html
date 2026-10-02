@@ -322,12 +322,17 @@
                     <div>
                         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
                         <select id="agendamento-horario" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+                            <option value="08:00">08:00</option>
                             <option value="09:00">09:00</option>
                             <option value="10:00">10:00</option>
                             <option value="11:00">11:00</option>
+                            <option value="12:00">12:00</option>
+                            <option value="13:00">13:00</option>
                             <option value="14:00">14:00</option>
                             <option value="15:00">15:00</option>
                             <option value="16:00">16:00</option>
+                            <option value="17:00">17:00</option>
+                            <option value="18:00">18:00</option>
                         </select>
                     </div>
                     <div>
@@ -470,7 +475,7 @@
             </div>
         </section>
 
-        <!-- PLANOS & MERCADO PAGO (COM VALORES E LINKS OFICIAIS EXATOS) -->
+        <!-- PLANOS & MERCADO PAGO -->
         <section id="aba-planos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="text-center space-y-2 mb-6">
@@ -486,7 +491,7 @@
                         <p class="text-xs text-zinc-400">Até 2 profissionais na equipa.</p>
                         <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Ativar Grátis</button>
                     </div>
-                    <!-- Plano Mensal (Mercado Pago Oficial) -->
+                    <!-- Plano Mensal -->
                     <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative overflow-hidden shadow-xl shadow-brand-500/10">
                         <div class="absolute -right-12 top-6 bg-brand-500 text-white text-[9px] font-bold uppercase py-1 px-12 rotate-45">Popular</div>
                         <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Mensal</span>
@@ -495,7 +500,7 @@
                         <p class="text-xs text-zinc-400">Até 10 profissionais na equipa.</p>
                         <a href="https://mpago.la/1LunQwf" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition text-center">Assinar Mensal</a>
                     </div>
-                    <!-- Plano Anual (Mercado Pago Oficial) -->
+                    <!-- Plano Anual -->
                     <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
                         <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Anual</span>
                         <h4 class="text-base font-bold text-white uppercase">Plano Anual</h4>
@@ -559,8 +564,14 @@
         </section>
 
     </main>
-
+<!-- RODAPÉ / COPYRIGHT -->
+    <footer class="relative z-10 max-w-7xl mx-auto px-4 py-8 text-center border-t border-white/10 mt-auto">
+        <p class="text-xs text-zinc-500 uppercase tracking-wider">
+            &copy; 2026 HairConcept. Todos os direitos reservados. Desenvolvido por <span class="text-zinc-400 font-bold">rodrigo-n-s@live.com / rodrigocode2</span>
+        </p>
+    </footer>
     <!-- Script Principal -->
     <script src="app.js"></script>
 </body>
 </html>
+
