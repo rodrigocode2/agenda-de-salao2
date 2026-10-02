@@ -189,8 +189,8 @@
             <div id="painel-profissional-extra" class="hidden space-y-6 pb-6 border-b border-white/10">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-zinc-950 border border-white/10">
                     <div class="flex items-center gap-4">
-                        <div class="relative group">
-                            <img id="prof-header-foto" src="https://via.placeholder.com/150" class="w-20 h-20 rounded-2xl object-cover border-2 border-brand-500 shadow-lg">
+                        <div class="relative group cursor-pointer" onclick="App.irParaAgenda()">
+                            <img id="prof-header-foto" src="https://via.placeholder.com/150" class="w-20 h-20 rounded-2xl object-cover border-2 border-brand-500 shadow-lg transition transform group-hover:scale-105" title="Ver Agenda">
                             <label class="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-white text-[10px] font-bold uppercase">
                                 Alterar Foto
                                 <input type="file" accept="image/*" onchange="App.handleAtualizarMinhaFoto(event)" class="hidden">
@@ -203,7 +203,7 @@
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-3 w-full md:w-auto">
+                    <div class="flex items-center gap-3 w-full md:w-auto justify-end">
                         <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 text-center">
                             <span class="block text-[10px] text-zinc-400 uppercase">Atendimentos</span>
                             <strong id="prof-stat-atendimentos" class="text-brand-500 text-sm font-bold">0</strong>
@@ -213,6 +213,14 @@
                             <strong id="prof-stat-comissao" class="text-emerald-400 text-sm font-bold">R$ 0,00</strong>
                         </div>
                     </div>
+                </div>
+
+                <!-- ENVIAR RECADO PARA O ESTABELECIMENTO -->
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex flex-col sm:flex-row gap-3 items-center">
+                    <input type="text" id="prof-recado-input" placeholder="Escrever recado ou mensagem para o estabelecimento..." class="w-full flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    <button onclick="App.enviarRecadoEstabelecimento()" class="w-full sm:w-auto px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-brand-600/20 cursor-pointer">
+                        Enviar para o Estabelecimento ➔
+                    </button>
                 </div>
 
                 <!-- FERRAMENTAS DO PROFISSIONAL -->
@@ -230,7 +238,7 @@
                         <div class="space-y-3 text-xs">
                             <div>
                                 <label class="block text-[10px] text-zinc-400 uppercase mb-1">Valor do Serviço (R$)</label>
-                                <input type="number" id="prof-calc-val" oninput="App.calcularGanhosPessoal()" placeholder="0.00" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-white">
+                                <input type="number" id="prof-calc-val" value="50" oninput="App.calcularGanhosPessoal()" placeholder="50.00" class="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-white">
                             </div>
                             <div>
                                 <label class="block text-[10px] text-zinc-400 uppercase mb-1">Sua Comissão (%)</label>
@@ -238,7 +246,7 @@
                             </div>
                             <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 flex justify-between items-center">
                                 <span class="text-zinc-400 text-[10px] uppercase">Recebimento:</span>
-                                <strong id="prof-calc-result" class="text-emerald-400 text-sm">R$ 0,00</strong>
+                                <strong id="prof-calc-result" class="text-emerald-400 text-sm">R$ 25,00</strong>
                             </div>
                         </div>
                     </div>
@@ -253,6 +261,16 @@
                             <button onclick="App.proximaFrase()" class="w-full py-2 bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 rounded-lg text-[10px] font-bold uppercase transition cursor-pointer">Nova Frase</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- CAIXA DE RECADOS DO ESTABELECIMENTO (VISÍVEL APENAS PARA O ADMIN) -->
+            <div class="admin-only glass-water p-5 rounded-2xl border border-white/10 space-y-3">
+                <h3 class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                    <i class="fa-solid fa-inbox text-brand-500"></i> Recados Recebidos dos Profissionais
+                </h3>
+                <div id="lista-recados-estab" class="space-y-2 max-h-40 overflow-y-auto">
+                    <p class="text-xs text-zinc-500">A carregar recados...</p>
                 </div>
             </div>
 
@@ -322,17 +340,12 @@
                     <div>
                         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
                         <select id="agendamento-horario" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-                            <option value="08:00">08:00</option>
                             <option value="09:00">09:00</option>
                             <option value="10:00">10:00</option>
                             <option value="11:00">11:00</option>
-                            <option value="12:00">12:00</option>
-                            <option value="13:00">13:00</option>
                             <option value="14:00">14:00</option>
                             <option value="15:00">15:00</option>
                             <option value="16:00">16:00</option>
-                            <option value="17:00">17:00</option>
-                            <option value="18:00">18:00</option>
                         </select>
                     </div>
                     <div>
@@ -564,14 +577,15 @@
         </section>
 
     </main>
-<!-- RODAPÉ / COPYRIGHT -->
+
+    <!-- RODAPÉ / COPYRIGHT -->
     <footer class="relative z-10 max-w-7xl mx-auto px-4 py-8 text-center border-t border-white/10 mt-auto">
         <p class="text-xs text-zinc-500 uppercase tracking-wider">
             &copy; 2026 HairConcept. Todos os direitos reservados. Desenvolvido por <span class="text-zinc-400 font-bold">rodrigo-n-s@live.com / rodrigocode2</span>
         </p>
     </footer>
+
     <!-- Script Principal -->
     <script src="app.js"></script>
 </body>
 </html>
-
