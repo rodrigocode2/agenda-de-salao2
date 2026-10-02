@@ -49,6 +49,7 @@ const App = {
         this.renderAgendaGrid();
         this.carregarPostIts();
         this.popularSelectProfissionais();
+        this.carregarRecadosEstabelecimento();
         
         if (this.user.role === 'profissional') {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
@@ -143,7 +144,6 @@ const App = {
                 .eq('estabelecimento_id', estabelecimentoId);
             if (countError) throw countError;
             
-            // Regras de limite por plano (Grátis: 2 | Mensal: 10 | Anual: 20+)
             let limiteMaximo = 2;
             if (planoAtual === 'mensal') limiteMaximo = 10;
             if (planoAtual === 'anual') limiteMaximo = 50;
@@ -209,13 +209,48 @@ const App = {
                     .eq('id', profId);
                 if (error) throw error;
                 document.getElementById('prof-header-foto').src = base64;
-                UI.showToast('Foto de perfil atualizada com sucesso!');
+                UI.showToast('Foto de perfil atualizada e salva com sucesso!');
                 this.renderListaProfissionais();
             } catch (err) {
                 UI.showToast('Erro ao atualizar foto: ' + err.message, 'error');
             }
         };
         reader.readAsDataURL(file);
+    },
+    irParaAgenda() {
+        UI.switchTab('aba-agenda');
+    },
+    enviarRecadoEstabelecimento() {
+        const input = document.getElementById('prof-recado-input');
+        const texto = input.value.trim();
+        if (!texto) {
+            UI.showToast('Escreva uma mensagem antes de enviar.', 'error');
+            return;
+        }
+        const recados = JSON.parse(localStorage.getItem('hairconcept_recados') || '[]');
+        recados.push({
+            profissional: this.user.name || 'Profissional',
+            texto: texto,
+            data: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        });
+        localStorage.setItem('hairconcept_recados', JSON.stringify(recados));
+        input.value = '';
+        UI.showToast('Recado enviado com sucesso para o estabelecimento!');
+        this.carregarRecadosEstabelecimento();
+    },
+    carregarRecadosEstabelecimento() {
+        const container = document.getElementById('lista-recados-estab');
+        if (!container) return;
+        const recados = JSON.parse(localStorage.getItem('hairconcept_recados') || '[]');
+        container.innerHTML = recados.length > 0 ? recados.map(r => `
+            <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center">
+                <div>
+                    <span class="text-brand-500 font-bold uppercase">${r.profissional}:</span>
+                    <span class="text-zinc-200 ml-1.5">${r.texto}</span>
+                </div>
+                <span class="text-[10px] text-zinc-500">${r.data}</span>
+            </div>
+        `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipa por enquanto.</p>';
     },
     async popularSelectProfissionais() {
         const select = document.getElementById('agendamento-profissional');
@@ -449,8 +484,9 @@ const App = {
     },
     calcularGanhosPessoal() {
         const val = parseFloat(document.getElementById('prof-calc-val').value) || 0;
-        const porc = parseFloat(document.getElementById('prof-calc-porc').value) || 50;
-        const total = (val * porc) / 100;
+        const porc = parseFloat(document.getElementById('prof-calc-porc').value);
+        const percentual = isNaN(porc) ? 50 : porc;
+        const total = (val * percentual) / 100;
         document.getElementById('prof-calc-result').textContent = `R$ ${total.toFixed(2)}`;
     },
     proximaFrase() {
