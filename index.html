@@ -57,6 +57,30 @@
     <!-- Toast Container -->
     <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
+    <!-- MODAL DE SETUP DO ESTABELECIMENTO (PRIMEIRO ACESSO ADMIN) -->
+    <div id="modal-setup-salao" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="glass-water p-8 rounded-3xl border border-white/10 max-w-md w-full space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 mx-auto rounded-2xl bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold text-xl">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <h3 class="text-xl font-bold uppercase text-white">Configurar Salão</h3>
+                <p class="text-xs text-zinc-400">Insira o nome do seu estabelecimento para iniciar o painel administrativo.</p>
+            </div>
+            <form onsubmit="App.handleSalvarSetupSalao(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
+                    <input type="text" id="setup-nome-salao" required placeholder="Ex: Studio Bella Hair" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp *</label>
+                    <input type="text" id="setup-telefone-salao" required placeholder="(11) 99999-9999" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase transition hover:bg-brand-600 cursor-pointer">Salvar e Aceder</button>
+            </form>
+        </div>
+    </div>
+
     <!-- HEADER -->
     <header id="main-header" class="hidden sticky top-0 z-40 glass-water border-b border-white/10">
         <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
@@ -100,14 +124,13 @@
         <!-- 1. TELA DE LOGIN & PLANOS MERCADO PAGO -->
         <section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 glass-water border border-white/10 space-y-12">
             <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-30 filter brightness-90"></video>
                 <div class="absolute inset-0 bg-gradient-to-b from-darkbg-300/60 via-darkbg-300/40 to-darkbg-300"></div>
             </div>
 
             <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
                 <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase tracking-wider">Plataforma de Gestão Integrada</span>
                 <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white">HairConcept <span class="text-brand-500">Gestão</span></h1>
-                <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento.</p>
+                <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento[cite: 114].</p>
             </div>
 
             <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -184,7 +207,7 @@
             <!-- PLANOS DE ASSINATURA & MERCADO PAGO -->
             <div class="relative z-10 max-w-4xl mx-auto pt-8 border-t border-white/10">
                 <div class="text-center space-y-2 mb-8">
-                    <h3 class="text-lg font-bold uppercase text-white">Planos e Assinaturas (Mercado Pago)</h3>
+                    <h3 class="text-lg font-bold uppercase text-white">Planos e Assinaturas (Mercado Pago)[cite: 114]</h3>
                     <p class="text-xs text-zinc-400">Escolha o plano ideal para gerir o seu salão com automação completa</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -194,7 +217,7 @@
                         <h4 class="text-base font-bold text-white uppercase">Iniciante</h4>
                         <p class="text-2xl font-black text-brand-500">R$ 0<span class="text-xs text-zinc-400">/mês</span></p>
                         <p class="text-xs text-zinc-400">Até 2 profissionais na equipa com agenda individual.</p>
-                        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Começar Grátis</button>
+                        <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Selecionar Grátis</button>
                     </div>
                     <!-- Plano Profissional Mercado Pago -->
                     <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative overflow-hidden shadow-xl shadow-brand-500/10">
@@ -203,7 +226,7 @@
                         <h4 class="text-base font-bold text-white uppercase">Salão Completo</h4>
                         <p class="text-2xl font-black text-white">R$ 97<span class="text-xs text-zinc-400">/mês</span></p>
                         <p class="text-xs text-zinc-400">Profissionais ilimitados, relatórios e comissões avançadas.</p>
-                        <a href="https://www.mercadopago.com.br" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition text-center">Assinar via Mercado Pago</a>
+                        <button onclick="App.setPlan('mensal')" class="w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition cursor-pointer">Assinar Mensal</button>
                     </div>
                     <!-- Plano Premium -->
                     <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
@@ -211,7 +234,7 @@
                         <h4 class="text-base font-bold text-white uppercase">Rede de Salões</h4>
                         <p class="text-2xl font-black text-blue-400">R$ 197<span class="text-xs text-zinc-400">/mês</span></p>
                         <p class="text-xs text-zinc-400">Múltiplas unidades, suporte prioritário e API dedicada.</p>
-                        <a href="https://www.mercadopago.com.br" target="_blank" class="block w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition text-center">Assinar via Mercado Pago</a>
+                        <button onclick="App.setPlan('anual')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Assinar Enterprise</button>
                     </div>
                 </div>
             </div>
@@ -296,27 +319,22 @@
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500"></i> Data:</span>
                     
-                    <!-- Botão Dia Anterior -->
                     <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer" title="Dia Anterior">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
 
-                    <!-- Seletor de Data (Permite escolher qualquer dia, mês ou ano à frente) -->
                     <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
 
-                    <!-- Botão Próximo Dia -->
                     <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer" title="Próximo Dia">
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
 
-                    <!-- Botão Ir para Hoje -->
                     <button onclick="App.irParaHoje()" class="px-3 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-brand-400 hover:bg-brand-500/30 text-xs font-bold uppercase transition cursor-pointer">
                         Hoje
                     </button>
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <!-- Navegação rápida por Meses à frente -->
                     <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
                         <option value="" disabled selected>Saltar para Mês...</option>
                         <option value="0">Outubro 2026</option>
