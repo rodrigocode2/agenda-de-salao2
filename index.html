@@ -97,7 +97,7 @@
     <!-- CONTEÚDO PRINCIPAL -->
     <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
         
-        <!-- 1. TELA DE LOGIN -->
+        <!-- 1. TELA DE LOGIN & PLANOS MERCADO PAGO -->
         <section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 glass-water border border-white/10 space-y-12">
             <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-30 filter brightness-90"></video>
@@ -105,7 +105,7 @@
             </div>
 
             <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-                <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase">Gestão Completa Inspirada no Salão 99</span>
+                <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase tracking-wider">Plataforma de Gestão Integrada</span>
                 <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white">HairConcept <span class="text-brand-500">Gestão</span></h1>
                 <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento.</p>
             </div>
@@ -178,6 +178,41 @@
                         </div>
                         <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:border-brand-500 text-white font-bold text-xs uppercase transition cursor-pointer">Aceder à Minha Agenda</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- PLANOS DE ASSINATURA & MERCADO PAGO -->
+            <div class="relative z-10 max-w-4xl mx-auto pt-8 border-t border-white/10">
+                <div class="text-center space-y-2 mb-8">
+                    <h3 class="text-lg font-bold uppercase text-white">Planos e Assinaturas (Mercado Pago)</h3>
+                    <p class="text-xs text-zinc-400">Escolha o plano ideal para gerir o seu salão com automação completa</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Plano Gratuito -->
+                    <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
+                        <span class="px-3 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase rounded-full">Gratuito</span>
+                        <h4 class="text-base font-bold text-white uppercase">Iniciante</h4>
+                        <p class="text-2xl font-black text-brand-500">R$ 0<span class="text-xs text-zinc-400">/mês</span></p>
+                        <p class="text-xs text-zinc-400">Até 2 profissionais na equipa com agenda individual.</p>
+                        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition cursor-pointer">Começar Grátis</button>
+                    </div>
+                    <!-- Plano Profissional Mercado Pago -->
+                    <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative overflow-hidden shadow-xl shadow-brand-500/10">
+                        <div class="absolute -right-12 top-6 bg-brand-500 text-white text-[9px] font-bold uppercase py-1 px-12 rotate-45">Popular</div>
+                        <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Profissional</span>
+                        <h4 class="text-base font-bold text-white uppercase">Salão Completo</h4>
+                        <p class="text-2xl font-black text-white">R$ 97<span class="text-xs text-zinc-400">/mês</span></p>
+                        <p class="text-xs text-zinc-400">Profissionais ilimitados, relatórios e comissões avançadas.</p>
+                        <a href="https://www.mercadopago.com.br" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition text-center">Assinar via Mercado Pago</a>
+                    </div>
+                    <!-- Plano Premium -->
+                    <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
+                        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Enterprise</span>
+                        <h4 class="text-base font-bold text-white uppercase">Rede de Salões</h4>
+                        <p class="text-2xl font-black text-blue-400">R$ 197<span class="text-xs text-zinc-400">/mês</span></p>
+                        <p class="text-xs text-zinc-400">Múltiplas unidades, suporte prioritário e API dedicada.</p>
+                        <a href="https://www.mercadopago.com.br" target="_blank" class="block w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase hover:bg-zinc-800 transition text-center">Assinar via Mercado Pago</a>
+                    </div>
                 </div>
             </div>
         </section>
@@ -256,15 +291,45 @@
                 </div>
             </div>
 
-            <!-- CONTROLO DE CALENDÁRIO & GRADE HORÁRIA -->
+            <!-- CONTROLO DE CALENDÁRIO & NAVEGAÇÃO AVANÇADA -->
             <div class="glass-water p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    <span class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-calendar text-brand-500"></i> Calendário do Salão</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500"></i> Data:</span>
+                    
+                    <!-- Botão Dia Anterior -->
+                    <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer" title="Dia Anterior">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+
+                    <!-- Seletor de Data (Permite escolher qualquer dia, mês ou ano à frente) -->
                     <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
+
+                    <!-- Botão Próximo Dia -->
+                    <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold uppercase transition cursor-pointer" title="Próximo Dia">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+
+                    <!-- Botão Ir para Hoje -->
+                    <button onclick="App.irParaHoje()" class="px-3 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-brand-400 hover:bg-brand-500/30 text-xs font-bold uppercase transition cursor-pointer">
+                        Hoje
+                    </button>
                 </div>
-                <button onclick="UI.switchTab('aba-agendar')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition cursor-pointer">+ Novo Agendamento</button>
+
+                <div class="flex items-center gap-3">
+                    <!-- Navegação rápida por Meses à frente -->
+                    <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
+                        <option value="" disabled selected>Saltar para Mês...</option>
+                        <option value="0">Outubro 2026</option>
+                        <option value="1">Novembro 2026</option>
+                        <option value="2">Dezembro 2026</option>
+                        <option value="3">Janeiro 2027</option>
+                    </select>
+
+                    <button onclick="UI.switchTab('aba-agendar')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase hover:bg-brand-600 transition cursor-pointer">+ Novo Agendamento</button>
+                </div>
             </div>
 
+            <!-- TABELA / GRELHA DA AGENDA -->
             <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
                 <table class="w-full text-left border-collapse min-w-[800px]">
                     <thead>
@@ -318,7 +383,7 @@
             </div>
         </section>
 
-        <!-- CATÁLOGO DE SERVIÇOS & COMISSÕES (Novo) -->
+        <!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
         <section id="aba-servicos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
@@ -457,7 +522,7 @@
             </div>
         </section>
 
-        <!-- AVALIAÇÕES E FEEDBACK (Novo) -->
+        <!-- AVALIAÇÕES E FEEDBACK -->
         <section id="aba-avaliacoes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
@@ -481,7 +546,7 @@
             </div>
         </section>
 
-        <!-- RELATÓRIOS E UNIFICAÇÃO DE CLIENTES (Novo) -->
+        <!-- RELATÓRIOS E UNIFICAÇÃO DE CLIENTES -->
         <section id="aba-relatorios" class="tab-content hidden max-w-4xl mx-auto space-y-6">
             <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
