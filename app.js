@@ -1,4 +1,3 @@
-// Configuração oficial do Supabase atualizada[cite: 113]
 const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
@@ -40,18 +39,16 @@ const App = {
     user: { loggedIn: false, role: '', name: '', id: null },
     fotoBase64Temp: '',
     init() {
-        console.log("HairConcept inicializado.");[cite: 113]
+        console.log("HairConcept inicializado.");
         const dataInput = document.getElementById('filtro-data-agenda');
         if (dataInput && !dataInput.value) {
             dataInput.value = new Date().toISOString().split('T')[0];
         }
         this.renderListaProfissionais();
         this.renderProdutos();
-        this.renderServicos();
         this.renderAgendaGrid();
         this.carregarPostIts();
         this.popularSelectProfissionais();
-        this.popularSelectServicos();
         
         if (this.user.role === 'profissional') {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
@@ -90,7 +87,8 @@ const App = {
                 .single();
             const headerSub = document.getElementById('saloon-name-header');
             if (error || !estab) {
-                document.getElementById('modal-setup-salao')?.classList.remove('hidden');
+                // Caso não tenha estabelecimento cadastrado, pode abrir modal ou criar automático
+                this.init();
             } else {
                 localStorage.setItem('hairconcept_estab_id', estab.id);
                 if (headerSub) headerSub.textContent = estab.nome_salao;
@@ -98,30 +96,6 @@ const App = {
             }
         } catch (e) {
             this.init();
-        }
-    },
-    async handleSalvarSetupSalao(event) {
-        event.preventDefault();
-        const nomeSalao = document.getElementById('setup-nome-salao').value;
-        const telefone = document.getElementById('setup-telefone-salao').value;
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session || !session.user) return;
-            const userId = session.user.id;
-            const { data, error } = await supabaseClient.from('estabelecimentos').insert([{
-                user_id: userId,
-                nome_salao: nomeSalao,
-                telefone: telefone
-            }]).select().single();
-            if (error) throw error;
-            localStorage.setItem('hairconcept_estab_id', data.id);
-            UI.showToast('Salão configurado com sucesso!');
-            document.getElementById('modal-setup-salao')?.classList.add('hidden');
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = nomeSalao;
-            this.init();
-        } catch (e) {
-            UI.showToast('Erro ao salvar estabelecimento: ' + e.message, 'error');
         }
     },
     async loginProfissional(event) {
@@ -170,9 +144,7 @@ const App = {
                 .eq('estabelecimento_id', estabelecimentoId);
             if (countError) throw countError;
             
-            const limites = { gratis: 2, mensal: 10, anual: 20 };
-            const limiteMaximo = limites[planoAtual] || 2;
-            
+            const limiteMaximo = planoAtual === 'gratis' ? 2 : 10;
             if (count >= limiteMaximo) {
                 UI.showToast(`Limite atingido! O plano ${planoAtual.toUpperCase()} permite apenas ${limiteMaximo} profissionais.`, 'error');
                 return;
@@ -240,76 +212,6 @@ const App = {
             console.error(e);
         }
     },
-    async popularSelectServicos() {
-        const select = document.getElementById('agendamento-servico-select');
-        if (!select) return;
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        try {
-            const { data } = await supabaseClient.from('servicos').select('*').eq('estabelecimento_id', estabId);
-            if (data && data.length > 0) {
-                select.innerHTML = data.map(s => `<option value="${s.nome}" data-preco="${s.preco}">${s.nome} - R$ ${s.preco.toFixed(2)}</option>`).join('');
-                this.preencherDadosServico();
-            } else {
-                select.innerHTML = '<option value="Corte Padrão" data-preco="50">Corte Padrão - R$ 50.00</option>';
-            }
-        } catch (e) {
-            select.innerHTML = '<option value="Corte Padrão" data-preco="50">Corte Padrão - R$ 50.00</option>';
-        }
-    },
-    preencherDadosServico() {
-        const select = document.getElementById('agendamento-servico-select');
-        const inputValor = document.getElementById('cliente-valor');
-        if (!select || !inputValor) return;
-        const selectedOption = select.options[select.selectedIndex];
-        if (selectedOption) {
-            const preco = selectedOption.getAttribute('data-preco');
-            if (preco) inputValor.value = preco;
-        }
-    },
-    async handleCreateServico(event) {
-        event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const nome = document.getElementById('serv-nome').value;
-        const preco = parseFloat(document.getElementById('serv-preco').value) || 0;
-        const duracao = parseInt(document.getElementById('serv-duracao').value) || 45;
-        const comissao = parseFloat(document.getElementById('serv-comissao').value) || 50;
-        try {
-            const { error } = await supabaseClient.from('servicos').insert([{
-                estabelecimento_id: estabId,
-                nome,
-                preco,
-                duracao,
-                comissao
-            }]);
-            if (error) throw error;
-            UI.showToast('Serviço adicionado com sucesso!');
-            event.target.reset();
-            this.renderServicos();
-            this.popularSelectServicos();
-        } catch (e) {
-            UI.showToast('Erro ao cadastrar serviço: ' + e.message, 'error');
-        }
-    },
-    async renderServicos() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
-        const container = document.getElementById('lista-servicos');
-        if (!container) return;
-        try {
-            const { data, error } = await supabaseClient.from('servicos').select('*').eq('estabelecimento_id', estabId);
-            if (error) throw error;
-            container.innerHTML = (data || []).map(s => `
-                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
-                    <div>
-                        <h4 class="text-xs font-bold text-white uppercase">${s.nome}</h4>
-                        <p class="text-[10px] text-zinc-400">Duração: ${s.duracao || 45} min | Comissão: ${s.comissao || 50}%</p>
-                    </div>
-                    <span class="text-xs font-bold text-brand-500">R$ ${(s.preco || 0).toFixed(2)}</span>
-                </div>
-            `).join('') || '<p class="text-xs text-zinc-500">Nenhum serviço registado.</p>';
-        } catch (e) {
-            console.error(e);
-        }
-    },
     async handleCreateAgendamento(event) {
         event.preventDefault();
         const estabId = localStorage.getItem('hairconcept_estab_id');
@@ -317,7 +219,7 @@ const App = {
         const profissional_id = document.getElementById('agendamento-profissional').value;
         const horario = document.getElementById('agendamento-horario').value;
         const cliente = document.getElementById('cliente-nome').value;
-        const servico = document.getElementById('agendamento-servico-select').value;
+        const servico = "Serviço Padrão";
         const valor = parseFloat(document.getElementById('cliente-valor').value) || 0;
         try {
             const { error } = await supabaseClient.from('agendamentos').insert([{
@@ -349,7 +251,7 @@ const App = {
             const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
             if (!profs || profs.length === 0) {
                 headerRow.innerHTML = '<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>';
-                tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipa para ver a agenda.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipe para ver a agenda.</td></tr>';
                 return;
             }
             let profsExibicao = profs;
@@ -434,7 +336,7 @@ const App = {
         try {
             const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             if (error) throw error;
-            lista.innerHTML = (data || []).map(p => `
+            lista.innerHTML = data.map(p => `
                 <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-xl object-cover">
@@ -462,7 +364,7 @@ const App = {
             const daqui3Meses = new Date();
             daqui3Meses.setMonth(hoje.getMonth() + 3);
             let alertaCount = 0;
-            lista.innerHTML = (data || []).map(prod => {
+            lista.innerHTML = data.map(prod => {
                 const dataVal = new Date(prod.data_validade);
                 const pertoVencer = dataVal <= daqui3Meses && dataVal >= hoje;
                 if (pertoVencer) alertaCount++;
@@ -542,54 +444,48 @@ const App = {
     },
     setPlan(plano) {
         localStorage.setItem('hairconcept_plan', plano);
-        UI.showToast(`Plano ${plano.toUpperCase()} selecionado com sucesso!`);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        UI.showToast(`Plano ${plano.toUpperCase()} ativado com sucesso!`);
+        UI.switchTab('aba-agenda');
     },
-    mudarDia(valor) {
-        const campo = document.getElementById('filtro-data-agenda');
-        if (!campo || !campo.value) return;
-        const data = new Date(campo.value);
-        data.setDate(data.getDate() + valor);
-        campo.value = data.toISOString().split('T')[0];
+    mudarDia(dias) {
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (!dataInput.value) return;
+        const atual = new Date(dataInput.value + 'T00:00:00');
+        atual.setDate(atual.getDate() + dias);
+        dataInput.value = atual.toISOString().split('T')[0];
         this.renderAgendaGrid();
     },
     irParaHoje() {
-        const campo = document.getElementById('filtro-data-agenda');
-        if (campo) {
-            campo.value = new Date().toISOString().split('T')[0];
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (dataInput) {
+            dataInput.value = new Date().toISOString().split('T')[0];
             this.renderAgendaGrid();
         }
     },
-    saltarParaMes(valor) {
-        if (!valor) return;
-        const data = new Date();
-        data.setMonth(data.getMonth() + Number(valor));
-        const campo = document.getElementById('filtro-data-agenda');
-        if (campo) {
-            campo.value = data.toISOString().split('T')[0];
+    saltarParaMes(mesIndex) {
+        const ano = 2026;
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (dataInput) {
+            const mesStr = String(parseInt(mesIndex) + 1).padStart(2, '0');
+            dataInput.value = `${ano}-${mesStr}-01`;
             this.renderAgendaGrid();
         }
-    },
-    unificarClientesDuplicados() {
-        UI.showToast('Ferramenta de unificação executada: Registos limpos com sucesso!');
     }
 };
 
 const UI = {
     showToast(msg, type = 'success') {
         const container = document.getElementById('toast-container');
-        if (!container) {
-            alert(msg);
-            return;
-        }
+        if (!container) return;
         const toast = document.createElement('div');
-        toast.className = `p-4 rounded-2xl glass-water border text-xs font-bold text-white shadow-xl transition-all duration-300 pointer-events-auto flex items-center justify-between gap-3 ${type === 'error' ? 'border-red-500/50 bg-red-500/10 text-red-200' : 'border-brand-500/50 bg-zinc-950 text-white'}`;
-        toast.innerHTML = `<span>${msg}</span>`;
+        toast.className = `p-3 rounded-2xl glass-water border ${type === 'error' ? 'border-rose-500/50 text-rose-300' : 'border-emerald-500/50 text-emerald-300'} text-xs font-bold uppercase shadow-xl transition-all transform translate-y-2 opacity-0`;
+        toast.textContent = msg;
         container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
         setTimeout(() => {
-            toast.style.opacity = '0';
+            toast.classList.add('translate-y-2', 'opacity-0');
             setTimeout(() => toast.remove(), 300);
-        }, 3500);
+        }, 3000);
     },
     switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -598,18 +494,6 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
-    const profId = localStorage.getItem('hairconcept_prof_id');
-    if (profId) {
-        App.user = {
-            loggedIn: true,
-            role: 'profissional',
-            id: profId,
-            name: 'Profissional'
-        };
-        App.finishLogin();
-        return;
-    }
-
     if (supabaseClient && supabaseClient.auth) {
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
