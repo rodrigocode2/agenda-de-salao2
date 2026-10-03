@@ -70,7 +70,6 @@ const App = {
             UI.showToast('O pagamento não foi concluído. Mantendo plano grátis.', 'error');
             window.history.replaceState({}, document.title, window.location.pathname);
         }
-        // =======================================
 
         const dataInput = document.getElementById('filtro-data-agenda');
         if (dataInput && !dataInput.value) {
@@ -84,6 +83,8 @@ const App = {
         this.popularSelectProfissionais();
         this.carregarRecadosEstabelecimento();
         this.carregarConfiguracoes();
+        this.renderRelatorios();
+        this.renderAvaliacoes();
         
         if (this.user.role === 'profissional') {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
@@ -254,9 +255,6 @@ const App = {
         };
         reader.readAsDataURL(file);
     },
-    irParaAgenda() {
-        UI.switchTab('aba-agenda');
-    },
     async enviarRecadoEstabelecimento() {
         const input = document.getElementById('prof-recado-input');
         const mensagem = input.value.trim();
@@ -293,10 +291,8 @@ const App = {
                 .order('created_at', { ascending: true });
                 
             if (error) throw error;
-            
             const mensagens = data || [];
 
-            // Renderizar no Painel do Admin (Lista / Caixa de Entrada)
             if (containerAdmin) {
                 containerAdmin.innerHTML = mensagens.length > 0 ? [...mensagens].reverse().map(r => `
                     <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center gap-4">
@@ -314,7 +310,6 @@ const App = {
                 `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>';
             }
 
-            // Renderizar no Painel do Profissional (Formato Chat / Balões)
             if (containerProf) {
                 containerProf.innerHTML = mensagens.length > 0 ? mensagens.map(r => {
                     const isEu = r.remetente.toLowerCase().includes((this.user.name || '').toLowerCase()) && !r.remetente.includes('Admin');
@@ -327,7 +322,6 @@ const App = {
                         </div>
                     `;
                 }).join('') : '<p class="text-xs text-zinc-500 text-center py-4">Inicie uma conversa com o estabelecimento.</p>';
-                
                 containerProf.scrollTop = containerProf.scrollHeight;
             }
         } catch (e) {
@@ -336,12 +330,9 @@ const App = {
     },
     async apagarRecado(id) {
         try {
-            const { error } = await supabaseClient
-                .from('recados')
-                .delete()
-                .eq('id', id);
+            const { error } = await supabaseClient.from('recados').delete().eq('id', id);
             if (error) throw error;
-            UI.showToast("Mensagem marcada como lida e apagada.", "success");
+            UI.showToast("Mensagem apagada.", "success");
             this.carregarRecadosEstabelecimento();
         } catch (e) {
             UI.showToast("Erro ao apagar recado: " + e.message, "error");
@@ -363,7 +354,7 @@ const App = {
                 mensagem: mensagem
             }]);
             if (error) throw error;
-            UI.showToast("Resposta enviada à equipe com sucesso!", "success");
+            UI.showToast("Resposta enviada!", "success");
             input.value = '';
             this.carregarRecadosEstabelecimento();
         } catch (e) {
@@ -407,6 +398,7 @@ const App = {
             event.target.reset();
             UI.switchTab('aba-agenda');
             this.renderAgendaGrid();
+            this.renderRelatorios();
         } catch (e) {
             UI.showToast('Erro ao agendar: ' + e.message, 'error');
         }
@@ -441,7 +433,7 @@ const App = {
                 </th>
             `).join('');
 
-            const horarios = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+            const horarios = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"];
             let atendimentoCount = 0;
             let totalGanhos = 0;
 
@@ -562,7 +554,7 @@ const App = {
         try {
             const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             if (error) throw error;
-            lista.innerHTML = data.map(p => `
+            lista.innerHTML = data && data.length > 0 ? data.map(p => `
                 <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-xl object-cover">
@@ -576,7 +568,7 @@ const App = {
                         Excluir
                     </button>
                 </div>
-            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional cadastrado.</p>';
+            `).join('') : '<p class="text-xs text-zinc-500">Nenhum profissional cadastrado.</p>';
         } catch (e) {
             console.error(e);
         }
@@ -593,7 +585,7 @@ const App = {
             const daqui3Meses = new Date();
             daqui3Meses.setMonth(hoje.getMonth() + 3);
             let alertaCount = 0;
-            lista.innerHTML = data.map(prod => {
+            lista.innerHTML = data && data.length > 0 ? data.map(prod => {
                 const dataVal = new Date(prod.data_validade);
                 const pertoVencer = dataVal <= daqui3Meses && dataVal >= hoje;
                 if (pertoVencer) alertaCount++;
@@ -606,12 +598,75 @@ const App = {
                         <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda.toFixed(2)}</span>
                     </div>
                 `;
-            }).join('') || '<p class="text-xs text-zinc-500">Nenhum produto cadastrado.</p>';
+            }).join('') : '<p class="text-xs text-zinc-500">Nenhum produto cadastrado.</p>';
             if (alertaBadge) {
                 alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Estoque Regular';
             }
         } catch (e) {
             console.error(e);
+        }
+    },
+    async renderRelatorios() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data: agendamentos, error } = await supabaseClient
+                .from('agendamentos')
+                .select('*')
+                .eq('estabelecimento_id', estabId);
+            if (error) throw error;
+
+            let faturamentoTotal = 0;
+            const clientesSet = new Set();
+
+            if (agendamentos) {
+                agendamentos.forEach(a => {
+                    faturamentoTotal += parseValor(a.valor);
+                    if (a.cliente) clientesSet.add(a.cliente.trim().toLowerCase());
+                });
+            }
+
+            const fatElem = document.getElementById('relatorio-faturamento');
+            const atemElem = document.getElementById('relatorio-atendimentos');
+            const cliElem = document.getElementById('relatorio-clientes');
+
+            if (fatElem) fatElem.textContent = `R$ ${faturamentoTotal.toFixed(2)}`;
+            if (atemElem) atemElem.textContent = agendamentos ? agendamentos.length : 0;
+            if (cliElem) cliElem.textContent = clientesSet.size;
+        } catch (e) {
+            console.error("Erro ao carregar relatórios:", e);
+        }
+    },
+    async renderAvaliacoes() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const container = document.getElementById('lista-avaliacoes');
+        if (!container) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('avaliacoes')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('created_at', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                container.innerHTML = '<p class="text-xs text-zinc-500">Nenhuma avaliação registrada até o momento.</p>';
+                return;
+            }
+
+            container.innerHTML = data.map(av => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-white uppercase">${av.cliente_nome || 'Cliente Anônimo'}</span>
+                        <div class="flex text-yellow-400 text-xs">
+                            ${'★'.repeat(av.nota || 5)}${'☆'.repeat(5 - (av.nota || 5))}
+                        </div>
+                    </div>
+                    <p class="text-xs text-zinc-300 italic">"${av.comentario || 'Sem comentário'}"</p>
+                    <span class="text-[9px] text-zinc-500 block">${new Date(av.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+            `).join('');
+        } catch (e) {
+            container.innerHTML = '<p class="text-xs text-zinc-500">Nenhuma avaliação registrada até o momento.</p>';
         }
     },
     handleFotoUpload(event) {
@@ -784,6 +839,16 @@ const UI = {
     switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
         document.getElementById(tabId)?.classList.remove('hidden');
+    },
+    toggleMobileMenu(forceState) {
+        const menu = document.getElementById('mobile-nav-menu');
+        if (!menu) return;
+        if (typeof forceState === 'boolean') {
+            if (forceState) menu.classList.remove('hidden');
+            else menu.classList.add('hidden');
+        } else {
+            menu.classList.toggle('hidden');
+        }
     }
 };
 
