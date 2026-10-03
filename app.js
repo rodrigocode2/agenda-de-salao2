@@ -3,6 +3,18 @@ const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
+// Função inteligente para ler valores com ponto, vírgula ou formato misto
+function parseValor(valorStr) {
+    if (!valorStr) return 0;
+    let limpo = String(valorStr).trim();
+    if (limpo.includes('.') && limpo.includes(',')) {
+        limpo = limpo.replace(/\./g, '').replace(',', '.');
+    } else if (limpo.includes(',')) {
+        limpo = limpo.replace(',', '.');
+    }
+    return parseFloat(limpo) || 0;
+}
+
 const Auth = {
     logout() {
         localStorage.removeItem('hairconcept_estab_id');
@@ -334,7 +346,7 @@ const App = {
         const horario = document.getElementById('agendamento-horario').value;
         const cliente = document.getElementById('cliente-nome').value;
         const servico = document.getElementById('cliente-servico').value;
-        const valor = parseFloat(document.getElementById('cliente-valor').value) || 0;
+        const valor = parseValor(document.getElementById('cliente-valor').value);
         try {
             const { error } = await supabaseClient.from('agendamentos').insert([{
                 estabelecimento_id: estabId,
@@ -423,7 +435,7 @@ const App = {
         const estabId = localStorage.getItem('hairconcept_estab_id');
         const nome = document.getElementById('prod-nome').value;
         const tipo = document.getElementById('prod-tipo').value;
-        const preco_venda = parseFloat(document.getElementById('prod-preco').value) || 0;
+        const preco_venda = parseValor(document.getElementById('prod-preco').value);
         const stock = parseInt(document.getElementById('prod-stock').value) || 0;
         const data_validade = document.getElementById('prod-validade').value;
         try {
@@ -447,7 +459,7 @@ const App = {
         event.preventDefault();
         const estabId = localStorage.getItem('hairconcept_estab_id');
         const nome = document.getElementById('serv-nome').value;
-        const preco = parseFloat(document.getElementById('serv-preco').value) || 0;
+        const preco = parseValor(document.getElementById('serv-preco').value);
         const comissao = parseFloat(document.getElementById('serv-comissao').value) || 50;
         try {
             const { error } = await supabaseClient.from('servicos').insert([{
@@ -599,7 +611,7 @@ const App = {
         this.carregarPostIts();
     },
     calcularGanhosPessoal() {
-        const val = parseFloat(document.getElementById('prof-calc-val').value) || 0;
+        const val = parseValor(document.getElementById('prof-calc-val').value);
         const porc = parseFloat(document.getElementById('prof-calc-porc').value);
         const percentual = isNaN(porc) ? 50 : porc;
         const total = (val * percentual) / 100;
