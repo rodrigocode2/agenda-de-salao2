@@ -221,37 +221,97 @@ const App = {
     irParaAgenda() {
         UI.switchTab('aba-agenda');
     },
-    enviarRecadoEstabelecimento() {
+    async enviarRecadoEstabelecimento() {
         const input = document.getElementById('prof-recado-input');
-        const texto = input.value.trim();
-        if (!texto) {
+        const mensagem = input.value.trim();
+        if (!mensagem) {
             UI.showToast('Escreva uma mensagem antes de enviar.', 'error');
             return;
         }
-        const recados = JSON.parse(localStorage.getItem('hairconcept_recados') || '[]');
-        recados.push({
-            profissional: this.user.name || 'Profissional',
-            texto: texto,
-            data: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-        });
-        localStorage.setItem('hairconcept_recados', JSON.stringify(recados));
-        input.value = '';
-        UI.showToast('Recado enviado com sucesso para o estabelecimento!');
-        this.carregarRecadosEstabelecimento();
+        const remetente = this.user.name || 'Profissional';
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        try {
+            const { error } = await supabaseClient.from('recados').insert([{
+                estabelecimento_id: estabId,
+                remetente: remetente,
+                mensagem: mensagem
+            }]);
+            if (error) throw error;
+            input.value = '';
+            UI.showToast('Recado enviado com sucesso para o estabelecimento!');
+            this.carregarRecadosEstabelecimento();
+        } catch (e) {
+            UI.showToast('Erro ao enviar recado: ' + e.message, 'error');
+        }
     },
-    carregarRecadosEstabelecimento() {
+    async carregarRecadosEstabelecimento() {
         const container = document.getElementById('lista-recados-estab');
         if (!container) return;
-        const recados = JSON.parse(localStorage.getItem('hairconcept_recados') || '[]');
-        container.innerHTML = recados.length > 0 ? recados.map(r => `
-            <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center">
-                <div>
-                    <span class="text-brand-500 font-bold uppercase">${r.profissional}:</span>
-                    <span class="text-zinc-200 ml-1.5">${r.texto}</span>
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        try {
+            const { data, error } = await supabaseClient
+                .from('recados')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('created_at', { ascending: false });
+                
+            if (error) throw error;
+            
+            container.innerHTML = data && data.length > 0 ? data.map(r => `
+                <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-brand-500 font-bold uppercase">${r.remetente}:</span>
+                            <span class="text-[9px] text-zinc-500">${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
+                        <span class="text-zinc-200 mt-0.5 block">${r.mensagem}</span>
+                    </div>
+                    <button onclick="App.apagarRecado('${r.id}')" title="Apagar mensagem lida" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 text-[10px] font-bold uppercase transition shrink-0 flex items-center gap-1">
+                        <i class="fa-solid fa-trash"></i> Apagar
+                    </button>
                 </div>
-                <span class="text-[10px] text-zinc-500">${r.data}</span>
-            </div>
-        `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipa por enquanto.</p>';
+            `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipa por enquanto.</p>';
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async apagarRecado(id) {
+        try {
+            const { error } = await supabaseClient
+                .from('recados')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            UI.showToast("Mensagem marcada como lida e apagada.", "success");
+            this.carregarRecadosEstabelecimento();
+        } catch (e) {
+            UI.showToast("Erro ao apagar recado: " + e.message, "error");
+        }
+    },
+    async enviarRespostaAdmin() {
+        const input = document.getElementById('admin-resposta-input');
+        const mensagem = input.value.trim();
+        if (!mensagem) {
+            UI.showToast("Escreva uma resposta antes de enviar.", "error");
+            return;
+        }
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        try {
+            const { error } = await supabaseClient.from('recados').insert([{
+                estabelecimento_id: estabId,
+                remetente: '👑 Salão (Admin)',
+                mensagem: mensagem
+            }]);
+            if (error) throw error;
+            UI.showToast("Resposta enviada à equipa com sucesso!", "success");
+            input.value = '';
+            this.carregarRecadosEstabelecimento();
+        } catch (e) {
+            UI.showToast("Erro ao enviar resposta: " + e.message, "error");
+        }
     },
     async popularSelectProfissionais() {
         const select = document.getElementById('agendamento-profissional');
@@ -324,7 +384,6 @@ const App = {
                 </th>
             `).join('');
 
-            // Horários atualizados das 08:00 às 18:00
             const horarios = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
             let atendimentoCount = 0;
             let totalGanhos = 0;
