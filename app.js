@@ -19,6 +19,7 @@ const Auth = {
     logout() {
         localStorage.removeItem('hairconcept_estab_id');
         localStorage.removeItem('hairconcept_prof_id');
+        localStorage.removeItem('hairconcept_plan');
         if (supabaseClient && supabaseClient.auth) {
             supabaseClient.auth.signOut();
         }
@@ -104,6 +105,9 @@ const App = {
                 this.init();
             } else {
                 localStorage.setItem('hairconcept_estab_id', estab.id);
+                if (estab.plano) {
+                    localStorage.setItem('hairconcept_plan', estab.plano);
+                }
                 if (headerSub) headerSub.textContent = estab.nome_salao;
                 this.init();
             }
@@ -626,10 +630,35 @@ const App = {
         const aleatoria = frases[Math.floor(Math.random() * frases.length)];
         document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
     },
-    setPlan(plano) {
-        localStorage.setItem('hairconcept_plan', plano);
-        UI.showToast(`Plano ${plano.toUpperCase()} ativado com sucesso!`);
-        UI.switchTab('aba-agenda');
+    async setPlan(plano) {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        // Se for grátis, atualiza logo na base de dados
+        if (plano === 'gratis') {
+            localStorage.setItem('hairconcept_plan', 'gratis');
+            if (estabId && supabaseClient) {
+                await supabaseClient.from('estabelecimentos').update({ plano: 'gratis' }).eq('id', estabId);
+            }
+            UI.showToast('Plano Grátis ativado com sucesso!');
+            UI.switchTab('aba-agenda');
+            return;
+        }
+
+        // Links oficiais de checkout do Mercado Pago
+        const linksPagamento = {
+            mensal: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=c6608384109b43c787b82d8f9646331f',
+            anual: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=SEU_PLANO_ANUAL_ID_AQUI' 
+        };
+
+        const linkCheckout = linksPagamento[plano];
+        if (linkCheckout) {
+            UI.showToast('A redirecionar para o Mercado Pago...');
+            setTimeout(() => {
+                window.location.href = linkCheckout;
+            }, 1000);
+        } else {
+            UI.showToast('Plano inválido.', 'error');
+        }
     },
     mudarDia(dias) {
         const dataInput = document.getElementById('filtro-data-agenda');
