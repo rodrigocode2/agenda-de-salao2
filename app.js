@@ -51,8 +51,27 @@ const Auth = {
 const App = {
     user: { loggedIn: false, role: '', name: '', id: null },
     fotoBase64Temp: '',
-    init() {
+    async init() {
         console.log("HairConcept inicializado.");
+
+        // >>> DETETAR RETORNO DO MERCADO PAGO <<<
+        const urlParams = new URLSearchParams(window.location.search);
+        const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
+        
+        if (statusPagamento === 'approved') {
+            const estabId = localStorage.getItem('hairconcept_estab_id');
+            localStorage.setItem('hairconcept_plan', 'mensal');
+            if (estabId && supabaseClient) {
+                await supabaseClient.from('estabelecimentos').update({ plano: 'mensal' }).eq('id', estabId);
+            }
+            UI.showToast('Pagamento aprovado! Plano Mensal ativado com sucesso.');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (statusPagamento === 'failure' || statusPagamento === 'cancelled') {
+            UI.showToast('O pagamento não foi concluído. A manter plano grátis.', 'error');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        // =======================================
+
         const dataInput = document.getElementById('filtro-data-agenda');
         if (dataInput && !dataInput.value) {
             dataInput.value = new Date().toISOString().split('T')[0];
@@ -633,7 +652,6 @@ const App = {
     async setPlan(plano) {
         const estabId = localStorage.getItem('hairconcept_estab_id');
         
-        // Se for grátis, atualiza logo na base de dados
         if (plano === 'gratis') {
             localStorage.setItem('hairconcept_plan', 'gratis');
             if (estabId && supabaseClient) {
@@ -644,7 +662,6 @@ const App = {
             return;
         }
 
-        // Links oficiais de checkout do Mercado Pago
         const linksPagamento = {
             mensal: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=c6608384109b43c787b82d8f9646331f',
             anual: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=SEU_PLANO_ANUAL_ID_AQUI' 
