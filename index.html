@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-PT" class="dark scroll-smooth">
+<html lang="pt-BR" class="dark scroll-smooth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -57,9 +57,22 @@ tailwind.config = {
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 15px 35px rgba(0, 0, 0, 0.5);
 }
+/* Rastro do Mouse */
+#mouse-trail-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+}
 </style>
 </head>
 <body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
+<!-- Canvas para o rastro do mouse -->
+<canvas id="mouse-trail-canvas"></canvas>
+
 <!-- Toast Container -->
 <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
@@ -82,7 +95,7 @@ tailwind.config = {
     <button onclick="UI.switchTab('aba-agendar')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Agendar</button>
     <button onclick="UI.switchTab('aba-servicos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Serviços</button>
     <button onclick="UI.switchTab('aba-equipe')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Equipe</button>
-    <button onclick="UI.switchTab('aba-produtos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Stock</button>
+    <button onclick="UI.switchTab('aba-produtos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Estoque</button>
     <button onclick="UI.switchTab('aba-planos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Planos</button>
     <button onclick="UI.switchTab('aba-avaliacoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Avaliações</button>
     <button onclick="UI.switchTab('aba-relatorios')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Relatórios</button>
@@ -102,16 +115,15 @@ tailwind.config = {
 
 <!-- CONTEÚDO PRINCIPAL -->
 <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
-<!-- ECRA DE LOGIN COM ESTILO GOTA NA ÁGUA -->
+<!-- TELA DE LOGIN COM ESTILO GOTA NA ÁGUA -->
 <section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 gota-agua border border-white/10 space-y-10 shadow-2xl">
   <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
     <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-20"></video>
     <div class="absolute inset-0 bg-gradient-to-b from-darkbg-300/60 via-darkbg-300/40 to-darkbg-300"></div>
   </div>
   <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-    <span class="px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-500 text-xs font-bold uppercase tracking-widest">Power Up Style</span>
     <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white">HairConcept <span class="text-brand-500">Gestão</span></h1>
-    <p class="text-zinc-300 text-sm">Aceda à sua conta para visualizar a agenda, comissões ou gerir o estabelecimento.</p>
+    <p class="text-zinc-300 text-sm">Acesse a sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento.</p>
   </div>
   <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
     <!-- Login Estabelecimento -->
@@ -142,7 +154,7 @@ tailwind.config = {
           <input type="email" id="login-admin-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Palavra-passe</label>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha</label>
           <input type="password" id="login-admin-senha" required placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition shadow-lg shadow-brand-500/20">Entrar como Admin</button>
@@ -238,7 +250,7 @@ tailwind.config = {
       <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4 flex flex-col justify-between">
         <div>
           <h3 class="text-xs font-bold text-white uppercase mb-2"><i class="fa-solid fa-mug-hot text-amber-500 mr-1.5"></i> Intervalos & Pausas</h3>
-          <p class="text-[11px] text-zinc-400">Espaço para gerir pausas e intervalos na bancada.</p>
+          <p class="text-[11px] text-zinc-400">Espaço para gerenciar pausas e intervalos na bancada.</p>
         </div>
         <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-center space-y-2">
           <span id="frase-motivacional" class="text-[11px] text-zinc-300 italic">"O sucesso é a soma de pequenos esforços."</span>
@@ -253,7 +265,7 @@ tailwind.config = {
         <i class="fa-solid fa-comments text-brand-500"></i> Chat com o Estabelecimento
       </h3>
       <div id="chat-historico-prof" class="space-y-2.5 max-h-52 overflow-y-auto pr-2 flex flex-col text-xs">
-        <p class="text-zinc-500 text-center py-2">A carregar conversa...</p>
+        <p class="text-zinc-500 text-center py-2">Carregando conversa...</p>
       </div>
       <div class="flex gap-2 pt-2 border-t border-white/10">
         <input type="text" id="prof-recado-input" placeholder="Escreva uma mensagem para o salão..." class="flex-grow glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRecadoEstabelecimento()">
@@ -268,25 +280,25 @@ tailwind.config = {
   <div class="admin-only glass-water p-5 rounded-2xl border border-white/10 space-y-3">
     <div class="flex items-center justify-between">
       <h3 class="text-xs font-bold text-white uppercase flex items-center gap-2">
-        <i class="fa-solid fa-inbox text-brand-500"></i> Mensagens e Recados Recebidos da Equipa
+        <i class="fa-solid fa-inbox text-brand-500"></i> Mensagens e Recados Recebidos da Equipe
       </h3>
       <span class="text-[10px] text-zinc-400">Comunicação interna</span>
     </div>
     
     <div id="lista-recados-estab" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-      <p class="text-xs text-zinc-500">Nenhum recado recebido da equipa por enquanto.</p>
+      <p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>
     </div>
 
     <!-- Campo para o Salão Responder -->
     <div class="pt-3 border-t border-white/10 flex gap-2">
-      <input type="text" id="admin-resposta-input" placeholder="Escrever resposta ou aviso para a equipa..." class="flex-grow glass-input rounded-xl px-3.5 py-2 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRespostaAdmin()">
+      <input type="text" id="admin-resposta-input" placeholder="Escrever resposta ou aviso para a equipe..." class="flex-grow glass-input rounded-xl px-3.5 py-2 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRespostaAdmin()">
       <button onclick="App.enviarRespostaAdmin()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition shrink-0">
         <i class="fa-solid fa-paper-plane mr-1"></i> Responder
       </button>
     </div>
   </div>
 
-  <!-- CONTROLO DE CALENDÁRIO & NAVEGAÇÃO -->
+  <!-- CONTROLE DE CALENDÁRIO & NAVEGAÇÃO -->
   <div class="glass-water p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-2 flex-wrap">
       <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500 mr-1.5"></i> Data:</span>
@@ -372,7 +384,7 @@ tailwind.config = {
     <div class="flex justify-between items-center border-b border-white/10 pb-4">
       <div>
         <h2 class="text-xl font-bold uppercase text-white">Catálogo de Serviços & Comissões</h2>
-        <p class="text-xs text-zinc-400">Registo de procedimentos e comissão percentual</p>
+        <p class="text-xs text-zinc-400">Cadastro de procedimentos e comissão percentual</p>
       </div>
     </div>
     <form onsubmit="App.handleCreateServico(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -396,13 +408,13 @@ tailwind.config = {
   </div>
 </section>
 
-<!-- EQUIPA -->
+<!-- EQUIPE -->
 <section id="aba-equipe" class="tab-content hidden max-w-4xl mx-auto space-y-6">
   <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
     <div class="flex justify-between items-center border-b border-white/10 pb-4">
       <div>
-        <h2 class="text-xl font-bold uppercase text-white">Gestão de Equipa e Turnos</h2>
-        <p class="text-xs text-zinc-400">Controlo de fotos, credenciais de acesso por CPF e exclusão</p>
+        <h2 class="text-xl font-bold uppercase text-white">Gestão de Equipe e Turnos</h2>
+        <p class="text-xs text-zinc-400">Controle de fotos, credenciais de acesso por CPF e exclusão</p>
       </div>
     </div>
     <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
@@ -434,24 +446,24 @@ tailwind.config = {
           <input type="password" id="prof-senha" required placeholder="Senha individual" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
       </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Registar Profissional</button>
+      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Cadastrar Profissional</button>
     </form>
     <div class="border-t border-white/10 pt-6 space-y-4">
-      <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipa Registada</h3>
+      <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
       <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </div>
   </div>
 </section>
 
-<!-- STOCK / PRODUTOS -->
+<!-- ESTOQUE / PRODUTOS -->
 <section id="aba-produtos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
   <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
     <div class="flex justify-between items-center border-b border-white/10 pb-4">
       <div>
-        <h2 class="text-xl font-bold uppercase text-white">Stock e Alertas de Validade</h2>
-        <p class="text-xs text-zinc-400">Controlo de inventário para venda e uso interno</p>
+        <h2 class="text-xl font-bold uppercase text-white">Estoque e Alertas de Validade</h2>
+        <p class="text-xs text-zinc-400">Controle de inventário para venda e uso interno</p>
       </div>
-      <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">Stock Regular</span>
+      <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">Estoque Regular</span>
     </div>
     <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <div>
@@ -478,7 +490,7 @@ tailwind.config = {
         <input type="date" id="prod-validade" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
       </div>
       <div class="md:col-span-5 flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar ao Stock</button>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar ao Estoque</button>
       </div>
     </form>
     <div id="lista-produtos" class="grid grid-cols-1 gap-4"></div>
@@ -498,7 +510,7 @@ tailwind.config = {
         <span class="px-3 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase rounded-full">Básico</span>
         <h4 class="text-base font-bold text-white uppercase">Plano Grátis</h4>
         <p class="text-2xl font-black text-brand-500">R$ 0</p>
-        <p class="text-xs text-zinc-400">Até 2 profissionais na equipa.</p>
+        <p class="text-xs text-zinc-400">Até 2 profissionais na equipe.</p>
         <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs hover:bg-zinc-800 transition">Selecionar Grátis</button>
       </div>
       <!-- Plano Mensal -->
@@ -507,7 +519,7 @@ tailwind.config = {
         <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Profissional</span>
         <h4 class="text-base font-bold text-white uppercase">Plano Mensal</h4>
         <p class="text-2xl font-black text-white">R$ 30,00<span class="text-xs text-zinc-400">/mês</span></p>
-        <p class="text-xs text-zinc-400">Até 10 profissionais na equipa.</p>
+        <p class="text-xs text-zinc-400">Até 10 profissionais na equipe.</p>
         <a href="https://mpago.la/1LunQwf" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase text-center transition shadow-lg shadow-brand-500/20">Assinar Mensal</a>
       </div>
       <!-- Plano Anual -->
@@ -588,11 +600,11 @@ tailwind.config = {
           <input type="text" id="config-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail de Contacto *</label>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail de Contato *</label>
           <input type="email" id="config-email-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
       </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Guardar Alterações</button>
+      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Salvar Alterações</button>
     </form>
   </div>
 </section>
@@ -602,6 +614,52 @@ tailwind.config = {
 <footer class="mt-12 py-6 text-center text-zinc-500 text-xs border-t border-white/10">
     <p>Criado e desenvolvido por <span class="text-zinc-300 font-bold">rodrigocode2 / rodrigo-n-s@live.com </span> &copy; 2026. Todos os direitos reservados.</p>
 </footer>
+
+<!-- Script do Efeito de Rastro do Mouse -->
+<script>
+const canvas = document.getElementById('mouse-trail-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+window.addEventListener('mousemove', (e) => {
+    for (let i = 0; i < 2; i++) {
+        particles.push({
+            x: e.clientX,
+            y: e.clientY,
+            size: Math.random() * 3 + 1,
+            speedX: (Math.random() - 0.5) * 1.5,
+            speedY: (Math.random() - 0.5) * 1.5,
+            life: 30
+        });
+    }
+});
+
+function handleParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.speedX;
+        p.y += p.speedY;
+        p.life--;
+        ctx.fillStyle = `rgba(236, 72, 153, ${p.life / 30})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+    requestAnimationFrame(handleParticles);
+}
+handleParticles();
+</script>
 
 <!-- Script Principal -->
 <script src="app.js"></script>
