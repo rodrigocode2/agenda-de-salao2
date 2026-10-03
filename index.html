@@ -31,44 +31,11 @@ tailwind.config = {
 }
 </script>
 <!-- FontAwesome CDN -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="style_2.css">
-<style>
-.glass-water {
-  background: rgba(24, 24, 27, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-}
-.glass-input {
-  background: rgba(9, 9, 11, 0.6);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-.glass-input:focus {
-  border-color: rgba(236, 72, 153, 0.5);
-  box-shadow: 0 0 15px rgba(236, 72, 153, 0.15);
-}
-.gota-agua {
-  background: radial-gradient(circle at 30% 30%, rgba(236, 72, 153, 0.15), rgba(24, 24, 27, 0.6) 70%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 15px 35px rgba(0, 0, 0, 0.5);
-}
-#mouse-trail-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 9999;
-}
-</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-fontawesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
+
 <!-- Canvas para o rastro do mouse -->
 <canvas id="mouse-trail-canvas"></canvas>
 
@@ -131,7 +98,8 @@ tailwind.config = {
 
 <!-- CONTEÚDO PRINCIPAL -->
 <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-8">
-<!-- TELA DE LOGIN COM ESTILO GOTA NA ÁGUA -->
+
+<!-- TELA DE LOGIN -->
 <section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 gota-agua border border-white/10 space-y-10 shadow-2xl">
   <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
     <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-20"></video>
@@ -300,11 +268,9 @@ tailwind.config = {
       </h3>
       <span class="text-[10px] text-zinc-400">Comunicação interna</span>
     </div>
-    
     <div id="lista-recados-estab" class="space-y-2 max-h-40 overflow-y-auto pr-1">
       <p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>
     </div>
-
     <div class="pt-3 border-t border-white/10 flex gap-2">
       <input type="text" id="admin-resposta-input" placeholder="Escrever resposta ou aviso para a equipe..." class="flex-grow glass-input rounded-xl px-3.5 py-2 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRespostaAdmin()">
       <button onclick="App.enviarRespostaAdmin()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition shrink-0">
@@ -366,27 +332,28 @@ tailwind.config = {
       </div>
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
+        <!-- VALORES CORRIGIDOS SEM DUPLICIDADES -->
         <select id="agendamento-horario" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
           <option value="08:00">08:00</option>
-          <option value="09:00">08:30</option>
+          <option value="08:30">08:30</option>
           <option value="09:00">09:00</option>
-          <option value="09:00">09:30</option>
+          <option value="09:30">09:30</option>
           <option value="10:00">10:00</option>
-          <option value="09:00">10:30</option>
+          <option value="10:30">10:30</option>
           <option value="11:00">11:00</option>
-          <option value="09:00">11:30</option>
+          <option value="11:30">11:30</option>
           <option value="12:00">12:00</option>
-          <option value="09:00">12:30</option>
+          <option value="12:30">12:30</option>
           <option value="13:00">13:00</option>
-          <option value="09:00">13:30</option>
+          <option value="13:30">13:30</option>
           <option value="14:00">14:00</option>
-          <option value="09:00">14:30</option>
+          <option value="14:30">14:30</option>
           <option value="15:00">15:00</option>
-          <option value="09:00">15:30</option>
+          <option value="15:30">15:30</option>
           <option value="16:00">16:00</option>
-          <option value="09:00">16:30</option>
+          <option value="16:30">16:30</option>
           <option value="17:00">17:00</option>
-          <option value="09:00">17:30</option>
+          <option value="17:30">17:30</option>
           <option value="18:00">18:00</option>
         </select>
       </div>
@@ -626,7 +593,7 @@ tailwind.config = {
 
 <!-- Rodapé com Créditos e Copyright -->
 <footer class="mt-12 py-6 text-center text-zinc-500 text-xs border-t border-white/10">
-    <p>Criado e desenvolvido por <span class="text-zinc-300 font-bold">rodrigocode2 / rodrigo-n-s@live.com </span> &copy; 2026. Todos os direitos reservados.</p>
+    <p>Criado e desenvolvido por <span class="text-zinc-300 font-bold">rodrigocode2 / rodrigo-n-s@live.com</span> &copy; 2026. Todos os direitos reservados.</p>
 </footer>
 
 <!-- Script do Efeito de Rastro do Mouse -->
@@ -676,6 +643,6 @@ handleParticles();
 </script>
 
 <!-- Script Principal -->
-<script src="app_2.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
