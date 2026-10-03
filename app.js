@@ -274,15 +274,14 @@ const App = {
             }]);
             if (error) throw error;
             input.value = '';
-            UI.showToast('Recado enviado com sucesso para o estabelecimento!');
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast('Erro ao enviar recado: ' + e.message, 'error');
+            UI.showToast('Erro ao enviar mensagem: ' + e.message, 'error');
         }
     },
     async carregarRecadosEstabelecimento() {
-        const container = document.getElementById('lista-recados-estab');
-        if (!container) return;
+        const containerAdmin = document.getElementById('lista-recados-estab');
+        const containerProf = document.getElementById('chat-historico-prof');
         const estabId = localStorage.getItem('hairconcept_estab_id');
         
         try {
@@ -290,24 +289,46 @@ const App = {
                 .from('recados')
                 .select('*')
                 .eq('estabelecimento_id', estabId)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: true });
                 
             if (error) throw error;
             
-            container.innerHTML = data && data.length > 0 ? data.map(r => `
-                <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center gap-4">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-brand-500 font-bold uppercase">${r.remetente}:</span>
-                            <span class="text-[9px] text-zinc-500">${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            const mensagens = data || [];
+
+            // Renderizar no Painel do Admin (Lista / Caixa de Entrada)
+            if (containerAdmin) {
+                containerAdmin.innerHTML = mensagens.length > 0 ? [...mensagens].reverse().map(r => `
+                    <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-brand-500 font-bold uppercase">${r.remetente}:</span>
+                                <span class="text-[9px] text-zinc-500">${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <span class="text-zinc-200 mt-0.5 block">${r.mensagem}</span>
                         </div>
-                        <span class="text-zinc-200 mt-0.5 block">${r.mensagem}</span>
+                        <button onclick="App.apagarRecado('${r.id}')" title="Apagar mensagem" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 text-[10px] font-bold uppercase transition shrink-0 flex items-center gap-1">
+                            <i class="fa-solid fa-trash"></i> Apagar
+                        </button>
                     </div>
-                    <button onclick="App.apagarRecado('${r.id}')" title="Apagar mensagem lida" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 text-[10px] font-bold uppercase transition shrink-0 flex items-center gap-1">
-                        <i class="fa-solid fa-trash"></i> Apagar
-                    </button>
-                </div>
-            `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipa por enquanto.</p>';
+                `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipa por enquanto.</p>';
+            }
+
+            // Renderizar no Painel do Profissional (Formato Chat / Balões)
+            if (containerProf) {
+                containerProf.innerHTML = mensagens.length > 0 ? mensagens.map(r => {
+                    const isEu = r.remetente.toLowerCase().includes((this.user.name || '').toLowerCase()) && !r.remetente.includes('Admin');
+                    return `
+                        <div class="flex flex-col ${isEu ? 'items-end' : 'items-start'} mb-2">
+                            <span class="text-[9px] text-zinc-500 mb-0.5 px-1">${r.remetente} • ${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            <div class="p-3 rounded-2xl max-w-[85%] text-xs ${isEu ? 'bg-brand-500 text-white rounded-br-xs' : 'bg-zinc-900 border border-white/10 text-zinc-200 rounded-bl-xs'}">
+                                ${r.mensagem}
+                            </div>
+                        </div>
+                    `;
+                }).join('') : '<p class="text-xs text-zinc-500 text-center py-4">Inicie uma conversa com o estabelecimento.</p>';
+                
+                containerProf.scrollTop = containerProf.scrollHeight;
+            }
         } catch (e) {
             console.error(e);
         }
