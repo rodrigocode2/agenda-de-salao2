@@ -54,7 +54,7 @@ const App = {
     async init() {
         console.log("HairConcept inicializado.");
 
-        // >>> DETECTAR RETORNO DO MERCADO PAGO <<<
+        // DETECTAR RETORNO DO MERCADO PAGO
         const urlParams = new URLSearchParams(window.location.search);
         const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
         
@@ -116,23 +116,43 @@ const App = {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return;
             const userId = session.user.id;
-            const { data: estab, error } = await supabaseClient
+            
+            let { data: estab, error } = await supabaseClient
                 .from('estabelecimentos')
                 .select('*')
                 .eq('user_id', userId)
-                .single();
+                .maybeSingle();
+
             const headerSub = document.getElementById('saloon-name-header');
+
             if (error || !estab) {
-                this.init();
+                const nomePadrao = 'Meu Salão';
+                const { data: newEstab, error: createErr } = await supabaseClient
+                    .from('estabelecimentos')
+                    .insert([{
+                        user_id: userId,
+                        nome_salao: nomePadrao,
+                        email: session.user.email,
+                        plano: 'gratis'
+                    }])
+                    .select()
+                    .single();
+
+                if (!createErr && newEstab) {
+                    localStorage.setItem('hairconcept_estab_id', newEstab.id);
+                    localStorage.setItem('hairconcept_plan', 'gratis');
+                    if (headerSub) headerSub.textContent = newEstab.nome_salao;
+                }
             } else {
                 localStorage.setItem('hairconcept_estab_id', estab.id);
                 if (estab.plano) {
                     localStorage.setItem('hairconcept_plan', estab.plano);
                 }
                 if (headerSub) headerSub.textContent = estab.nome_salao;
-                this.init();
             }
+            this.init();
         } catch (e) {
+            console.error("Erro ao verificar estabelecimento:", e);
             this.init();
         }
     },
@@ -451,7 +471,7 @@ const App = {
                                 <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px]">
                                     <strong class="text-white block">${ag.cliente}</strong>
                                     <span class="text-zinc-300">${ag.servico}</span>
-                                    <span class="text-brand-400 block font-bold mt-0.5">R$ ${ag.valor.toFixed(2)}</span>
+                                    <span class="text-brand-400 block font-bold mt-0.5">R$ ${parseFloat(ag.valor).toFixed(2)}</span>
                                 </div>
                             ` : '<span class="text-zinc-600 text-[11px]">Disponível</span>'}
                         </td>`;
@@ -527,7 +547,7 @@ const App = {
                         <p class="text-[10px] text-zinc-400 mt-0.5">Comissão: ${s.comissao}%</p>
                     </div>
                     <div class="text-right flex items-center gap-3">
-                        <span class="text-xs font-bold text-brand-500">R$ ${s.preco.toFixed(2)}</span>
+                        <span class="text-xs font-bold text-brand-500">R$ ${parseFloat(s.preco).toFixed(2)}</span>
                         <button onclick="App.excluirServico('${s.id}')" class="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition">Excluir</button>
                     </div>
                 </div>
@@ -595,7 +615,7 @@ const App = {
                             <h4 class="text-xs font-bold text-white">${prod.nome} ${pertoVencer ? '<span class="text-[9px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full ml-2">Validade Próxima (&lt; 3 meses)</span>' : ''}</h4>
                             <p class="text-[10px] text-zinc-400">Estoque: ${prod.stock} | Validade: ${prod.data_validade} | Tipo: ${prod.tipo}</p>
                         </div>
-                        <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda.toFixed(2)}</span>
+                        <span class="text-xs font-bold text-brand-500">R$ ${parseFloat(prod.preco_venda).toFixed(2)}</span>
                     </div>
                 `;
             }).join('') : '<p class="text-xs text-zinc-500">Nenhum produto cadastrado.</p>';
