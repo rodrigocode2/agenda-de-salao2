@@ -26,7 +26,7 @@ const Auth = {
         location.reload();
     },
     loginSocial(provider) {
-        UI.showToast('A redirecionar para autenticação...');
+        UI.showToast('Redirecionando para autenticação...');
         if (supabaseClient && supabaseClient.auth) {
             supabaseClient.auth.signInWithOAuth({ provider: provider });
         }
@@ -54,7 +54,7 @@ const App = {
     async init() {
         console.log("HairConcept inicializado.");
 
-        // >>> DETETAR RETORNO DO MERCADO PAGO <<<
+        // >>> DETECTAR RETORNO DO MERCADO PAGO <<<
         const urlParams = new URLSearchParams(window.location.search);
         const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
         
@@ -67,7 +67,7 @@ const App = {
             UI.showToast('Pagamento aprovado! Plano Mensal ativado com sucesso.');
             window.history.replaceState({}, document.title, window.location.pathname);
         } else if (statusPagamento === 'failure' || statusPagamento === 'cancelled') {
-            UI.showToast('O pagamento não foi concluído. A manter plano grátis.', 'error');
+            UI.showToast('O pagamento não foi concluído. Mantendo plano grátis.', 'error');
             window.history.replaceState({}, document.title, window.location.pathname);
         }
         // =======================================
@@ -205,7 +205,7 @@ const App = {
                 foto_url
             }]);
             if (error) throw error;
-            UI.showToast('Profissional registado com sucesso!');
+            UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
             this.fotoBase64Temp = '';
             document.getElementById('preview-foto-prof').classList.add('hidden');
@@ -213,11 +213,11 @@ const App = {
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
         } catch (err) {
-            UI.showToast('Erro ao registar profissional: ' + err.message, 'error');
+            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');
         }
     },
     async excluirProfissional(id) {
-        if (!confirm("Tem a certeza que deseja excluir este profissional?")) return;
+        if (!confirm("Tem certeza que deseja excluir este profissional?")) return;
         try {
             const { error } = await supabaseClient
                 .from('profissionais')
@@ -311,7 +311,7 @@ const App = {
                             <i class="fa-solid fa-trash"></i> Apagar
                         </button>
                     </div>
-                `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipa por enquanto.</p>';
+                `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>';
             }
 
             // Renderizar no Painel do Profissional (Formato Chat / Balões)
@@ -363,7 +363,7 @@ const App = {
                 mensagem: mensagem
             }]);
             if (error) throw error;
-            UI.showToast("Resposta enviada à equipa com sucesso!", "success");
+            UI.showToast("Resposta enviada à equipe com sucesso!", "success");
             input.value = '';
             this.carregarRecadosEstabelecimento();
         } catch (e) {
@@ -421,8 +421,8 @@ const App = {
             const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
             if (!profs || profs.length === 0) {
-                headerRow.innerHTML = '<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais registados</th>';
-                tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Registe profissionais na aba Equipa para ver a agenda.</td></tr>';
+                headerRow.innerHTML = '<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>';
+                tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipe para ver a agenda.</td></tr>';
                 return;
             }
             let profsExibicao = profs;
@@ -493,11 +493,11 @@ const App = {
                 data_validade
             }]);
             if (error) throw error;
-            UI.showToast('Produto registado com sucesso!');
+            UI.showToast('Produto cadastrado com sucesso!');
             event.target.reset();
             this.renderProdutos();
         } catch (e) {
-            UI.showToast('Erro ao registar produto: ' + e.message, 'error');
+            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');
         }
     },
     async handleCreateServico(event) {
@@ -518,7 +518,7 @@ const App = {
             event.target.reset();
             this.renderServicos();
         } catch (e) {
-            UI.showToast('Erro ao registar serviço: ' + e.message, 'error');
+            UI.showToast('Erro ao cadastrar serviço: ' + e.message, 'error');
         }
     },
     async renderServicos() {
@@ -539,13 +539,13 @@ const App = {
                         <button onclick="App.excluirServico('${s.id}')" class="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition">Excluir</button>
                     </div>
                 </div>
-            `).join('') : '<p class="text-xs text-zinc-500 md:col-span-2">Nenhum serviço registado.</p>';
+            `).join('') : '<p class="text-xs text-zinc-500 md:col-span-2">Nenhum serviço cadastrado.</p>';
         } catch (e) {
             console.error(e);
         }
     },
     async excluirServico(id) {
-        if (!confirm("Tem a certeza que deseja excluir este serviço?")) return;
+        if (!confirm("Tem certeza que deseja excluir este serviço?")) return;
         try {
             const { error } = await supabaseClient.from('servicos').delete().eq('id', id);
             if (error) throw error;
@@ -576,7 +576,7 @@ const App = {
                         Excluir
                     </button>
                 </div>
-            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional registado.</p>';
+            `).join('') || '<p class="text-xs text-zinc-500">Nenhum profissional cadastrado.</p>';
         } catch (e) {
             console.error(e);
         }
@@ -601,14 +601,14 @@ const App = {
                     <div class="p-3.5 rounded-2xl bg-zinc-950 border ${pertoVencer ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10'} flex justify-between items-center">
                         <div>
                             <h4 class="text-xs font-bold text-white">${prod.nome} ${pertoVencer ? '<span class="text-[9px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full ml-2">Validade Próxima (&lt; 3 meses)</span>' : ''}</h4>
-                            <p class="text-[10px] text-zinc-400">Stock: ${prod.stock} | Validade: ${prod.data_validade} | Tipo: ${prod.tipo}</p>
+                            <p class="text-[10px] text-zinc-400">Estoque: ${prod.stock} | Validade: ${prod.data_validade} | Tipo: ${prod.tipo}</p>
                         </div>
                         <span class="text-xs font-bold text-brand-500">R$ ${prod.preco_venda.toFixed(2)}</span>
                     </div>
                 `;
-            }).join('') || '<p class="text-xs text-zinc-500">Nenhum produto registado.</p>';
+            }).join('') || '<p class="text-xs text-zinc-500">Nenhum produto cadastrado.</p>';
             if (alertaBadge) {
-                alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Stock Regular';
+                alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Estoque Regular';
             }
         } catch (e) {
             console.error(e);
@@ -691,7 +691,7 @@ const App = {
 
         const linkCheckout = linksPagamento[plano];
         if (linkCheckout) {
-            UI.showToast('A redirecionar para o Mercado Pago...');
+            UI.showToast('Redirecionando para o Mercado Pago...');
             setTimeout(() => {
                 window.location.href = linkCheckout;
             }, 1000);
@@ -758,11 +758,11 @@ const App = {
                 .update({ nome_salao, email })
                 .eq('id', estabId);
             if (error) throw error;
-            UI.showToast('Configurações guardadas com sucesso!');
+            UI.showToast('Configurações salvas com sucesso!');
             const headerSub = document.getElementById('saloon-name-header');
             if (headerSub) headerSub.textContent = nome_salao;
         } catch (e) {
-            UI.showToast('Erro ao guardar configurações: ' + e.message, 'error');
+            UI.showToast('Erro ao salvar configurações: ' + e.message, 'error');
         }
     }
 };
