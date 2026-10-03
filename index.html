@@ -32,6 +32,7 @@ tailwind.config = {
 </script>
 <!-- FontAwesome CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="style_2.css">
 <style>
 .glass-water {
   background: rgba(24, 24, 27, 0.45);
@@ -49,7 +50,6 @@ tailwind.config = {
   border-color: rgba(236, 72, 153, 0.5);
   box-shadow: 0 0 15px rgba(236, 72, 153, 0.15);
 }
-/* Estilo Gota na Água / Efeito Líquido Refletivo */
 .gota-agua {
   background: radial-gradient(circle at 30% 30%, rgba(236, 72, 153, 0.15), rgba(24, 24, 27, 0.6) 70%);
   backdrop-filter: blur(20px);
@@ -57,7 +57,6 @@ tailwind.config = {
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 15px 35px rgba(0, 0, 0, 0.5);
 }
-/* Rastro do Mouse */
 #mouse-trail-canvas {
   position: fixed;
   top: 0;
@@ -78,15 +77,15 @@ tailwind.config = {
 
 <!-- HEADER -->
 <header id="main-header" class="hidden sticky top-0 z-40 glass-water border-b border-white/10">
-<div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+<div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-2">
   <div class="flex items-center gap-3 overflow-hidden">
-    <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500">
+    <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0">
       <i class="fa-solid fa-scissors text-lg"></i>
     </div>
     <div class="overflow-hidden">
       <span class="font-syne text-xl font-extrabold text-white uppercase">HairConcept</span>
       <div class="flex items-center gap-1 overflow-hidden">
-        <span id="saloon-name-header" class="text-[10px] text-zinc-400 font-medium tracking-wider uppercase">Salão</span>
+        <span id="saloon-name-header" class="text-[10px] text-zinc-400 font-medium tracking-wider uppercase truncate">Salão</span>
       </div>
     </div>
   </div>
@@ -102,6 +101,9 @@ tailwind.config = {
     <button onclick="UI.switchTab('aba-configuracoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Configurações</button>
   </nav>
   <div class="flex items-center gap-3 shrink-0">
+    <button onclick="UI.toggleMobileMenu()" class="lg:hidden p-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition">
+      <i class="fa-solid fa-bars text-base"></i>
+    </button>
     <div class="text-right hidden sm:block">
       <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[120px]">Nome</span>
       <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase">Cargo</span>
@@ -111,10 +113,24 @@ tailwind.config = {
     </button>
   </div>
 </div>
+<!-- Menu Mobile Dropdown -->
+<div id="mobile-nav-menu" class="hidden lg:hidden glass-water border-t border-white/10 px-4 py-3">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+    <button onclick="UI.switchTab('aba-agenda'); UI.toggleMobileMenu(false);" class="p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agenda</button>
+    <button onclick="UI.switchTab('aba-agendar'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agendar</button>
+    <button onclick="UI.switchTab('aba-servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços</button>
+    <button onclick="UI.switchTab('aba-equipe'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Equipe</button>
+    <button onclick="UI.switchTab('aba-produtos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Estoque</button>
+    <button onclick="UI.switchTab('aba-planos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Planos</button>
+    <button onclick="UI.switchTab('aba-avaliacoes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avaliações</button>
+    <button onclick="UI.switchTab('aba-relatorios'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Relatórios</button>
+    <button onclick="UI.switchTab('aba-configuracoes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
+  </div>
+</div>
 </header>
 
 <!-- CONTEÚDO PRINCIPAL -->
-<main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-12">
+<main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-8">
 <!-- TELA DE LOGIN COM ESTILO GOTA NA ÁGUA -->
 <section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 gota-agua border border-white/10 space-y-10 shadow-2xl">
   <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -276,7 +292,7 @@ tailwind.config = {
     </div>
   </div>
 
-  <!-- CAIXA DE MENSAGENS / RECADOS RECEBIDOS (Visível para o Admin / Estabelecimento) -->
+  <!-- CAIXA DE MENSAGENS / RECADOS RECEBIDOS (Visível para o Admin) -->
   <div class="admin-only glass-water p-5 rounded-2xl border border-white/10 space-y-3">
     <div class="flex items-center justify-between">
       <h3 class="text-xs font-bold text-white uppercase flex items-center gap-2">
@@ -289,7 +305,6 @@ tailwind.config = {
       <p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>
     </div>
 
-    <!-- Campo para o Salão Responder -->
     <div class="pt-3 border-t border-white/10 flex gap-2">
       <input type="text" id="admin-resposta-input" placeholder="Escrever resposta ou aviso para a equipe..." class="flex-grow glass-input rounded-xl px-3.5 py-2 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRespostaAdmin()">
       <button onclick="App.enviarRespostaAdmin()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition shrink-0">
@@ -310,10 +325,10 @@ tailwind.config = {
     <div class="flex items-center gap-3">
       <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
         <option value="" disabled selected>Saltar para Mês...</option>
-        <option value="0">Outubro 2026</option>
-        <option value="1">Novembro 2026</option>
-        <option value="2">Dezembro 2026</option>
-        <option value="3">Janeiro 2027</option>
+        <option value="9">Outubro 2026</option>
+        <option value="10">Novembro 2026</option>
+        <option value="11">Dezembro 2026</option>
+        <option value="0">Janeiro 2027</option>
       </select>
       <button onclick="UI.switchTab('aba-agendar')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
     </div>
@@ -353,15 +368,25 @@ tailwind.config = {
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
         <select id="agendamento-horario" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
           <option value="08:00">08:00</option>
+          <option value="09:00">08:30</option>
           <option value="09:00">09:00</option>
+          <option value="09:00">09:30</option>
           <option value="10:00">10:00</option>
+          <option value="09:00">10:30</option>
           <option value="11:00">11:00</option>
+          <option value="09:00">11:30</option>
           <option value="12:00">12:00</option>
+          <option value="09:00">12:30</option>
           <option value="13:00">13:00</option>
+          <option value="09:00">13:30</option>
           <option value="14:00">14:00</option>
+          <option value="09:00">14:30</option>
           <option value="15:00">15:00</option>
+          <option value="09:00">15:30</option>
           <option value="16:00">16:00</option>
+          <option value="09:00">16:30</option>
           <option value="17:00">17:00</option>
+          <option value="09:00">17:30</option>
           <option value="18:00">18:00</option>
         </select>
       </div>
@@ -520,7 +545,7 @@ tailwind.config = {
         <h4 class="text-base font-bold text-white uppercase">Plano Mensal</h4>
         <p class="text-2xl font-black text-white">R$ 30,00<span class="text-xs text-zinc-400">/mês</span></p>
         <p class="text-xs text-zinc-400">Até 10 profissionais na equipe.</p>
-        <a href="https://mpago.la/1LunQwf" target="_blank" class="block w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase text-center transition shadow-lg shadow-brand-500/20">Assinar Mensal</a>
+        <button onclick="App.setPlan('mensal')" class="block w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase text-center transition shadow-lg shadow-brand-500/20">Assinar Mensal</button>
       </div>
       <!-- Plano Anual -->
       <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
@@ -528,7 +553,7 @@ tailwind.config = {
         <h4 class="text-base font-bold text-white uppercase">Plano Anual</h4>
         <p class="text-2xl font-black text-blue-400">R$ 300,00<span class="text-xs text-zinc-400">/ano</span></p>
         <p class="text-xs text-zinc-400">20 ou mais profissionais.</p>
-        <a href="https://mpago.la/1doAutJ" target="_blank" class="block w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase text-center transition shadow-lg">Assinar Anual</a>
+        <button onclick="App.setPlan('anual')" class="block w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase text-center transition shadow-lg">Assinar Anual</button>
       </div>
     </div>
   </div>
@@ -543,18 +568,7 @@ tailwind.config = {
         <p class="text-xs text-zinc-400">Moderação de notas pós-atendimento</p>
       </div>
     </div>
-    <div id="lista-avaliacoes" class="space-y-4">
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
-        <div>
-          <div class="flex items-center gap-1 text-amber-400 text-xs mb-1">
-            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-            <span class="text-white font-bold ml-2">Ana Souza</span>
-          </div>
-          <p class="text-xs text-zinc-300">"Excelente atendimento!"</p>
-        </div>
-        <span class="text-[10px] text-zinc-500 uppercase">Profissional: Maria</span>
-      </div>
-    </div>
+    <div id="lista-avaliacoes" class="space-y-4"></div>
   </div>
 </section>
 
@@ -564,7 +578,7 @@ tailwind.config = {
     <div class="flex justify-between items-center border-b border-white/10 pb-4">
       <div>
         <h2 class="text-xl font-bold uppercase text-white">Relatórios Gerenciais</h2>
-        <p class="text-xs text-zinc-400">Histórico de caixa e indicadores</p>
+        <p class="text-xs text-zinc-400">Histórico de caixa e indicadores acumulados</p>
       </div>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -577,7 +591,7 @@ tailwind.config = {
         <h3 id="relatorio-atendimentos" class="text-xl font-black text-brand-500">0</h3>
       </div>
       <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-        <span class="text-[10px] text-zinc-400 uppercase font-bold">Clientes</span>
+        <span class="text-[10px] text-zinc-400 uppercase font-bold">Clientes Atendidos</span>
         <h3 id="relatorio-clientes" class="text-xl font-black text-white">0</h3>
       </div>
     </div>
@@ -662,6 +676,6 @@ handleParticles();
 </script>
 
 <!-- Script Principal -->
-<script src="app.js"></script>
+<script src="app_2.js"></script>
 </body>
 </html>
