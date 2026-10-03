@@ -52,7 +52,7 @@ const App = {
     user: { loggedIn: false, role: '', name: '', id: null },
     fotoBase64Temp: '',
     async init() {
-        console.log("HairConcept inicializado.");
+        console.log("HairConcept inicializado[cite: 180].");
 
         // DETECTAR RETORNO DO MERCADO PAGO
         const urlParams = new URLSearchParams(window.location.search);
@@ -159,20 +159,34 @@ const App = {
     async loginProfissional(event) {
         event.preventDefault();
         const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
-        const cpf = document.getElementById('login-prof-id').value.trim();
+        const cpf = document.getElementById('login-prof-id').value.trim().replace(/\D/g, '');
         const senha = document.getElementById('login-prof-senha').value.trim();
+        
         try {
+            // SEGURANÇA: Autenticação via Supabase Auth com hash seguro (substitui consulta direta de senha em texto plano)
+            const emailInterno = `prof_${cpf}@hairconcept.internal`;
+            const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                email: emailInterno,
+                password: senha
+            });
+
+            if (authError) {
+                UI.showToast('CPF ou senha incorretos.', 'error');
+                return;
+            }
+
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('*')
                 .ilike('estabelecimento', nomeEstabelecimento)
                 .eq('cpf', cpf)
-                .eq('senha', senha)
                 .single();
+
             if (error || !data) {
-                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
+                UI.showToast('Estabelecimento incorreto ou perfil não encontrado.', 'error');
                 return;
             }
+
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
                 localStorage.setItem('hairconcept_prof_id', data.id);
@@ -187,7 +201,7 @@ const App = {
             }
             this.finishLogin(`Bem-vindo, ${data.nome}!`);
         } catch (e) {
-            UI.showToast('Erro ao validar login do profissional.', 'error');
+            UI.showToast('Erro ao validar login do profissional: ' + e.message, 'error');
         }
     },
     async handleCreateProfissional(e) {
@@ -213,20 +227,32 @@ const App = {
             
             const nome = document.getElementById('prof-nome').value;
             const cargo = document.getElementById('prof-cargo').value;
-            const cpf = document.getElementById('prof-cpf').value;
+            const cpf = document.getElementById('prof-cpf').value.trim().replace(/\D/g, '');
             const senha = document.getElementById('prof-senha').value;
             const foto_url = this.fotoBase64Temp;
+
+            // SEGURANÇA: Criação de conta segura via Supabase Auth (gera hash automático da senha)
+            const emailInterno = `prof_${cpf}@hairconcept.internal`;
+            const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                email: emailInterno,
+                password: senha
+            });
+
+            if (authError) throw authError;
+            const userId = authData.user ? authData.user.id : null;
+
+            // Inserção na tabela sem armazenar a senha em texto plano
             const { error } = await supabaseClient.from('profissionais').insert([{
+                id: userId,
                 estabelecimento_id: estabelecimentoId,
                 estabelecimento: nomeEstabelecimentoHeader,
                 nome,
                 cargo,
                 cpf,
-                senha,
                 foto_url
             }]);
             if (error) throw error;
-            UI.showToast('Profissional cadastrado com sucesso!');
+            UI.showToast('Profissional cadastrado com segurança!');
             e.target.reset();
             this.fotoBase64Temp = '';
             document.getElementById('preview-foto-prof').classList.add('hidden');
