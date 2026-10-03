@@ -570,21 +570,92 @@ tailwind.config = {
     <div class="flex justify-between items-center border-b border-white/10 pb-4">
       <div>
         <h2 class="text-xl font-bold uppercase text-white">Configurações do Estabelecimento</h2>
-        <p class="text-xs text-zinc-400">Atualize os dados principais do salão</p>
+        <p class="text-xs text-zinc-400">Gerencie todas as informações do seu negócio, endereço e identidade visual</p>
       </div>
     </div>
-    <form onsubmit="App.handleSalvarConfiguracoes(event)" class="space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
-          <input type="text" id="config-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail de Contato *</label>
-          <input type="email" id="config-email-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+
+    <form onsubmit="App.handleSalvarConfiguracoes(event)" class="space-y-6">
+      
+      <!-- Seção 1: Identidade Visual e Logotipo -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Identidade Visual</h3>
+        <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
+          <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+            <img id="preview-logo-salao" src="" class="w-full h-full object-cover hidden">
+            <i id="icon-logo-salao" class="fa-solid fa-store text-zinc-600 text-2xl"></i>
+          </div>
+          <div class="flex-grow space-y-1">
+            <label class="block text-xs uppercase font-bold text-zinc-400">Logotipo do Salão</label>
+            <input type="file" id="config-logo-file" accept="image/*" onchange="App.handleLogoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-500 file:text-white hover:file:bg-brand-600 cursor-pointer">
+          </div>
         </div>
       </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Salvar Alterações</button>
+
+      <!-- Seção 2: Informações do Negócio -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Informações do Negócio</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
+            <input type="text" id="config-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="Ex: HairConcept Studio">
+          </div>
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CNPJ</label>
+            <input type="text" id="config-cnpj" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="00.000.000/0001-00">
+          </div>
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail de Contato *</label>
+            <input type="email" id="config-email-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
+            <input type="text" id="config-whatsapp" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="(00) 90000-0000">
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção 3: Endereço e Localização -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Endereço e Localização</h3>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Endereço Físico Completo</label>
+          <input type="text" id="config-endereco" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="Ex: Rua das Flores, 123 - Centro - São Paulo/SP">
+        </div>
+      </div>
+
+      <!-- Seção 4: Redes Sociais -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Redes Sociais</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1"><i class="fa-brands fa-instagram text-rose-500 mr-1"></i> Instagram</label>
+            <input type="text" id="config-instagram" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="@seusalao">
+          </div>
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1"><i class="fa-brands fa-facebook text-blue-500 mr-1"></i> Facebook</label>
+            <input type="text" id="config-facebook" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="facebook.com/seusalao">
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção 5: Horários de Funcionamento -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Horários de Funcionamento Padrão</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Abertura</label>
+            <input type="time" id="config-horario-abertura" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fechamento</label>
+            <input type="time" id="config-horario-fechamento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition-all shadow-lg shadow-brand-500/20">
+        Salvar Todas as Alterações
+      </button>
     </form>
   </div>
 </section>
