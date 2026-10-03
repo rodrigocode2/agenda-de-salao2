@@ -4,6 +4,14 @@ const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 // Função inteligente para ler valores com ponto, vírgula ou formato misto
+// Data local no formato AAAA-MM-DD (toISOString usa UTC e adianta o dia à noite)
+function dataLocalISO(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dia}`;
+}
+
 function parseValor(valorStr) {
     if (!valorStr) return 0;
     let limpo = String(valorStr).trim();
@@ -20,6 +28,8 @@ const Auth = {
         localStorage.removeItem('hairconcept_estab_id');
         localStorage.removeItem('hairconcept_prof_id');
         localStorage.removeItem('hairconcept_plan');
+        localStorage.removeItem('hairconcept_prof_dados');
+        localStorage.removeItem('hairconcept_plan_pendente');
         if (supabaseClient && supabaseClient.auth) {
             supabaseClient.auth.signOut();
         }
@@ -61,11 +71,13 @@ const App = {
         
         if (statusPagamento === 'approved') {
             const estabId = localStorage.getItem('hairconcept_estab_id');
-            localStorage.setItem('hairconcept_plan', 'mensal');
+            const planoPago = localStorage.getItem('hairconcept_plan_pendente') || 'mensal';
+            localStorage.setItem('hairconcept_plan', planoPago);
+            localStorage.removeItem('hairconcept_plan_pendente');
             if (estabId && supabaseClient) {
-                await supabaseClient.from('estabelecimentos').update({ plano: 'mensal' }).eq('id', estabId);
+                await supabaseClient.from('estabelecimentos').update({ plano: planoPago }).eq('id', estabId);
             }
-            UI.showToast('Pagamento aprovado! Plano Mensal ativado com sucesso.');
+            UI.showToast(`Pagamento aprovado! Plano ${planoPago === 'anual' ? 'Anual' : 'Mensal'} ativado com sucesso.`);
             window.history.replaceState({}, document.title, window.location.pathname);
         } else if (statusPagamento === 'failure' || statusPagamento === 'cancelled') {
             UI.showToast('O pagamento não foi concluído. Mantendo plano grátis.', 'error');
@@ -74,7 +86,7 @@ const App = {
 
         const dataInput = document.getElementById('filtro-data-agenda');
         if (dataInput && !dataInput.value) {
-            dataInput.value = new Date().toISOString().split('T')[0];
+            dataInput.value = dataLocalISO();
         }
         this.renderListaProfissionais();
         this.renderProdutos();
@@ -163,14 +175,14 @@ const App = {
         const cpf = document.getElementById('login-prof-id').value.trim();
         const senha = document.getElementById('login-prof-senha').value.trim();
         try {
-            const { data, error } = await supabaseClient
-                .from('profissionais')
-                .select('*')
-                .ilike('estabelecimento', nomeEstabelecimento)
-                .eq('cpf', cpf)
-                .eq('senha', senha)
-                .single();
+            const { data: lista, error } = await supabaseClient.rpc('login_profissional', {
+                p_salao: nomeEstabelecimento,
+                p_cpf: cpf,
+                p_senha: senha
+            });
+            const data = Array.isArray(lista) ? lista[0] : lista;
             if (error || !data) {
+                if (error) console.error('Erro no login do profissional:', error);
                 UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
                 return;
             }
@@ -178,9 +190,10 @@ const App = {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
                 localStorage.setItem('hairconcept_prof_id', data.id);
             }
+            localStorage.setItem('hairconcept_prof_dados', JSON.stringify(data));
             this.user = { loggedIn: true, role: 'profissional', name: data.nome, id: data.id };
             const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = data.estabelecimento || nomeEstabelecimento;
+            if (headerSub) headerSub.textContent = data.nome_salao || nomeEstabelecimento;
             document.getElementById('prof-header-nome').textContent = data.nome;
             document.getElementById('prof-header-cargo').textContent = data.cargo;
             if (data.foto_url) {
@@ -783,6 +796,7 @@ const App = {
 
         const linkCheckout = linksPagamento[plano];
         if (linkCheckout) {
+            localStorage.setItem('hairconcept_plan_pendente', plano);
             UI.showToast('Redirecionando para o Mercado Pago...');
             setTimeout(() => {
                 window.location.href = linkCheckout;
@@ -796,13 +810,13 @@ const App = {
         if (!dataInput.value) return;
         const atual = new Date(dataInput.value + 'T00:00:00');
         atual.setDate(atual.getDate() + dias);
-        dataInput.value = atual.toISOString().split('T')[0];
+        dataInput.value = dataLocalISO(atual);
         this.renderAgendaGrid();
     },
     irParaHoje() {
         const dataInput = document.getElementById('filtro-data-agenda');
         if (dataInput) {
-            dataInput.value = new Date().toISOString().split('T')[0];
+            dataInput.value = dataLocalISO();
             this.renderAgendaGrid();
         }
     },
@@ -935,10 +949,37 @@ const UI = {
     }
 };
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+    // Profissional: restaura o login salvo no navegador
+    const profSalvo = localStorage.getItem('hairconcept_prof_dados');
+    if (profSalvo) {
+        try {
+            const data = JSON.parse(profSalvo);
+            App.user = { loggedIn: true, role: 'profissional', name: data.nome, id: data.id };
+            const headerSub = document.getElementById('saloon-name-header');
+            if (headerSub) headerSub.textContent = data.nome_salao || '';
+            const nomeEl = document.getElementById('prof-header-nome');
+            const cargoEl = document.getElementById('prof-header-cargo');
+            if (nomeEl) nomeEl.textContent = data.nome;
+            if (cargoEl) cargoEl.textContent = data.cargo;
+            if (data.foto_url) document.getElementById('prof-header-foto').src = data.foto_url;
+            App.finishLogin();
+            return;
+        } catch (e) {
+            localStorage.removeItem('hairconcept_prof_dados');
+        }
+    }
+
+    // Admin: restaura a sessão do Supabase
     if (supabaseClient && supabaseClient.auth) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && !App.user.loggedIn) {
+            const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+            App.user = { loggedIn: true, role: 'admin', name: name };
+            App.finishLogin();
+        }
         supabaseClient.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session) {
+            if (event === 'SIGNED_IN' && session && !App.user.loggedIn) {
                 const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
                 App.user = { loggedIn: true, role: 'admin', name: name };
                 App.finishLogin(`Bem-vindo, ${name}!`);
@@ -946,3 +987,4 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
