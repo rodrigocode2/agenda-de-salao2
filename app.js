@@ -83,6 +83,7 @@ const App = {
         this.carregarPostIts();
         this.popularSelectProfissionais();
         this.carregarRecadosEstabelecimento();
+        this.carregarConfiguracoes();
         
         if (this.user.role === 'profissional') {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
@@ -720,6 +721,48 @@ const App = {
             const mesStr = String(parseInt(mesIndex) + 1).padStart(2, '0');
             dataInput.value = `${ano}-${mesStr}-01`;
             this.renderAgendaGrid();
+        }
+    },
+    async carregarConfiguracoes() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('*')
+                .eq('id', estabId)
+                .single();
+            if (error) throw error;
+            if (data) {
+                const inputNome = document.getElementById('config-nome-salao');
+                const inputEmail = document.getElementById('config-email-salao');
+                if (inputNome) inputNome.value = data.nome_salao || '';
+                if (inputEmail) inputEmail.value = data.email || '';
+            }
+        } catch (e) {
+            console.error("Erro ao carregar configurações:", e);
+        }
+    },
+    async handleSalvarConfiguracoes(event) {
+        event.preventDefault();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const nome_salao = document.getElementById('config-nome-salao').value.trim();
+        const email = document.getElementById('config-email-salao').value.trim();
+        if (!estabId || !supabaseClient) {
+            UI.showToast('Erro: Estabelecimento não identificado.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient
+                .from('estabelecimentos')
+                .update({ nome_salao, email })
+                .eq('id', estabId);
+            if (error) throw error;
+            UI.showToast('Configurações guardadas com sucesso!');
+            const headerSub = document.getElementById('saloon-name-header');
+            if (headerSub) headerSub.textContent = nome_salao;
+        } catch (e) {
+            UI.showToast('Erro ao guardar configurações: ' + e.message, 'error');
         }
     }
 };
