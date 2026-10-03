@@ -51,8 +51,9 @@ const Auth = {
 const App = {
     user: { loggedIn: false, role: '', name: '', id: null },
     fotoBase64Temp: '',
+    logoBase64Temp: '',
     async init() {
-        console.log("HairConcept inicializado[cite: 180].");
+        console.log("HairConcept inicializado.");
 
         // DETECTAR RETORNO DO MERCADO PAGO
         const urlParams = new URLSearchParams(window.location.search);
@@ -159,34 +160,20 @@ const App = {
     async loginProfissional(event) {
         event.preventDefault();
         const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
-        const cpf = document.getElementById('login-prof-id').value.trim().replace(/\D/g, '');
+        const cpf = document.getElementById('login-prof-id').value.trim();
         const senha = document.getElementById('login-prof-senha').value.trim();
-        
         try {
-            // SEGURANÇA: Autenticação via Supabase Auth com hash seguro (substitui consulta direta de senha em texto plano)
-            const emailInterno = `prof_${cpf}@hairconcept.internal`;
-            const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-                email: emailInterno,
-                password: senha
-            });
-
-            if (authError) {
-                UI.showToast('CPF ou senha incorretos.', 'error');
-                return;
-            }
-
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('*')
                 .ilike('estabelecimento', nomeEstabelecimento)
                 .eq('cpf', cpf)
+                .eq('senha', senha)
                 .single();
-
             if (error || !data) {
-                UI.showToast('Estabelecimento incorreto ou perfil não encontrado.', 'error');
+                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
                 return;
             }
-
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
                 localStorage.setItem('hairconcept_prof_id', data.id);
@@ -201,7 +188,7 @@ const App = {
             }
             this.finishLogin(`Bem-vindo, ${data.nome}!`);
         } catch (e) {
-            UI.showToast('Erro ao validar login do profissional: ' + e.message, 'error');
+            UI.showToast('Erro ao validar login do profissional.', 'error');
         }
     },
     async handleCreateProfissional(e) {
@@ -227,32 +214,20 @@ const App = {
             
             const nome = document.getElementById('prof-nome').value;
             const cargo = document.getElementById('prof-cargo').value;
-            const cpf = document.getElementById('prof-cpf').value.trim().replace(/\D/g, '');
+            const cpf = document.getElementById('prof-cpf').value;
             const senha = document.getElementById('prof-senha').value;
             const foto_url = this.fotoBase64Temp;
-
-            // SEGURANÇA: Criação de conta segura via Supabase Auth (gera hash automático da senha)
-            const emailInterno = `prof_${cpf}@hairconcept.internal`;
-            const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-                email: emailInterno,
-                password: senha
-            });
-
-            if (authError) throw authError;
-            const userId = authData.user ? authData.user.id : null;
-
-            // Inserção na tabela sem armazenar a senha em texto plano
             const { error } = await supabaseClient.from('profissionais').insert([{
-                id: userId,
                 estabelecimento_id: estabelecimentoId,
                 estabelecimento: nomeEstabelecimentoHeader,
                 nome,
                 cargo,
                 cpf,
+                senha,
                 foto_url
             }]);
             if (error) throw error;
-            UI.showToast('Profissional cadastrado com segurança!');
+            UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
             this.fotoBase64Temp = '';
             document.getElementById('preview-foto-prof').classList.add('hidden');
@@ -298,6 +273,22 @@ const App = {
             } catch (err) {
                 UI.showToast('Erro ao atualizar foto: ' + err.message, 'error');
             }
+        };
+        reader.readAsDataURL(file);
+    },
+    handleLogoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.logoBase64Temp = e.target.result;
+            const preview = document.getElementById('preview-logo-salao');
+            const icon = document.getElementById('icon-logo-salao');
+            if (preview) {
+                preview.src = this.logoBase64Temp;
+                preview.classList.remove('hidden');
+            }
+            if (icon) icon.classList.add('hidden');
         };
         reader.readAsDataURL(file);
     },
@@ -837,8 +828,34 @@ const App = {
             if (data) {
                 const inputNome = document.getElementById('config-nome-salao');
                 const inputEmail = document.getElementById('config-email-salao');
+                const inputCnpj = document.getElementById('config-cnpj');
+                const inputWhatsapp = document.getElementById('config-whatsapp');
+                const inputEndereco = document.getElementById('config-endereco');
+                const inputInstagram = document.getElementById('config-instagram');
+                const inputFacebook = document.getElementById('config-facebook');
+                const inputAbertura = document.getElementById('config-horario-abertura');
+                const inputFechamento = document.getElementById('config-horario-fechamento');
+
                 if (inputNome) inputNome.value = data.nome_salao || '';
                 if (inputEmail) inputEmail.value = data.email || '';
+                if (inputCnpj && data.cnpj) inputCnpj.value = data.cnpj;
+                if (inputWhatsapp && data.whatsapp) inputWhatsapp.value = data.whatsapp;
+                if (inputEndereco && data.endereco) inputEndereco.value = data.endereco;
+                if (inputInstagram && data.instagram) inputInstagram.value = data.instagram;
+                if (inputFacebook && data.facebook) inputFacebook.value = data.facebook;
+                if (inputAbertura && data.horario_abertura) inputAbertura.value = data.horario_abertura;
+                if (inputFechamento && data.horario_fechamento) inputFechamento.value = data.horario_fechamento;
+
+                if (data.logo_url) {
+                    this.logoBase64Temp = data.logo_url;
+                    const preview = document.getElementById('preview-logo-salao');
+                    const icon = document.getElementById('icon-logo-salao');
+                    if (preview) {
+                        preview.src = data.logo_url;
+                        preview.classList.remove('hidden');
+                    }
+                    if (icon) icon.classList.add('hidden');
+                }
             }
         } catch (e) {
             console.error("Erro ao carregar configurações:", e);
@@ -849,6 +866,15 @@ const App = {
         const estabId = localStorage.getItem('hairconcept_estab_id');
         const nome_salao = document.getElementById('config-nome-salao').value.trim();
         const email = document.getElementById('config-email-salao').value.trim();
+        const cnpj = document.getElementById('config-cnpj')?.value.trim() || '';
+        const whatsapp = document.getElementById('config-whatsapp')?.value.trim() || '';
+        const endereco = document.getElementById('config-endereco')?.value.trim() || '';
+        const instagram = document.getElementById('config-instagram')?.value.trim() || '';
+        const facebook = document.getElementById('config-facebook')?.value.trim() || '';
+        const horario_abertura = document.getElementById('config-horario-abertura')?.value || '';
+        const horario_fechamento = document.getElementById('config-horario-fechamento')?.value || '';
+        const logo_url = this.logoBase64Temp;
+
         if (!estabId || !supabaseClient) {
             UI.showToast('Erro: Estabelecimento não identificado.', 'error');
             return;
@@ -856,7 +882,18 @@ const App = {
         try {
             const { error } = await supabaseClient
                 .from('estabelecimentos')
-                .update({ nome_salao, email })
+                .update({ 
+                    nome_salao, 
+                    email, 
+                    cnpj, 
+                    whatsapp, 
+                    endereco, 
+                    instagram, 
+                    facebook, 
+                    horario_abertura, 
+                    horario_fechamento,
+                    logo_url 
+                })
                 .eq('id', estabId);
             if (error) throw error;
             UI.showToast('Configurações salvas com sucesso!');
