@@ -585,7 +585,13 @@ const App = {
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
         } catch (e) {
-            UI.showToast('Erro ao excluir profissional: ' + e.message, 'error');
+            console.error('Erro ao excluir profissional:', e);
+            const msg = String(e && e.message ? e.message : e);
+            if (msg.indexOf('23503') >= 0 || msg.toLowerCase().indexOf('foreign key') >= 0) {
+                UI.showToast('Este profissional tem atendimentos na agenda. Apague os atendimentos dele primeiro.', 'error');
+            } else {
+                UI.showToast('Não foi possível excluir: ' + msg, 'error');
+            }
         }
     },
     async handleAtualizarMinhaFoto(event) {
@@ -735,7 +741,25 @@ const App = {
             UI.showToast("Erro ao enviar resposta: " + e.message, "error");
         }
     },
-       async mudarStatusAgendamento(id, status) {
+       async excluirAgendamento(id, cliente) {
+        if (!confirm('Desmarcar o atendimento de ' + (cliente || '') + '?')) return;
+        try {
+            const { error } = await supabaseClient.from('agendamentos').delete().eq('id', id);
+            if (error) {
+                console.error('Erro ao desmarcar:', error);
+                UI.showToast('Não foi possível desmarcar: ' + error.message, 'error');
+                return;
+            }
+            UI.showToast('Atendimento desmarcado.');
+            this.renderAgendaGrid();
+            this.renderRelatorios();
+        } catch (e) {
+            console.error('Erro inesperado ao desmarcar:', e);
+            UI.showToast('Erro inesperado ao desmarcar.', 'error');
+        }
+    },
+
+    async mudarStatusAgendamento(id, status) {
         try {
             const { error } = await supabaseClient
                 .from('agendamentos')
@@ -1580,12 +1604,15 @@ const App = {
 
                     if (ag) {
                         const ehInicio = this.normalizarHora(ag.horario) === this.normalizarHora(h);
+                        if (!ag.status) ag.status = 'espera';
 
                         if (!ehInicio) {
-                            // Bloco de continuacao: apenas a faixa colorida
+                            // Bloco de continuacao: faixa colorida, sem texto repetido
                             const cont = document.createElement('div');
                             const est = String(ag.status || 'espera').toLowerCase();
-                            cont.className = 'ag-continuacao ' + ('ag-cont-' + (['espera','atendendo','finalizado','faltou'].indexOf(est) >= 0 ? est : 'espera'));
+                            const estOk = ['espera','atendendo','finalizado','faltou'].indexOf(est) >= 0 ? est : 'espera';
+                            cont.className = 'ag-continuacao ag-cont-' + estOk;
+                            cont.title = ag.cliente + ' • ' + this.rotuloEstado(ag.status);
                             td.appendChild(cont);
                         } else {
                         const caixa = document.createElement('div');
@@ -1604,7 +1631,15 @@ const App = {
 
                         const faixa = document.createElement('span');
                         faixa.className = 'block text-[9px] opacity-80';
-                        faixa.textContent = this.normalizarHora(ag.horario) + ' - ' + (this.normalizarHora(ag.horario_fim) || '?') + ' • ' + this.rotuloEstado(ag.status);
+                        let fimMostrar = this.normalizarHora(ag.horario_fim);
+                        if (!fimMostrar || fimMostrar === '') {
+                            const mi = this.minutosDoDia(this.normalizarHora(ag.horario));
+                            if (mi >= 0) {
+                                const mf = mi + 30;
+                                fimMostrar = String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0');
+                            }
+                        }
+                        faixa.textContent = this.normalizarHora(ag.horario) + ' - ' + fimMostrar + ' • ' + this.rotuloEstado(ag.status);
 
                         const val = document.createElement('span');
                         val.className = 'block font-bold mt-0.5';
@@ -1616,8 +1651,14 @@ const App = {
                         caixa.appendChild(val);
 
                         // Encaixes dentro deste atendimento
-                        const encaixes = (agendamentos || []).filter(x =>
-                            x.id !== ag.id && x.aceita_encaixe && this.cobreHorario(ag, this.normalizarHora(x.horario)));
+                        const encaixes = (agendamentos || []).filter(x => {
+                            if (x.id === ag.id || x.profissional_id != p.id) return false;
+                            if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
+                            // So entra como encaixe se for um atendimento curto dentro do longo
+                            const durX = this.minutosDoDia(this.normalizarHora(x.horario_fim)) - this.minutosDoDia(this.normalizarHora(x.horario));
+                            const durAg = this.minutosDoDia(this.normalizarHora(ag.horario_fim)) - this.minutosDoDia(this.normalizarHora(ag.horario));
+                            return durX > 0 && durX < durAg;
+                        });
                         if (encaixes.length > 0) {
                             encaixes.forEach(x => {
                                 const e = document.createElement('span');
@@ -1637,6 +1678,13 @@ const App = {
                                 b.onclick = () => this.mudarStatusAgendamento(ag.id, st);
                                 acoes.appendChild(b);
                             });
+
+                            const bExcluir = document.createElement('button');
+                            bExcluir.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-rose-500/40 text-rose-300 hover:bg-rose-500/20 transition cursor-pointer';
+                            bExcluir.textContent = 'Desmarcar';
+                            bExcluir.onclick = () => this.excluirAgendamento(ag.id, ag.cliente);
+                            acoes.appendChild(bExcluir);
+
                             caixa.appendChild(acoes);
                         }
 
@@ -2257,3 +2305,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
