@@ -127,3 +127,63 @@ table th, table td {
   opacity: 0.5;
 }
 
+
+/* ===== Campos preenchidos pelo navegador (autofill) ===== */
+/* Sem isto, o Chrome pinta os campos de branco e o texto some. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(9, 9, 11, 0.95) inset !important;
+  box-shadow: 0 0 0 1000px rgba(9, 9, 11, 0.95) inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+  caret-color: #ffffff;
+}
+
+/* Força o navegador a tratar o site como escuro (evita fundo branco em campos e menus) */
+html {
+  color-scheme: dark;
+}
+
+/* Placeholders precisam ser visíveis, mas discretos */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(161, 161, 170, 0.7);
+  opacity: 1;
+}
+
+
+/* ===== Menu do cabeçalho: aperta em telas mais estreitas ===== */
+#nav-menu {
+  max-width: 100%;
+}
+
+@media (max-width: 1500px) {
+  #nav-menu button {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.65rem;
+    letter-spacing: 0;
+  }
+}
+
+@media (max-width: 1280px) {
+  #nav-menu button {
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    font-size: 0.6rem;
+  }
+}
+
+/* O nome do site nunca encolhe nem quebra */
+header .font-syne {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+header .overflow-hidden {
+  min-width: 0;
+}
