@@ -6,7 +6,6 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 // Foto padrão (o site via.placeholder.com saiu do ar)
 const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
 
-// Função inteligente para ler valores com ponto, vírgula ou formato misto
 // Data local no formato AAAA-MM-DD (toISOString usa UTC e adianta o dia à noite)
 function dataLocalISO(d = new Date()) {
     const y = d.getFullYear();
@@ -44,6 +43,170 @@ const Auth = {
             supabaseClient.auth.signInWithOAuth({ provider: provider });
         }
     },
+    // ---------- Janelas (modais) ----------
+    abrirModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+    },
+    fecharModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    },
+    abrirCadastro() { this.abrirModal('modal-cadastro'); },
+    abrirRecuperarSenha() { this.abrirModal('modal-recuperar'); },
+    abrirAjuda() { this.abrirModal('modal-ajuda'); },
+
+    // ---------- Criar conta ----------
+    async criarConta(event) {
+        event.preventDefault();
+        const nomeSalao = document.getElementById('cad-nome-salao').value.trim();
+        const email = document.getElementById('cad-email').value.trim();
+        const senha = document.getElementById('cad-senha').value;
+        const senha2 = document.getElementById('cad-senha2').value;
+
+        if (senha !== senha2) {
+            UI.showToast('As duas senhas precisam ser iguais.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient.auth.signUp({ email, password: senha });
+            if (error) {
+                UI.showToast('Não foi possível criar a conta: ' + error.message, 'error');
+                return;
+            }
+            if (!data.user) {
+                UI.showToast('Não foi possível criar a conta. Tente novamente.', 'error');
+                return;
+            }
+
+            // Cria o salão já com o nome escolhido (se a sessão existir na hora)
+            if (data.session) {
+                const { error: erroEstab } = await supabaseClient
+                    .from('estabelecimentos')
+                    .insert([{ user_id: data.user.id, nome_salao: nomeSalao, email, plano: 'gratis' }]);
+                if (erroEstab) console.error('Erro ao criar salão:', erroEstab);
+            } else {
+                localStorage.setItem('hairconcept_nome_novo_salao', nomeSalao);
+                UI.showToast('Conta criada! Confirme o e-mail que enviamos e depois entre.');
+                this.fecharModal('modal-cadastro');
+                return;
+            }
+
+            this.fecharModal('modal-cadastro');
+            UI.showToast('Conta criada! Bem-vindo ao HairConcept.');
+            const nome = nomeSalao;
+            App.user = { loggedIn: true, role: 'admin', name: nome };
+            App.finishLogin();
+        } catch (e) {
+            console.error('Erro ao criar conta:', e);
+            UI.showToast('Erro inesperado ao criar a conta.', 'error');
+        }
+    },
+
+    // ---------- Esqueci minha senha ----------
+    async enviarRecuperacao(event) {
+        event.preventDefault();
+        const email = document.getElementById('rec-email').value.trim();
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + window.location.pathname
+            });
+            if (error) {
+                UI.showToast('Erro ao enviar o link: ' + error.message, 'error');
+                return;
+            }
+            this.fecharModal('modal-recuperar');
+            UI.showToast('Se esse e-mail estiver cadastrado, o link de recuperação já foi enviado.');
+        } catch (e) {
+            console.error('Erro ao pedir recuperação:', e);
+            UI.showToast('Erro inesperado ao enviar o link.', 'error');
+        }
+    },
+
+    // ---------- Salvar a senha nova (abre pelo link do e-mail) ----------
+    async salvarNovaSenha(event) {
+        event.preventDefault();
+        const senha = document.getElementById('nova-senha').value;
+        const senha2 = document.getElementById('nova-senha2').value;
+        if (senha !== senha2) {
+            UI.showToast('As duas senhas precisam ser iguais.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.auth.updateUser({ password: senha });
+            if (error) {
+                UI.showToast('Não foi possível salvar a senha: ' + error.message, 'error');
+                return;
+            }
+            this.fecharModal('modal-nova-senha');
+            // Limpa o link de recuperação da barra de endereços
+            window.history.replaceState({}, document.title, window.location.pathname);
+            UI.showToast('Senha alterada com sucesso!');
+            await App.verificarOuCriarEstabelecimento();
+        } catch (e) {
+            console.error('Erro ao salvar a senha:', e);
+            UI.showToast('Erro inesperado ao salvar a senha.', 'error');
+        }
+    },
+
+    // ---------- Pedido de ajuda do profissional ----------
+    async enviarAjuda(event) {
+        event.preventDefault();
+        const nomeEstab = document.getElementById('ajuda-salao').value.trim();
+        const nome = document.getElementById('ajuda-nome').value.trim();
+        const cpf = document.getElementById('ajuda-cpf').value.trim();
+        const tipo = document.getElementById('ajuda-tipo').value;
+        const mensagem = document.getElementById('ajuda-mensagem').value.trim();
+
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            // Localiza o salão pelo nome para gravar o aviso junto dele
+            let estabId = null;
+            const { data: saloes, error: erroSalao } = await supabaseClient
+                .from('estabelecimentos')
+                .select('id')
+                .ilike('nome_salao', nomeEstab)
+                .limit(1);
+            if (erroSalao) console.error('Erro ao procurar salão:', erroSalao);
+            if (saloes && saloes.length > 0) estabId = saloes[0].id;
+
+            const { error } = await supabaseClient.from('solicitacoes').insert([{
+                estabelecimento_id: estabId,
+                tipo: tipo,
+                nome_pessoa: nome,
+                nome_salao: nomeEstab,
+                cpf: cpf,
+                mensagem: mensagem
+            }]);
+            if (error) {
+                UI.showToast('Não foi possível enviar o pedido: ' + error.message, 'error');
+                return;
+            }
+            this.fecharModal('modal-ajuda');
+            event.target.reset();
+            UI.showToast('Pedido enviado! O salão vai falar com você.');
+        } catch (e) {
+            console.error('Erro ao enviar pedido:', e);
+            UI.showToast('Erro inesperado ao enviar o pedido.', 'error');
+        }
+    },
+
     loginAdmin(event) {
         event.preventDefault();
         const email = document.getElementById('login-admin-email').value.trim();
@@ -51,6 +214,7 @@ const Auth = {
         if (supabaseClient) {
             supabaseClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
                 if (error) {
+                    console.error('Erro no login do admin:', error);
                     UI.showToast('Erro ao entrar: ' + error.message, 'error');
                 } else {
                     App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
@@ -101,6 +265,7 @@ const App = {
         this.carregarConfiguracoes();
         this.renderRelatorios();
         this.renderAvaliacoes();
+        if (this.user.role === 'admin') this.carregarAvisos();
         
         if (this.user.role === 'profissional') {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
@@ -142,7 +307,8 @@ const App = {
             const headerSub = document.getElementById('saloon-name-header');
 
             if (error || !estab) {
-                const nomePadrao = 'Meu Salão';
+                const nomePadrao = localStorage.getItem('hairconcept_nome_novo_salao') || 'Meu Salão';
+                localStorage.removeItem('hairconcept_nome_novo_salao');
                 const { data: newEstab, error: createErr } = await supabaseClient
                     .from('estabelecimentos')
                     .insert([{
@@ -424,7 +590,144 @@ const App = {
             UI.showToast("Erro ao enviar resposta: " + e.message, "error");
         }
     },
-       async popularSelectProfissionais() {
+       // ---------- Avisos e pedidos dos clientes ----------
+    async carregarAvisos() {
+        const container = document.getElementById('lista-avisos');
+        if (!container) return;
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('solicitacoes')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Erro ao carregar avisos:', error);
+                container.textContent = 'Não foi possível carregar os avisos agora.';
+                return;
+            }
+
+            const avisos = data || [];
+            this.atualizarBadgeAvisos(avisos);
+
+            container.innerHTML = '';
+            if (avisos.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-zinc-500';
+                p.textContent = 'Nenhum aviso ou pedido por enquanto.';
+                container.appendChild(p);
+                return;
+            }
+
+            const rotulos = {
+                esqueci_senha: 'Esqueci minha senha',
+                reclamacao: 'Reclamação',
+                excluir_dados: 'Excluir meus dados',
+                outro: 'Outro assunto'
+            };
+
+            avisos.forEach(a => {
+                const item = document.createElement('div');
+                item.className = 'aviso-item' + (a.resolvido ? ' resolvido' : '');
+
+                const linhaTopo = document.createElement('div');
+                linhaTopo.className = 'flex items-center justify-between gap-3 flex-wrap';
+
+                const rotulo = document.createElement('span');
+                rotulo.className = 'text-[10px] font-bold uppercase text-brand-500';
+                rotulo.textContent = rotulos[a.tipo] || a.tipo;
+
+                const dataTexto = document.createElement('span');
+                dataTexto.className = 'text-[10px] text-zinc-500';
+                dataTexto.textContent = a.created_at ? new Date(a.created_at).toLocaleString('pt-BR') : '';
+
+                linhaTopo.appendChild(rotulo);
+                linhaTopo.appendChild(dataTexto);
+
+                const quem = document.createElement('p');
+                quem.className = 'text-xs text-white font-bold mt-2';
+                quem.textContent = (a.nome_pessoa || 'Sem nome') + ' — ' + (a.nome_salao || '') + (a.cpf ? ' — CPF ' + a.cpf : '');
+
+                const msg = document.createElement('p');
+                msg.className = 'text-xs text-zinc-300 mt-1';
+                msg.textContent = a.mensagem || '';
+
+                const acoes = document.createElement('div');
+                acoes.className = 'flex gap-2 mt-3';
+
+                const btnResolver = document.createElement('button');
+                btnResolver.className = 'px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase hover:bg-emerald-500/20 transition';
+                btnResolver.textContent = a.resolvido ? 'Reabrir' : 'Marcar como resolvido';
+                btnResolver.onclick = () => this.marcarAviso(a.id, !a.resolvido);
+
+                const btnExcluir = document.createElement('button');
+                btnExcluir.className = 'px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold uppercase hover:bg-red-500/20 transition';
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.onclick = () => this.excluirAviso(a.id);
+
+                acoes.appendChild(btnResolver);
+                acoes.appendChild(btnExcluir);
+
+                item.appendChild(linhaTopo);
+                item.appendChild(quem);
+                item.appendChild(msg);
+                item.appendChild(acoes);
+                container.appendChild(item);
+            });
+        } catch (e) {
+            console.error('Erro inesperado ao carregar avisos:', e);
+            container.textContent = 'Não foi possível carregar os avisos agora.';
+        }
+    },
+
+    atualizarBadgeAvisos(avisos) {
+        const badge = document.getElementById('badge-avisos');
+        if (!badge) return;
+        const pendentes = (avisos || []).filter(a => !a.resolvido).length;
+        if (pendentes > 0) {
+            badge.textContent = String(pendentes);
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    },
+
+    async marcarAviso(id, resolvido) {
+        try {
+            const { error } = await supabaseClient
+                .from('solicitacoes')
+                .update({ resolvido: resolvido })
+                .eq('id', id);
+            if (error) {
+                UI.showToast('Não foi possível atualizar o aviso: ' + error.message, 'error');
+                return;
+            }
+            this.carregarAvisos();
+        } catch (e) {
+            console.error('Erro ao marcar aviso:', e);
+            UI.showToast('Erro inesperado ao atualizar o aviso.', 'error');
+        }
+    },
+
+    async excluirAviso(id) {
+        if (!confirm('Tem certeza que deseja excluir este aviso?')) return;
+        try {
+            const { error } = await supabaseClient.from('solicitacoes').delete().eq('id', id);
+            if (error) {
+                UI.showToast('Não foi possível excluir o aviso: ' + error.message, 'error');
+                return;
+            }
+            UI.showToast('Aviso excluído.');
+            this.carregarAvisos();
+        } catch (e) {
+            console.error('Erro ao excluir aviso:', e);
+            UI.showToast('Erro inesperado ao excluir o aviso.', 'error');
+        }
+    },
+
+    async popularSelectProfissionais() {
         const select = document.getElementById('agendamento-profissional');
         if (!select) return;
         try {
@@ -445,15 +748,29 @@ const App = {
                 }
             }
 
-            const { data } = await supabaseClient
+            const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('id, nome')
                 .eq('estabelecimento_id', estabId);
 
+            if (error) {
+                console.error('Erro ao buscar profissionais:', error);
+                return;
+            }
+
+            select.innerHTML = '';
             if (data && data.length > 0) {
-                select.innerHTML = data.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+                data.forEach(p => {
+                    const op = document.createElement('option');
+                    op.value = p.id;
+                    op.textContent = p.nome;
+                    select.appendChild(op);
+                });
             } else {
-                select.innerHTML = '<option value="">Cadastre um profissional na aba Equipe</option>';
+                const op = document.createElement('option');
+                op.value = '';
+                op.textContent = 'Cadastre um profissional na aba Equipe';
+                select.appendChild(op);
             }
         } catch (e) {
             console.error(e);
@@ -1006,6 +1323,24 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Link de recuperação de senha: o Supabase entrega o token na barra de endereços
+    const hash = window.location.hash || '';
+    const query = window.location.search || '';
+    if (/type=recovery/.test(hash) || /type=recovery/.test(query) || /code=/.test(query)) {
+        if (supabaseClient && supabaseClient.auth) {
+            try {
+                const { error } = await supabaseClient.auth.getSessionFromUrl
+                    ? await supabaseClient.auth.getSessionFromUrl({ storeSession: true })
+                    : { error: null };
+                if (error) console.error('Erro ao ler o link de recuperação:', error);
+            } catch (e) {
+                console.error('Erro ao processar o link de recuperação:', e);
+            }
+            Auth.abrirModal('modal-nova-senha');
+            return;
+        }
+    }
+
     // Admin: restaura a sessão do Supabase
     if (supabaseClient && supabaseClient.auth) {
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1023,4 +1358,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
