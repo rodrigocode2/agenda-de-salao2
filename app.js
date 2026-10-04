@@ -863,6 +863,88 @@ const App = {
         return { pontos: pontos, total: base, progresso: progresso, cheias: cheias, meia: resto >= 0.5, vazias: 5 - cheias - (resto >= 0.5 ? 1 : 0) };
     },
 
+    async renderRankingGestao() {
+        const container = document.getElementById('ranking-gestao');
+        const totalEl = document.getElementById('aval-total-clientes');
+        if (!container) return;
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data: profs } = await supabaseClient
+                .from('profissionais').select('id, nome, cargo')
+                .eq('estabelecimento_id', estabId);
+            const { data: votos } = await supabaseClient
+                .from('avaliacoes_cliente').select('profissional_id, tipo')
+                .eq('estabelecimento_id', estabId);
+            const { count } = await supabaseClient
+                .from('clientes').select('*', { count: 'exact', head: true })
+                .eq('estabelecimento_id', estabId);
+            const total = count || 0;
+            if (totalEl) totalEl.textContent = total + ' cliente(s) na base';
+
+            const pontos = {};
+            (votos || []).forEach(function (v) {
+                if (!v.profissional_id || v.tipo !== 'mais') return;
+                pontos[v.profissional_id] = (pontos[v.profissional_id] || 0) + 1;
+            });
+
+            const lista = (profs || []).map(function (p) {
+                return { p: p, pontos: pontos[p.id] || 0 };
+            }).sort(function (a, b) { return b.pontos - a.pontos; });
+
+            container.innerHTML = '';
+            if (lista.length === 0) {
+                const m = document.createElement('p');
+                m.className = 'text-xs text-zinc-500';
+                m.textContent = 'Nenhum profissional cadastrado ainda.';
+                container.appendChild(m);
+                return;
+            }
+
+            lista.forEach(function (item) {
+                const est = App.calcularEstrelaProf(item.pontos, total);
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
+
+                const topo = document.createElement('div');
+                topo.className = 'flex items-center justify-between gap-3';
+                const info = document.createElement('div');
+                const nome = document.createElement('h4');
+                nome.className = 'text-xs font-bold text-white uppercase';
+                nome.textContent = item.p.nome || '';
+                const cargo = document.createElement('p');
+                cargo.className = 'text-[10px] text-brand-500';
+                cargo.textContent = item.p.cargo || '';
+                info.appendChild(nome); info.appendChild(cargo);
+
+                const dir = document.createElement('div');
+                dir.className = 'text-right';
+                const estrelas = document.createElement('div');
+                estrelas.className = 'prof-estrelas';
+                for (let i = 0; i < est.cheias; i++) estrelas.innerHTML += '<i class="fa-solid fa-star"></i>';
+                if (est.meia) estrelas.innerHTML += '<i class="fa-solid fa-star-half-stroke"></i>';
+                for (let i = 0; i < est.vazias; i++) estrelas.innerHTML += '<i class="fa-regular fa-star text-zinc-600"></i>';
+                const cont = document.createElement('span');
+                cont.className = 'block text-[9px] text-zinc-500 mt-0.5';
+                cont.textContent = item.pontos + ' de ' + total + ' cliente(s)';
+                dir.appendChild(estrelas); dir.appendChild(cont);
+                topo.appendChild(info); topo.appendChild(dir);
+
+                const barra = document.createElement('div');
+                barra.className = 'prof-barra';
+                const cheia = document.createElement('div');
+                cheia.className = 'prof-barra-cheia';
+                cheia.style.width = Math.round(est.progresso * 100) + '%';
+                barra.appendChild(cheia);
+
+                card.appendChild(topo); card.appendChild(barra);
+                container.appendChild(card);
+            });
+        } catch (e) {
+            console.warn('Erro ao montar a avaliacao:', e);
+        }
+    },
+
     async renderRanking() {
         const container = document.getElementById('ranking-profissionais');
         const totalEl = document.getElementById('ranking-total-clientes');
@@ -1941,6 +2023,24 @@ const App = {
         try {
             const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
+            // Pontos de elogio e total de clientes, para as estrelas do cabeçalho
+            let votosProf = {};
+            let totalClientesBase = 0;
+            try {
+                const { data: vv } = await supabaseClient
+                    .from('avaliacoes_cliente').select('profissional_id, tipo')
+                    .eq('estabelecimento_id', estabId);
+                (vv || []).forEach(function (v) {
+                    if (!v.profissional_id || v.tipo !== 'mais') return;
+                    votosProf[v.profissional_id] = (votosProf[v.profissional_id] || 0) + 1;
+                });
+                const { count } = await supabaseClient
+                    .from('clientes').select('*', { count: 'exact', head: true })
+                    .eq('estabelecimento_id', estabId);
+                totalClientesBase = count || 0;
+            } catch (e) {
+                console.warn('Nao foi possivel carregar as estrelas:', e);
+            }
             if (!profs || profs.length === 0) {
                 headerRow.innerHTML = '<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>';
                 tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipe para ver a agenda.</td></tr>';
@@ -1950,17 +2050,50 @@ const App = {
             if (this.user.role === 'profissional') {
                 profsExibicao = profs.filter(p => p.id == this.user.id);
             }
-            headerRow.innerHTML = '<th class="py-3 px-4 w-24">Horário</th>' + profsExibicao.map(p => `
-                <th class="py-3 px-4">
-                    <div class="flex items-center gap-2">
-                        <img src="${p.foto_url || FOTO_PADRAO}" class="w-7 h-7 rounded-lg object-cover">
-                        <div>
-                            <span class="block text-white font-bold">${p.nome}</span>
-                            <span class="text-[9px] text-zinc-400">${p.cargo}</span>
-                        </div>
-                    </div>
-                </th>
-            `).join('');
+            headerRow.innerHTML = '';
+            const thHora = document.createElement('th');
+            thHora.className = 'py-3 px-4 w-24';
+            thHora.textContent = 'Horário';
+            headerRow.appendChild(thHora);
+
+            profsExibicao.forEach(function (p) {
+                const th = document.createElement('th');
+                th.className = 'py-3 px-4';
+                const linha = document.createElement('div');
+                linha.className = 'flex items-center gap-2';
+
+                const img = document.createElement('img');
+                img.src = p.foto_url || FOTO_PADRAO;
+                img.className = 'w-7 h-7 rounded-lg object-cover';
+
+                const bloco = document.createElement('div');
+                const nomeEl = document.createElement('span');
+                nomeEl.className = 'block text-white font-bold';
+                nomeEl.textContent = p.nome || '';
+                const cargoEl = document.createElement('span');
+                cargoEl.className = 'block text-[9px] text-zinc-400';
+                cargoEl.textContent = p.cargo || '';
+
+                const meusPontos = (votosProf || {})[p.id] || 0;
+                const estP = App.calcularEstrelaProf(meusPontos, totalClientesBase);
+                const linhaEst = document.createElement('span');
+                linhaEst.className = 'prof-estrelas mt-0.5';
+                for (let i = 0; i < estP.cheias; i++) linhaEst.innerHTML += '<i class="fa-solid fa-star"></i>';
+                if (estP.meia) linhaEst.innerHTML += '<i class="fa-solid fa-star-half-stroke"></i>';
+                for (let i = 0; i < estP.vazias; i++) linhaEst.innerHTML += '<i class="fa-regular fa-star text-zinc-600"></i>';
+                const contEst = document.createElement('span');
+                contEst.className = 'text-[8px] text-zinc-500 ml-1';
+                contEst.textContent = meusPontos + '/' + totalClientesBase;
+                linhaEst.appendChild(contEst);
+
+                bloco.appendChild(nomeEl);
+                bloco.appendChild(cargoEl);
+                bloco.appendChild(linhaEst);
+                linha.appendChild(img);
+                linha.appendChild(bloco);
+                th.appendChild(linha);
+                headerRow.appendChild(th);
+            });
 
             const horarios = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"];
             let atendimentoCount = 0;
@@ -2611,7 +2744,7 @@ const UI = {
         }, 3000);
     },
     trocarEspaco(qual) {
-        const paineis = ['servicos', 'produtos', 'avaliacoes'];
+        const paineis = ['servicos', 'produtos', 'avaliacoes-nova'];
         if (paineis.indexOf(qual) < 0) return;
         paineis.forEach(function (p) {
             const painel = document.getElementById('aba-' + p);
@@ -2630,7 +2763,7 @@ const UI = {
         // Recarrega a lista do painel aberto
         if (qual === 'servicos') App.renderServicos();
         if (qual === 'produtos') App.renderProdutos();
-        if (qual === 'avaliacoes') App.renderAvaliacoes();
+        if (qual === 'avaliacoes-nova') App.renderRankingGestao();
     },
     abrirGestao(qual) {
         this.switchTab('aba-gestao');
@@ -2715,5 +2848,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
-
