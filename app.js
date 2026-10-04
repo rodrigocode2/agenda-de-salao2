@@ -282,6 +282,7 @@ const App = {
         // Mostra ou esconde as partes conforme o perfil
         if (ehProfissional) {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
+            this.carregarFechamento();
             document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
         } else {
             document.getElementById('painel-profissional-extra')?.classList.add('hidden');
@@ -1926,6 +1927,202 @@ const App = {
         if (aviso) aviso.classList.remove('hidden');
         Auth.abrirModal('modal-marcar');
         UI.showToast('Preenchendo dentro do atendimento de ' + (pai.cliente || '') + '.');
+    },
+
+    // ===== FECHAMENTO DO PROFISSIONAL =====
+    hojeISO() { return dataLocalISO(); },
+
+    // Carrega o ciclo atual e o historico de fechamentos
+    async carregarFechamento() {
+        const painel = document.getElementById('painel-fechamento');
+        if (!painel) return;
+        const lista = document.getElementById('fech-lista');
+        const hist = document.getElementById('fech-historico');
+        const elPeriodo = document.getElementById('fech-periodo');
+        const elQtd = document.getElementById('fech-qtd');
+        const elValor = document.getElementById('fech-valor');
+
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) return;
+
+            // Descobre o id do profissional desta sessao
+            let profId = this.user.id;
+            if (!profId) {
+                const { data: p } = await supabaseClient
+                    .from('profissionais').select('id').eq('user_id', session.user.id).maybeSingle();
+                if (p) profId = p.id;
+            }
+            if (!profId) return;
+            this._profIdFech = profId;
+
+            // Inicio do ciclo: dia seguinte ao ultimo fechamento
+            const { data: fechs } = await supabaseClient
+                .from('fechamentos').select('*')
+                .eq('profissional_id', profId)
+                .order('fim', { ascending: false });
+
+            let inicio = '0001-01-01';
+            if (fechs && fechs.length > 0 && fechs[0].fim) {
+                const d = new Date(fechs[0].fim + 'T00:00:00');
+                d.setDate(d.getDate() + 1);
+                inicio = dataLocalISO(d);
+            }
+            this._inicioCiclo = inicio;
+
+            // Atendimentos do ciclo (do inicio ate hoje)
+            const hoje = dataLocalISO();
+            const { data: ags, error } = await supabaseClient
+                .from('agendamentos').select('*')
+                .eq('profissional_id', profId)
+                .gte('data', inicio)
+                .lte('data', hoje)
+                .order('data', { ascending: true });
+            if (error) { console.warn('Erro ao buscar atendimentos do ciclo:', error.message); }
+
+            const atendimentos = (ags || []).filter(function (a) {
+                return String(a.status || '').toLowerCase() !== 'faltou';
+            });
+            const totalValor = atendimentos.reduce(function (s, a) { return s + (parseFloat(a.valor) || 0); }, 0);
+
+            this._totalCiclo = { qtd: atendimentos.length, valor: totalValor };
+
+            if (elPeriodo) {
+                const de = inicio === '0001-01-01' ? 'o comeco' : inicio.split('-').reverse().join('/');
+                elPeriodo.textContent = 'Ciclo atual: de ' + de + ' ate hoje (' + hoje.split('-').reverse().join('/') + ')';
+            }
+            if (elQtd) elQtd.textContent = String(atendimentos.length);
+            if (elValor) elValor.textContent = 'R$ ' + totalValor.toFixed(2);
+            this.calcularFechamento();
+
+            // Lista dos atendimentos do ciclo
+            if (lista) {
+                lista.innerHTML = '';
+                if (atendimentos.length === 0) {
+                    const p = document.createElement('p');
+                    p.className = 'text-xs text-zinc-500';
+                    p.textContent = 'Nenhum atendimento neste ciclo ainda.';
+                    lista.appendChild(p);
+                }
+                atendimentos.slice().reverse().forEach(function (a) {
+                    const linha = document.createElement('div');
+                    linha.className = 'fech-linha';
+                    const esq = document.createElement('div');
+                    const dia = document.createElement('span');
+                    dia.className = 'dia';
+                    dia.textContent = (a.data || '').split('-').reverse().slice(0, 2).join('/') + ' ' + this.normalizarHora(a.horario);
+                    const cli = document.createElement('span');
+                    cli.className = 'cli ml-2';
+                    cli.textContent = a.cliente || '';
+                    const sv = document.createElement('span');
+                    sv.className = 'text-zinc-400 ml-2';
+                    sv.textContent = a.servico || '';
+                    esq.appendChild(dia); esq.appendChild(cli); esq.appendChild(sv);
+                    const val = document.createElement('span');
+                    val.className = 'val';
+                    val.textContent = 'R$ ' + (parseFloat(a.valor) || 0).toFixed(2);
+                    linha.appendChild(esq); linha.appendChild(val);
+                    lista.appendChild(linha);
+                }.bind(this));
+            }
+
+            // Historico de ciclos fechados
+            if (hist) {
+                hist.innerHTML = '';
+                if (!fechs || fechs.length === 0) {
+                    const p = document.createElement('p');
+                    p.className = 'text-xs text-zinc-500';
+                    p.textContent = 'Nenhum ciclo fechado ainda.';
+                    hist.appendChild(p);
+                }
+                (fechs || []).forEach(function (f) {
+                    const linha = document.createElement('div');
+                    linha.className = 'fech-linha';
+                    const esq = document.createElement('div');
+                    const per = document.createElement('span');
+                    per.className = 'dia';
+                    per.textContent = (f.inicio || '').split('-').reverse().join('/') + ' a ' + (f.fim || '').split('-').reverse().join('/');
+                    const rec = document.createElement('span');
+                    rec.className = 'text-zinc-400 ml-2';
+                    rec.textContent = f.recebido_em ? 'recebido em ' + f.recebido_em.split('-').reverse().join('/') : '';
+                    esq.appendChild(per); esq.appendChild(rec);
+                    const val = document.createElement('span');
+                    val.className = 'val';
+                    val.textContent = 'R$ ' + (parseFloat(f.total_comissao) || 0).toFixed(2) + ' de comissao';
+                    linha.appendChild(esq); linha.appendChild(val);
+                    hist.appendChild(linha);
+                });
+            }
+        } catch (e) {
+            console.warn('Erro ao carregar o fechamento:', e);
+        }
+    },
+
+    calcularFechamento() {
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const total = this._totalCiclo ? this._totalCiclo.valor : 0;
+        const com = isNaN(pct) ? 0 : (total * pct) / 100;
+        const el = document.getElementById('fech-comissao');
+        if (el) el.textContent = 'R$ ' + com.toFixed(2);
+    },
+
+    abrirFecharCiclo() {
+        const total = this._totalCiclo || { qtd: 0, valor: 0 };
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const com = isNaN(pct) ? 0 : (total.valor * pct) / 100;
+
+        const elPer = document.getElementById('fechar-periodo');
+        const elQtd = document.getElementById('fechar-atend');
+        const elVal = document.getElementById('fechar-valor');
+        const elCom = document.getElementById('fechar-comissao');
+        const elData = document.getElementById('fechar-recebido');
+
+        const inicio = this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : null;
+        if (elPer) elPer.textContent = 'Periodo: ' + (inicio ? inicio.split('-').reverse().join('/') : 'inicio') + ' ate ' + dataLocalISO().split('-').reverse().join('/');
+        if (elQtd) elQtd.textContent = String(total.qtd);
+        if (elVal) elVal.textContent = 'R$ ' + total.valor.toFixed(2);
+        if (elCom) elCom.textContent = 'R$ ' + com.toFixed(2);
+        if (elData) elData.value = dataLocalISO();
+        Auth.abrirModal('modal-fechar');
+    },
+
+    async confirmarFechamento() {
+        const profId = this._profIdFech;
+        const total = this._totalCiclo || { qtd: 0, valor: 0 };
+        if (!profId) { UI.showToast('Nao encontrei o seu cadastro. Recarregue a pagina.', 'error'); return; }
+        if (total.qtd === 0) { UI.showToast('Nao ha atendimentos neste ciclo para fechar.', 'error'); return; }
+
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const comissaoPct = isNaN(pct) ? 0 : pct;
+        const comissaoVal = (total.valor * comissaoPct) / 100;
+        const recebido = document.getElementById('fechar-recebido')?.value || dataLocalISO();
+
+        try {
+            const { error } = await supabaseClient.from('fechamentos').insert([{
+                estabelecimento_id: localStorage.getItem('hairconcept_estab_id'),
+                profissional_id: profId,
+                inicio: this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : dataLocalISO(),
+                fim: dataLocalISO(),
+                total_atendimentos: total.qtd,
+                total_valor: total.valor,
+                comissao_pct: comissaoPct,
+                total_comissao: comissaoVal,
+                recebido_em: recebido
+            }]);
+            if (error) {
+                console.error('Erro ao fechar o ciclo:', error);
+                UI.showToast('Nao foi possivel fechar: ' + error.message, 'error');
+                return;
+            }
+            Auth.fecharModal('modal-fechar');
+            const campoPct = document.getElementById('fech-pct');
+            if (campoPct) campoPct.value = '';
+            UI.showToast('Ciclo fechado! O proximo comeca amanha.');
+            this.carregarFechamento();
+        } catch (e) {
+            console.error('Erro inesperado ao fechar:', e);
+            UI.showToast('Erro inesperado ao fechar o ciclo.', 'error');
+        }
     },
 
     abrirMarcar(horario) {
