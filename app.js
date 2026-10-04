@@ -1493,6 +1493,35 @@ const App = {
         return null;
     },
 
+    // Abre a janela para colocar um serviço DENTRO de um atendimento
+    abrirEncaixe(pai) {
+        if (!pai) return;
+        const campoData = document.getElementById('agendamento-data');
+        if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
+
+        // Sugere: começa no início do atendimento e dura 30 minutos
+        const inicio = this.normalizarHora(pai.horario) || '08:00';
+        const mi = this.minutosDoDia(inicio);
+        const mf = mi + 30;
+        const fim = mi >= 0
+            ? String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0')
+            : '08:30';
+
+        const campoHora = document.getElementById('agendamento-horario');
+        const campoFim = document.getElementById('agendamento-horario-fim');
+        if (campoHora) campoHora.value = inicio;
+        if (campoFim) campoFim.value = fim;
+
+        const selProf = document.getElementById('agendamento-profissional');
+        if (selProf && pai.profissional_id) selProf.value = pai.profissional_id;
+
+        const cx = document.getElementById('agendamento-encaixe');
+        if (cx) cx.checked = false;
+
+        Auth.abrirModal('modal-marcar');
+        UI.showToast('Preenchendo dentro do atendimento de ' + (pai.cliente || '') + '.');
+    },
+
     abrirMarcar(horario) {
         const campoData = document.getElementById('agendamento-data');
         const campoHora = document.getElementById('agendamento-horario');
@@ -1689,6 +1718,13 @@ const App = {
                                 b.onclick = () => this.mudarStatusAgendamento(ag.id, st);
                                 acoes.appendChild(b);
                             });
+
+                            // Serviço dentro deste atendimento (encaixe)
+                            const bDentro = document.createElement('button');
+                            bDentro.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 transition cursor-pointer';
+                            bDentro.textContent = 'Adicionar dentro';
+                            bDentro.onclick = () => this.abrirEncaixe(ag);
+                            acoes.appendChild(bDentro);
 
                             const bExcluir = document.createElement('button');
                             bExcluir.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-rose-500/40 text-rose-300 hover:bg-rose-500/20 transition cursor-pointer';
