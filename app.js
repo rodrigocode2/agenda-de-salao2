@@ -3,6 +3,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
+// Foto padrão (o site via.placeholder.com saiu do ar)
+const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
+
 // Função inteligente para ler valores com ponto, vírgula ou formato misto
 // Data local no formato AAAA-MM-DD (toISOString usa UTC e adianta o dia à noite)
 function dataLocalISO(d = new Date()) {
@@ -209,6 +212,12 @@ const App = {
         const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
         const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
         const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
+
+        if (!estabelecimentoId) {
+            UI.showToast('Sessão ainda carregando. Aguarde um instante e tente novamente.', 'error');
+            return;
+        }
+
         try {
             const { count, error: countError } = await supabaseClient
                 .from('profissionais')
@@ -248,7 +257,11 @@ const App = {
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
         } catch (err) {
-            UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');
+            if (err && err.code === '23505') {
+                UI.showToast('Já existe um profissional com esse CPF. Apague o cadastro antigo ou use outro CPF.', 'error');
+            } else {
+                UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');
+            }
         }
     },
     async excluirProfissional(id) {
@@ -474,7 +487,7 @@ const App = {
             headerRow.innerHTML = '<th class="py-3 px-4 w-24">Horário</th>' + profsExibicao.map(p => `
                 <th class="py-3 px-4">
                     <div class="flex items-center gap-2">
-                        <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-7 h-7 rounded-lg object-cover">
+                        <img src="${p.foto_url || FOTO_PADRAO}" class="w-7 h-7 rounded-lg object-cover">
                         <div>
                             <span class="block text-white font-bold">${p.nome}</span>
                             <span class="text-[9px] text-zinc-400">${p.cargo}</span>
@@ -607,7 +620,7 @@ const App = {
             lista.innerHTML = data && data.length > 0 ? data.map(p => `
                 <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <img src="${p.foto_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-xl object-cover">
+                        <img src="${p.foto_url || FOTO_PADRAO}" class="w-10 h-10 rounded-xl object-cover">
                         <div>
                             <h4 class="text-xs font-bold text-white">${p.nome}</h4>
                             <p class="text-[10px] text-brand-500">${p.cargo}</p>
