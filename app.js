@@ -276,6 +276,7 @@ const App = {
             this.renderAvaliacoes();
             this.carregarAvisos();
             this.renderClientes();
+            this.renderRanking();
         }
 
         // Mostra ou esconde as partes conforme o perfil
@@ -778,6 +779,181 @@ const App = {
     },
 
     // ========== CLIENTES ==========
+    // ===== Votos e estrelas =====
+    abrirVoto(clienteId, clienteNome) {
+        const cId = document.getElementById('voto-cliente-id');
+        const cNome = document.getElementById('voto-cliente-nome');
+        const tipo = document.getElementById('voto-tipo');
+        const obs = document.getElementById('voto-obs');
+        if (cId) cId.value = clienteId;
+        if (cNome) cNome.textContent = clienteNome || '';
+        if (tipo) tipo.value = 'mais';
+        if (obs) obs.value = '';
+        this.preencherSelectProfissionaisVoto();
+        Auth.abrirModal('modal-voto');
+    },
+
+    async preencherSelectProfissionaisVoto() {
+        const sel = document.getElementById('voto-profissional');
+        if (!sel) return;
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome')
+                .eq('estabelecimento_id', estabId);
+            if (error) { console.warn('Erro ao buscar profissionais:', error.message); return; }
+            sel.innerHTML = '';
+            const op = document.createElement('option');
+            op.value = '';
+            op.textContent = 'Nenhum / so sobre a cliente';
+            sel.appendChild(op);
+            (data || []).forEach(function (p) {
+                const o = document.createElement('option');
+                o.value = p.id;
+                o.textContent = p.nome || '';
+                sel.appendChild(o);
+            });
+        } catch (e) {
+            console.warn('Erro ao preencher profissionais do voto:', e);
+        }
+    },
+
+    async salvarVoto(event) {
+        event.preventDefault();
+        const clienteId = document.getElementById('voto-cliente-id')?.value;
+        const tipo = document.getElementById('voto-tipo')?.value || 'mais';
+        const profId = document.getElementById('voto-profissional')?.value || null;
+        const obs = document.getElementById('voto-obs')?.value.trim() || null;
+
+        if (!clienteId) { UI.showToast('Cliente nao identificada.', 'error'); return; }
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
+
+        try {
+            const { error } = await supabaseClient.from('avaliacoes_cliente').insert([{
+                estabelecimento_id: estabId,
+                cliente_id: clienteId,
+                profissional_id: profId,
+                tipo: tipo,
+                obs: obs
+            }]);
+            if (error) {
+                console.error('Erro ao registrar voto:', error);
+                UI.showToast('Nao foi possivel registrar: ' + error.message, 'error');
+                return;
+            }
+            Auth.fecharModal('modal-voto');
+            UI.showToast(tipo === 'mais' ? 'Ponto registrado!' : 'Alerta registrado.');
+            this.renderClientes();
+            this.renderRanking();
+        } catch (e) {
+            console.error('Erro inesperado ao votar:', e);
+            UI.showToast('Erro inesperado ao registrar.', 'error');
+        }
+    },
+
+    // Estrelas do profissional: proporcional ao total de clientes do salao
+    calcularEstrelaProf(pontos, totalClientes) {
+        const base = totalClientes > 0 ? totalClientes : 1;
+        const progresso = Math.min(pontos / base, 1);
+        const cheias = Math.floor(progresso * 5);
+        const resto = (progresso * 5) - cheias;
+        return { pontos: pontos, total: base, progresso: progresso, cheias: cheias, meia: resto >= 0.5, vazias: 5 - cheias - (resto >= 0.5 ? 1 : 0) };
+    },
+
+    async renderRanking() {
+        const container = document.getElementById('ranking-profissionais');
+        const totalEl = document.getElementById('ranking-total-clientes');
+        if (!container) return;
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+
+        try {
+            const { data: profs, error: e1 } = await supabaseClient
+                .from('profissionais').select('id, nome, cargo, foto_url')
+                .eq('estabelecimento_id', estabId);
+            if (e1) { console.warn('Erro ao buscar equipe:', e1.message); return; }
+
+            const { data: votos } = await supabaseClient
+                .from('avaliacoes_cliente').select('profissional_id, tipo')
+                .eq('estabelecimento_id', estabId);
+
+            const { count: totalClientes } = await supabaseClient
+                .from('clientes').select('*', { count: 'exact', head: true })
+                .eq('estabelecimento_id', estabId);
+
+            const total = totalClientes || 0;
+            if (totalEl) totalEl.textContent = total + ' cliente(s) na base';
+
+            const pontosPorProf = {};
+            (votos || []).forEach(function (v) {
+                if (!v.profissional_id || v.tipo !== 'mais') return;
+                pontosPorProf[v.profissional_id] = (pontosPorProf[v.profissional_id] || 0) + 1;
+            });
+
+            const lista = (profs || []).map(function (p) {
+                return { p: p, pontos: pontosPorProf[p.id] || 0 };
+            }).sort(function (a, b) { return b.pontos - a.pontos; });
+
+            container.innerHTML = '';
+            if (lista.length === 0) {
+                const msg = document.createElement('p');
+                msg.className = 'text-xs text-zinc-500';
+                msg.textContent = 'Nenhum profissional cadastrado ainda.';
+                container.appendChild(msg);
+                return;
+            }
+
+            lista.forEach(function (item) {
+                const est = App.calcularEstrelaProf(item.pontos, total);
+
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
+
+                const topo = document.createElement('div');
+                topo.className = 'flex items-center justify-between gap-3';
+
+                const info = document.createElement('div');
+                const nome = document.createElement('h4');
+                nome.className = 'text-xs font-bold text-white uppercase';
+                nome.textContent = item.p.nome || '';
+                const cargo = document.createElement('p');
+                cargo.className = 'text-[10px] text-brand-500';
+                cargo.textContent = item.p.cargo || '';
+                info.appendChild(nome); info.appendChild(cargo);
+
+                const dir = document.createElement('div');
+                dir.className = 'text-right';
+                const estrelas = document.createElement('div');
+                estrelas.className = 'prof-estrelas';
+                for (let i = 0; i < est.cheias; i++) estrelas.innerHTML += '<i class="fa-solid fa-star"></i>';
+                if (est.meia) estrelas.innerHTML += '<i class="fa-solid fa-star-half-stroke"></i>';
+                for (let i = 0; i < est.vazias; i++) estrelas.innerHTML += '<i class="fa-regular fa-star text-zinc-600"></i>';
+                const contagem = document.createElement('span');
+                contagem.className = 'block text-[9px] text-zinc-500 mt-0.5';
+                contagem.textContent = item.pontos + ' de ' + total + ' cliente(s)';
+                dir.appendChild(estrelas); dir.appendChild(contagem);
+
+                topo.appendChild(info); topo.appendChild(dir);
+
+                const barra = document.createElement('div');
+                barra.className = 'prof-barra';
+                const cheia = document.createElement('div');
+                cheia.className = 'prof-barra-cheia';
+                cheia.style.width = Math.round(est.progresso * 100) + '%';
+                barra.appendChild(cheia);
+
+                card.appendChild(topo);
+                card.appendChild(barra);
+                container.appendChild(card);
+            });
+        } catch (e) {
+            console.warn('Erro ao montar o ranking:', e);
+        }
+    },
+
     async renderClientes() {
         const lista = document.getElementById('lista-clientes');
         const total = document.getElementById('clientes-total');
@@ -799,6 +975,24 @@ const App = {
                 lista.textContent = 'Não foi possível carregar os clientes agora.';
                 return;
             }
+
+            // Votos de cada cliente (uso interno do salao)
+            let votos = [];
+            try {
+                const { data: v } = await supabaseClient
+                    .from('avaliacoes_cliente')
+                    .select('cliente_id, tipo')
+                    .eq('estabelecimento_id', estabId);
+                votos = v || [];
+            } catch (e) {
+                console.warn('Nao foi possivel carregar os votos:', e);
+            }
+            const saldo = {};
+            votos.forEach(function (v) {
+                if (!saldo[v.cliente_id]) saldo[v.cliente_id] = { mais: 0, menos: 0 };
+                if (v.tipo === 'mais') saldo[v.cliente_id].mais++;
+                else saldo[v.cliente_id].menos++;
+            });
 
             let clientes = data || [];
             const digitosBusca = busca.replace(/\D/g, '');
@@ -829,8 +1023,12 @@ const App = {
             }
 
             clientes.forEach((c) => {
+                const s = saldo[c.id] || { mais: 0, menos: 0 };
+                const alerta = (s.menos - s.mais) > 0;
+                const boa = (s.mais - s.menos) > 0;
+
                 const card = document.createElement('div');
-                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border space-y-2 ' + (alerta ? 'cli-alerta' : (boa ? 'cli-boa' : 'border-white/10'));
 
                 const topo = document.createElement('div');
                 topo.className = 'flex items-start justify-between gap-3';
@@ -843,6 +1041,37 @@ const App = {
                 contato.className = 'text-[10px] text-zinc-400';
                 contato.textContent = [c.telefone, c.cpf, c.email].filter(Boolean).join(' • ');
                 info.appendChild(nome); info.appendChild(contato);
+
+                // Votos: estrela amarela para cliente boa, vermelha para alerta
+                const linhaVotos = document.createElement('div');
+                linhaVotos.className = 'cli-votos mt-1';
+                const icone = document.createElement('i');
+                icone.className = alerta
+                    ? 'fa-solid fa-star cli-estrela-vermelha'
+                    : (boa ? 'fa-solid fa-star cli-estrela-amarela' : 'fa-regular fa-star text-zinc-600');
+                const mais = document.createElement('span');
+                mais.className = 'cli-mais';
+                mais.textContent = '+' + s.mais;
+                const menos = document.createElement('span');
+                menos.className = 'cli-menos';
+                menos.textContent = '-' + s.menos;
+                linhaVotos.appendChild(icone);
+                linhaVotos.appendChild(mais);
+                linhaVotos.appendChild(menos);
+                if (alerta) {
+                    const aviso = document.createElement('span');
+                    aviso.className = 'cli-menos uppercase font-bold ml-1';
+                    aviso.textContent = 'cuidado';
+                    linhaVotos.appendChild(aviso);
+                }
+                info.appendChild(linhaVotos);
+
+                if (c.obs_interna) {
+                    const obs = document.createElement('p');
+                    obs.className = 'cli-obs';
+                    obs.textContent = c.obs_interna;
+                    info.appendChild(obs);
+                }
                 topo.appendChild(info);
                 card.appendChild(topo);
 
@@ -864,6 +1093,18 @@ const App = {
                     btnMail.innerHTML = '<i class="fa-solid fa-envelope"></i> E-mail';
                     acoes.appendChild(btnMail);
                 }
+
+                const btnMais = document.createElement('button');
+                btnMais.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
+                btnMais.textContent = '+1';
+                btnMais.onclick = () => this.abrirVoto(c.id, c.nome);
+                acoes.appendChild(btnMais);
+
+                const btnMenos = document.createElement('button');
+                btnMenos.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
+                btnMenos.textContent = '-1';
+                btnMenos.onclick = () => this.abrirVoto(c.id, c.nome);
+                acoes.appendChild(btnMenos);
 
                 const btnEditar = document.createElement('button');
                 btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-[10px] font-bold uppercase transition cursor-pointer';
@@ -2474,3 +2715,5 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
+
