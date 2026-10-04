@@ -32,6 +32,7 @@ const Auth = {
         localStorage.removeItem('hairconcept_plan');
         localStorage.removeItem('hairconcept_prof_dados');
         localStorage.removeItem('hairconcept_plan_pendente');
+        // Não apaga hairconcept_boasvindas_* : é para nunca mais aparecer
         if (supabaseClient && supabaseClient.auth) {
             supabaseClient.auth.signOut();
         }
@@ -302,6 +303,36 @@ const App = {
             this.init();
         }
     },
+    mostrarBoasVindas(estab) {
+        const nome = (estab && estab.nome_salao) || localStorage.getItem('hairconcept_nome_novo_salao') || 'Meu Salão';
+        const el = document.getElementById('welcome-nome-salao');
+        if (el) el.textContent = nome;
+
+        const img = document.getElementById('welcome-logo-img');
+        const icone = document.getElementById('welcome-logo-icon');
+        const logo = estab && estab.logo_url;
+        if (img && icone) {
+            if (logo) {
+                img.src = logo;
+                img.classList.remove('hidden');
+                icone.classList.add('hidden');
+            } else {
+                img.classList.add('hidden');
+                icone.classList.remove('hidden');
+            }
+        }
+
+        document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+        document.getElementById('aba-boasvindas')?.classList.remove('hidden');
+    },
+
+    concluirBoasVindas() {
+        const id = this._userIdBoasVindas;
+        if (id) localStorage.setItem('hairconcept_boasvindas_' + id, 'visto');
+        this.init();
+        UI.switchTab('aba-agenda');
+    },
+
     async verificarOuCriarEstabelecimento() {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -317,7 +348,7 @@ const App = {
             const headerSub = document.getElementById('saloon-name-header');
 
             if (error || !estab) {
-                const nomePadrao = localStorage.getItem('hairconcept_nome_novo_salao') || 'Meu Salão';
+                const nomePadrao = localStorage.getItem('hairconcept_nome_novo_salao') || '';
                 localStorage.removeItem('hairconcept_nome_novo_salao');
                 const { data: newEstab, error: createErr } = await supabaseClient
                     .from('estabelecimentos')
@@ -342,7 +373,15 @@ const App = {
                 }
                 if (headerSub) headerSub.textContent = estab.nome_salao;
             }
-            this.init();
+            // Primeiro login: mostra o guia antes da agenda
+            const jaViu = localStorage.getItem('hairconcept_boasvindas_' + userId);
+            if (!jaViu) {
+                this.mostrarBoasVindas(estab || null);
+                // Só marca como visto depois que ele clicar em "Começar agora"
+                this._userIdBoasVindas = userId;
+            } else {
+                this.init();
+            }
         } catch (e) {
             console.error("Erro ao verificar estabelecimento:", e);
             this.init();
@@ -396,8 +435,12 @@ const App = {
             }
 
             this.user = { loggedIn: true, role: 'profissional', name: dadosProf.nome, id: dadosProf.id };
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = dadosProf.nome_salao;
+
+            // O profissional também vê o nome e a logo do salão onde trabalha
+            this.aplicarIdentidadeNoHeader(dadosProf.nome_salao, dadosProf.logo_url || null);
+            if (dadosProf.estabelecimento_id) {
+                this.carregarIdentidadeDoSalao(dadosProf.estabelecimento_id);
+            }
 
             const elNome = document.getElementById('prof-header-nome');
             const elCargo = document.getElementById('prof-header-cargo');
@@ -1039,6 +1082,41 @@ const App = {
         }
     },
 
+    async carregarIdentidadeDoSalao(estabId) {
+        // O profissional não carrega as configurações, então busca só a identidade
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('nome_salao, logo_url')
+                .eq('id', estabId)
+                .maybeSingle();
+            if (error) { console.warn('Não foi possível carregar a identidade do salão:', error.message); return; }
+            if (data) {
+                App.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
+                const salvo = JSON.parse(localStorage.getItem('hairconcept_prof_dados') || '{}');
+                salvo.nome_salao = data.nome_salao;
+                salvo.logo_url = data.logo_url || '';
+                localStorage.setItem('hairconcept_prof_dados', JSON.stringify(salvo));
+            }
+        } catch (e) {
+            console.warn('Erro ao carregar a identidade do salão:', e);
+        }
+    },
+
+    aplicarIdentidadeNoHeader(nomeSalao, logoUrl) {
+        const elNome = document.getElementById('saloon-name-header');
+        const assinatura = document.getElementById('header-assinatura');
+        const temNome = !!(nomeSalao && nomeSalao.trim()) && nomeSalao.trim().toLowerCase() !== 'meu salão';
+
+        // Nome: o do salão, ou um neutro até ele cadastrar
+        if (elNome) elNome.textContent = temNome ? nomeSalao.trim() : 'Bem-vindo';
+        // A assinatura HairConcept some quando o salão tem nome próprio
+        if (assinatura) assinatura.classList.toggle('hidden', temNome);
+
+        this.aplicarLogoNoHeader(logoUrl);
+    },
+
     aplicarLogoNoHeader(logoUrl) {
         const img = document.getElementById('header-logo-img');
         const icone = document.getElementById('header-icon-scissors');
@@ -1593,11 +1671,9 @@ const App = {
                         preview.classList.remove('hidden');
                     }
                     if (icon) icon.classList.add('hidden');
-                    // A tesoura do cabeçalho vira a logo do salão
-                    this.aplicarLogoNoHeader(data.logo_url);
-                } else {
-                    this.aplicarLogoNoHeader(null);
                 }
+                // Nome, assinatura e logo de uma vez só
+                this.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
             }
         } catch (e) {
             console.error("Erro ao carregar configurações:", e);
@@ -1639,10 +1715,8 @@ const App = {
                 .eq('id', estabId);
             if (error) throw error;
             UI.showToast('Configurações salvas com sucesso!');
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = nome_salao;
-            // Troca a tesoura pela logo na hora
-            this.aplicarLogoNoHeader(logo_url || null);
+            // Aplica nome, assinatura e logo na hora
+            this.aplicarIdentidadeNoHeader(nome_salao, logo_url || null);
         } catch (e) {
             UI.showToast('Erro ao salvar configurações: ' + e.message, 'error');
         }
@@ -1687,8 +1761,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             const data = JSON.parse(profSalvo);
             if (!data || !data.id) throw new Error('dados incompletos');
             App.user = { loggedIn: true, role: 'profissional', name: data.nome || '', id: data.id };
-            const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = data.nome_salao || '';
+            App.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
+            if (data.estabelecimento_id) App.carregarIdentidadeDoSalao(data.estabelecimento_id);
             const nomeEl = document.getElementById('prof-header-nome');
             const cargoEl = document.getElementById('prof-header-cargo');
             const fotoEl = document.getElementById('prof-header-foto');
@@ -1726,6 +1800,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (session && !App.user.loggedIn) {
             const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
             App.user = { loggedIn: true, role: 'admin', name: name };
+            // Só na primeira vez: marca como visto para não repetir
+            localStorage.setItem('hairconcept_boasvindas_' + session.user.id, 'visto');
             App.finishLogin();
         }
         supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -1737,3 +1813,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
