@@ -1604,7 +1604,11 @@ const App = {
                 profsExibicao.forEach(p => {
                     // O banco guarda 14:00:00 e a grade usa 14:00: compara só HH:MM
                     const hhmm = (v) => String(v || '').slice(0, 5);
+                    // 1) o atendimento que COMECA neste bloco
                     const ag = (agendamentos || []).find(a => a.profissional_id == p.id && hhmm(a.horario) === hhmm(h));
+                    // 2) o atendimento que COBRE este bloco (servico longo em andamento)
+                    const agCobrindo = !ag ? (agendamentos || []).find(a => a.profissional_id == p.id && this.cobreHorario(a, hhmm(h))) : null;
+                    const agExibir = ag || agCobrindo;
                     if (ag && this.user.role === 'profissional') {
                         atendimentoCount++;
                         totalGanhos += (ag.valor * 0.5);
@@ -1613,7 +1617,8 @@ const App = {
                     const td = document.createElement('td');
                     td.className = 'py-3 px-4';
 
-                    if (ag) {
+                    if (agExibir) {
+                        const ag = agExibir;
                         const ehInicio = this.normalizarHora(ag.horario) === this.normalizarHora(h);
                         if (!ag.status) ag.status = 'espera';
 
@@ -2311,3 +2316,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
