@@ -1164,6 +1164,14 @@ const App = {
         return null;
     },
 
+    abrirMarcar(horario) {
+        const campoData = document.getElementById('agendamento-data');
+        const campoHora = document.getElementById('agendamento-horario');
+        if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
+        if (campoHora) campoHora.value = horario || '08:00';
+        Auth.abrirModal('modal-marcar');
+    },
+
     async handleCreateAgendamento(event) {
         event.preventDefault();
         const estabId = await this.obterEstabId();
@@ -1189,8 +1197,10 @@ const App = {
             }]);
             if (error) throw error;
             UI.showToast('Agendamento efetuado com sucesso!');
-            event.target.reset();
-            UI.switchTab('aba-agenda');
+            document.getElementById('cliente-nome').value = '';
+            document.getElementById('cliente-servico').value = '';
+            document.getElementById('cliente-valor').value = '';
+            Auth.fecharModal('modal-marcar');
             this.renderAgendaGrid();
             this.renderRelatorios();
         } catch (e) {
@@ -1247,7 +1257,7 @@ const App = {
                                     <span class="text-zinc-300">${ag.servico}</span>
                                     <span class="text-brand-400 block font-bold mt-0.5">R$ ${parseFloat(ag.valor).toFixed(2)}</span>
                                 </div>
-                            ` : '<span class="text-zinc-600 text-[11px]">Disponível</span>'}
+                            ` : '<button onclick="App.abrirMarcar('${h}')" class="text-zinc-600 hover:text-brand-500 text-[11px] transition cursor-pointer">Disponível</button>'}
                         </td>`;
                     }).join('') +
                 `</tr>`;
@@ -1737,9 +1747,39 @@ const UI = {
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     },
+    trocarEspaco(qual) {
+        const paineis = ['servicos', 'produtos', 'avaliacoes'];
+        if (paineis.indexOf(qual) < 0) return;
+        paineis.forEach(function (p) {
+            const painel = document.getElementById('aba-' + p);
+            const botao = document.getElementById('btn-espaco-' + p);
+            const ativo = (p === qual);
+            if (painel) painel.classList.toggle('hidden', !ativo);
+            if (botao) {
+                botao.classList.toggle('bg-brand-500/15', ativo);
+                botao.classList.toggle('text-brand-500', ativo);
+                botao.classList.toggle('bg-zinc-900', !ativo);
+                botao.classList.toggle('border', !ativo);
+                botao.classList.toggle('border-white/10', !ativo);
+                botao.classList.toggle('text-zinc-400', !ativo);
+            }
+        });
+        // Recarrega a lista do painel aberto
+        if (qual === 'servicos') App.renderServicos();
+        if (qual === 'produtos') App.renderProdutos();
+        if (qual === 'avaliacoes') App.renderAvaliacoes();
+    },
+    abrirGestao(qual) {
+        this.switchTab('aba-gestao');
+        this.trocarEspaco(qual || 'servicos');
+    },
+
     switchTab(tabId) {
+        const alvo = document.getElementById(tabId);
+        if (!alvo) return;
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.getElementById(tabId)?.classList.remove('hidden');
+        alvo.classList.remove('hidden');
+        if (tabId === 'aba-gestao') this.trocarEspaco('servicos');
     },
     toggleMobileMenu(forceState) {
         const menu = document.getElementById('mobile-nav-menu');
