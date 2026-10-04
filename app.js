@@ -1389,6 +1389,86 @@ const App = {
     // ===== Estados do atendimento =====
     normalizarHora(v) { return String(v || '').slice(0, 5); },
 
+    // Fim real de um atendimento (se nao tiver, assume 30 minutos)
+    fimDoAtendimento(ag) {
+        const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
+        const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
+        const fim = temFim ? this.minutosDoDia(this.normalizarHora(ag.horario_fim)) : (inicio + 30);
+        return fim > inicio ? fim : inicio + 30;
+    },
+
+    // Um horario esta ocupado se cai dentro de algum atendimento do profissional
+    horarioOcupado(agendamentos, profId, hhmm) {
+        const alvo = this.minutosDoDia(hhmm);
+        if (alvo < 0) return false;
+        return (agendamentos || []).some(a => {
+            if (String(a.profissional_id) !== String(profId)) return false;
+            const inicio = this.minutosDoDia(this.normalizarHora(a.horario));
+            const fim = this.fimDoAtendimento(a);
+            return inicio >= 0 && alvo >= inicio && alvo < fim;
+        });
+    },
+
+    // Devolve a lista de horarios livres do profissional naquele dia
+    horariosLivres(agendamentos, profId) {
+        const todos = [];
+        for (let m = 480; m <= 1080; m += 30) {
+            todos.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+        }
+        if (!profId) return todos;
+        return todos.filter(h => !this.horarioOcupado(agendamentos, profId, h));
+    },
+
+    // Aplica o bloqueio nos campos de hora da janela de marcar
+    async aplicarHorariosLivres() {
+        const selProf = document.getElementById('agendamento-profissional');
+        const campoHora = document.getElementById('agendamento-horario');
+        const campoFim = document.getElementById('agendamento-horario-fim');
+        const campoData = document.getElementById('agendamento-data');
+        if (!selProf || !campoHora) return;
+
+        // Modo encaixe: nao bloqueia nada (a decisao e do salao)
+        if (this._modoEncaixe) {
+            campoHora.removeAttribute('disabled');
+            if (campoFim) campoFim.removeAttribute('disabled');
+            return;
+        }
+
+        const estabId = await this.obterEstabId();
+        const dataEscolhida = campoData ? campoData.value : null;
+        if (!estabId || !dataEscolhida) return;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('agendamentos')
+                .select('horario, horario_fim, profissional_id')
+                .eq('estabelecimento_id', estabId)
+                .eq('data', dataEscolhida);
+            if (error) { console.warn('Nao foi possivel conferir a agenda:', error.message); return; }
+
+            const profId = selProf.value;
+            const livres = this.horariosLivres(data || [], profId);
+
+            if (livres.length === 0) {
+                UI.showToast('Esse profissional nao tem horario livre neste dia. Use "Adicionar dentro" num atendimento.', 'error');
+                return;
+            }
+
+            // Se a hora atual esta ocupada, pula para o primeiro horario livre
+            const atual = this.normalizarHora(campoHora.value);
+            if (livres.indexOf(atual) < 0) {
+                campoHora.value = livres[0];
+                if (campoFim) {
+                    const mi = this.minutosDoDia(livres[0]);
+                    const mf = mi + 30;
+                    campoFim.value = String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0');
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao aplicar horarios livres:', e);
+        }
+    },
+
     minutosDoDia(hhmm) {
         const p = String(hhmm || '').split(':');
         const h = parseInt(p[0], 10);
@@ -1496,6 +1576,7 @@ const App = {
     // Abre a janela para colocar um serviço DENTRO de um atendimento
     abrirEncaixe(pai) {
         if (!pai) return;
+        this._modoEncaixe = true;
         const campoData = document.getElementById('agendamento-data');
         if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
 
@@ -1518,11 +1599,14 @@ const App = {
         const cx = document.getElementById('agendamento-encaixe');
         if (cx) cx.checked = false;
 
+        const aviso = document.getElementById('aviso-encaixe');
+        if (aviso) aviso.classList.remove('hidden');
         Auth.abrirModal('modal-marcar');
         UI.showToast('Preenchendo dentro do atendimento de ' + (pai.cliente || '') + '.');
     },
 
     abrirMarcar(horario) {
+        this._modoEncaixe = false;
         const campoData = document.getElementById('agendamento-data');
         const campoHora = document.getElementById('agendamento-horario');
         if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
@@ -1537,6 +1621,9 @@ const App = {
         }
         const cxEncaixe = document.getElementById('agendamento-encaixe');
         if (cxEncaixe) cxEncaixe.checked = false;
+        const avisoEnc = document.getElementById('aviso-encaixe');
+        if (avisoEnc) avisoEnc.classList.add('hidden');
+        this.aplicarHorariosLivres();
         Auth.abrirModal('modal-marcar');
     },
 
@@ -1557,6 +1644,24 @@ const App = {
         if (!horarioFim || horarioFim <= horario) {
             UI.showToast('O horário de fim precisa ser depois do horário de início.', 'error');
             return;
+        }
+
+        // Fora do modo encaixe, nao deixa marcar em cima de outro atendimento
+        if (!this._modoEncaixe) {
+            try {
+                const { data: doDia } = await supabaseClient
+                    .from('agendamentos')
+                    .select('horario, horario_fim, profissional_id, cliente')
+                    .eq('estabelecimento_id', estabId)
+                    .eq('data', data)
+                    .eq('profissional_id', profissional_id);
+                if (this.horarioOcupado(doDia || [], profissional_id, horario)) {
+                    UI.showToast('Esse horario ja esta ocupado para ' + (nomeProfissional || 'este profissional') + '. Use "Adicionar dentro" se quiser encaixar.', 'error');
+                    return;
+                }
+            } catch (e) {
+                console.warn('Nao foi possivel conferir a agenda:', e);
+            }
         }
         const cliente = document.getElementById('cliente-nome').value;
         const servico = document.getElementById('cliente-servico').value;
