@@ -283,6 +283,30 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ============ MODAL: FECHAR CICLO ============ -->
+  <div id="modal-fechar" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Fechar ciclo</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-fechar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
+          <p id="fechar-periodo" class="text-[11px] text-zinc-400"></p>
+          <p class="text-xs text-white font-bold"><span id="fechar-atend">0</span> atendimento(s)</p>
+          <p class="text-xs text-white font-bold">Valor: <span id="fechar-valor">R$ 0,00</span></p>
+          <p class="text-xs text-emerald-400 font-bold">Comissão: <span id="fechar-comissao">R$ 0,00</span></p>
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data em que recebi</label>
+          <input type="date" id="fechar-recebido" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <p class="text-[10px] text-zinc-500">Ao fechar, o sistema guarda este período e o próximo ciclo começa no dia seguinte.</p>
+        <button onclick="App.confirmarFechamento()" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition">Confirmar fechamento</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ MODAL: VOTAR NO CLIENTE ============ -->
   <div id="modal-voto" class="modal-overlay hidden">
     <div class="modal-caixa">
@@ -479,6 +503,54 @@ tailwind.config = {
       </div>
     </div>
     
+    <!-- FECHAMENTO DO PROFISSIONAL -->
+    <div id="painel-fechamento" class="glass-water rounded-2xl border border-white/10 p-6 space-y-5">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h3 class="text-sm font-bold uppercase text-white"><i class="fa-solid fa-sack-dollar text-emerald-400 mr-2"></i>Meu Fechamento</h3>
+          <p id="fech-periodo" class="text-[10px] text-zinc-500 uppercase">Carregando período...</p>
+        </div>
+        <button onclick="App.abrirFecharCiclo()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">
+          <i class="fa-solid fa-lock mr-1"></i> Fechar ciclo
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="p-4 bg-zinc-900 rounded-2xl border border-white/10 text-center">
+          <span class="block text-[10px] text-zinc-400 uppercase">Atendimentos</span>
+          <strong id="fech-qtd" class="text-brand-500 text-xl font-bold">0</strong>
+        </div>
+        <div class="p-4 bg-zinc-900 rounded-2xl border border-white/10 text-center">
+          <span class="block text-[10px] text-zinc-400 uppercase">Valor real</span>
+          <strong id="fech-valor" class="text-white text-xl font-bold">R$ 0,00</strong>
+        </div>
+        <div class="p-4 bg-zinc-900 rounded-2xl border border-emerald-500/30 text-center">
+          <span class="block text-[10px] text-zinc-400 uppercase">Minha comissão</span>
+          <strong id="fech-comissao" class="text-emerald-400 text-xl font-bold">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Minha comissão (%)</label>
+          <input type="number" id="fech-pct" step="0.01" min="0" max="100" placeholder="Ex: 50" oninput="App.calcularFechamento()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div class="p-3 rounded-xl bg-zinc-950 border border-white/10">
+          <p class="text-[10px] text-zinc-400">Confira na <span class="text-white font-bold">Calculadora</span> ao lado, atendimento por atendimento.</p>
+        </div>
+      </div>
+
+      <div class="border-t border-white/10 pt-4 space-y-3">
+        <h4 class="text-[10px] font-bold text-zinc-400 uppercase">Meus atendimentos no ciclo</h4>
+        <div id="fech-lista" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+      </div>
+
+      <div class="border-t border-white/10 pt-4 space-y-3">
+        <h4 class="text-[10px] font-bold text-zinc-400 uppercase">Ciclos já fechados</h4>
+        <div id="fech-historico" class="space-y-2"></div>
+      </div>
+    </div>
+
     <!-- FERRAMENTAS DO PROFISSIONAL -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
