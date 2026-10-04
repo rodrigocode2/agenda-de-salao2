@@ -1400,10 +1400,21 @@ const App = {
     // O atendimento cobre todos os blocos entre o inicio e o fim
     cobreHorario(ag, hhmm) {
         const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
-        const fim = this.minutosDoDia(this.normalizarHora(ag.horario_fim)) || (inicio + 30);
+        const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
+        const fim = temFim ? this.minutosDoDia(this.normalizarHora(ag.horario_fim)) : (inicio + 30);
         const alvo = this.minutosDoDia(hhmm);
         if (inicio < 0 || alvo < 0) return false;
         return alvo >= inicio && alvo < fim;
+    },
+
+    duracaoMinutos(ag) {
+        const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
+        const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
+        if (inicio < 0) return 30;
+        if (!temFim) return 30;
+        const fim = this.minutosDoDia(this.normalizarHora(ag.horario_fim));
+        const d = fim - inicio;
+        return d > 0 ? d : 30;
     },
 
     classeEstado(status) {
@@ -1631,14 +1642,11 @@ const App = {
 
                         const faixa = document.createElement('span');
                         faixa.className = 'block text-[9px] opacity-80';
-                        let fimMostrar = this.normalizarHora(ag.horario_fim);
-                        if (!fimMostrar || fimMostrar === '') {
-                            const mi = this.minutosDoDia(this.normalizarHora(ag.horario));
-                            if (mi >= 0) {
-                                const mf = mi + 30;
-                                fimMostrar = String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0');
-                            }
-                        }
+                        const mi = this.minutosDoDia(this.normalizarHora(ag.horario));
+                        const mf = mi + this.duracaoMinutos(ag);
+                        const fimMostrar = (mi >= 0)
+                            ? String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0')
+                            : '';
                         faixa.textContent = this.normalizarHora(ag.horario) + ' - ' + fimMostrar + ' • ' + this.rotuloEstado(ag.status);
 
                         const val = document.createElement('span');
@@ -1655,9 +1663,7 @@ const App = {
                             if (x.id === ag.id || x.profissional_id != p.id) return false;
                             if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
                             // So entra como encaixe se for um atendimento curto dentro do longo
-                            const durX = this.minutosDoDia(this.normalizarHora(x.horario_fim)) - this.minutosDoDia(this.normalizarHora(x.horario));
-                            const durAg = this.minutosDoDia(this.normalizarHora(ag.horario_fim)) - this.minutosDoDia(this.normalizarHora(ag.horario));
-                            return durX > 0 && durX < durAg;
+                            return this.duracaoMinutos(x) < this.duracaoMinutos(ag);
                         });
                         if (encaixes.length > 0) {
                             encaixes.forEach(x => {
@@ -2305,4 +2311,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
