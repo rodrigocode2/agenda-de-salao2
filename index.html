@@ -253,6 +253,55 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ============ MODAL: TROCAR SENHA DO PROFISSIONAL ============ -->
+  <div id="modal-trocar-senha" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Trocar senha</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-trocar-senha')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="App.salvarNovaSenhaProfissional(event)" class="space-y-4">
+        <input type="hidden" id="trocasenha-prof-id">
+        <p class="text-[11px] text-zinc-400">Definindo uma senha nova para <span id="trocasenha-prof-nome" class="text-white font-bold"></span>.</p>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha nova (mínimo 4 caracteres)</label>
+          <input type="password" id="trocasenha-senha" required minlength="4" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Repetir a senha nova</label>
+          <input type="password" id="trocasenha-senha2" required minlength="4" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar senha nova</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: EDITAR PROFISSIONAL ============ -->
+  <div id="modal-editar-prof" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Editar profissional</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-editar-prof')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="App.salvarEdicaoProfissional(event)" class="space-y-4">
+        <input type="hidden" id="editar-prof-id">
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo</label>
+          <input type="text" id="editar-prof-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Especialidade / Cargo</label>
+          <input type="text" id="editar-prof-cargo" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF (Chave de Acesso)</label>
+          <input type="text" id="editar-prof-cpf" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar alterações</button>
+      </form>
+    </div>
+  </div>
+
   <!-- ============ MODAL: PRECISO DE AJUDA (profissional) ============ -->
   <div id="modal-ajuda" class="modal-overlay hidden">
     <div class="modal-caixa">
