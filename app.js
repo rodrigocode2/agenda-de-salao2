@@ -1853,4 +1853,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
