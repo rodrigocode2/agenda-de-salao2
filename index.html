@@ -563,11 +563,11 @@ tailwind.config = {
     <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
-        <input id="agendamento-data" type="date" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        <input id="agendamento-data" type="date" required onchange="App.aplicarHorariosLivres()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
       </div>
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional *</label>
-        <select id="agendamento-profissional" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
+        <select id="agendamento-profissional" required onchange="App.aplicarHorariosLivres()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
       </div>
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
@@ -581,6 +581,7 @@ tailwind.config = {
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fim *</label>
         <input type="time" id="agendamento-horario-fim" required step="1800" min="06:00" max="23:30" value="08:30" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
       </div>
+      <p id="aviso-encaixe" class="hidden text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-2">Colocando um serviço DENTRO do atendimento. O horário não será bloqueado.</p>
       <div class="flex items-center gap-2 p-3 rounded-xl bg-zinc-950 border border-white/10">
         <input type="checkbox" id="agendamento-encaixe" class="w-4 h-4">
         <label for="agendamento-encaixe" class="text-[11px] text-zinc-300">Aceita encaixe dentro deste atendimento (ex: escova durante o notavel)</label>
@@ -1025,4 +1026,5 @@ handleParticles();
 <script src="app.js"></script>
 </body>
 </html>
+
 
