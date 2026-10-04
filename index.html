@@ -69,9 +69,12 @@ tailwind.config = {
     <button onclick="UI.switchTab('aba-planos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Planos</button>
     <button onclick="UI.switchTab('aba-avaliacoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Avaliações</button>
     <button onclick="UI.switchTab('aba-relatorios')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Relatórios</button>
-    <button onclick="UI.switchTab('aba-configuracoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Configurações</button>
-          <button onclick="UI.switchTab('aba-avisos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition relative">Avisos
-            <span id="badge-avisos" class="hidden absolute -top-1 -right-1 bg-brand-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+    <button onclick="UI.switchTab('aba-configuracoes')" title="Configurações" aria-label="Configurações" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
+            <i class="fa-solid fa-gear text-sm"></i>
+          </button>
+          <button onclick="UI.switchTab('aba-avisos')" title="Avisos" aria-label="Avisos" class="admin-only relative px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
+            <i class="fa-solid fa-bell text-sm"></i>
+            <span id="badge-avisos" class="hidden absolute -top-0.5 -right-0.5 bg-brand-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
           </button>
   </nav>
   <div class="flex items-center gap-3 shrink-0">
