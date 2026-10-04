@@ -156,6 +156,47 @@ textarea::placeholder {
 }
 
 
+/* ===== Estados do atendimento na agenda ===== */
+.ag-espera     { background: rgba(234, 179, 8, 0.18);   border-color: rgba(234, 179, 8, 0.5)   !important; color: #fde68a; }
+.ag-atendendo  { background: rgba(59, 130, 246, 0.18);  border-color: rgba(59, 130, 246, 0.5)  !important; color: #bfdbfe; }
+.ag-finalizado { background: rgba(161, 161, 170, 0.14); border-color: rgba(161, 161, 170, 0.4) !important; color: #d4d4d8; }
+.ag-faltou     { background: rgba(239, 68, 68, 0.18);   border-color: rgba(239, 68, 68, 0.5)   !important; color: #fecaca; }
+
+.ag-cont-espera     { background: rgba(234, 179, 8, 0.18);   border: 1px solid rgba(234, 179, 8, 0.35); }
+.ag-cont-atendendo  { background: rgba(59, 130, 246, 0.18);  border: 1px solid rgba(59, 130, 246, 0.35); }
+.ag-cont-finalizado { background: rgba(161, 161, 170, 0.14); border: 1px solid rgba(161, 161, 170, 0.3); }
+.ag-cont-faltou     { background: rgba(239, 68, 68, 0.18);   border: 1px solid rgba(239, 68, 68, 0.35); }
+
+.ag-continuacao {
+  border-radius: 0.5rem;
+  min-height: 20px;
+  opacity: 0.6;
+  margin-top: 3px;
+}
+
+.ag-encaixe {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.55);
+  color: #bbf7d0;
+  border-radius: 0.6rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 10px;
+  margin-top: 4px;
+  display: block;
+}
+
+.ag-cor {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 9999px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.ag-cor-espera     { background: #eab308; }
+.ag-cor-atendendo  { background: #3b82f6; }
+.ag-cor-finalizado { background: #a1a1aa; }
+.ag-cor-faltou     { background: #ef4444; }
+
 /* ===== Menu do cabeçalho: aperta em telas mais estreitas ===== */
 #nav-menu {
   max-width: 100%;
@@ -313,3 +354,52 @@ html, body {
     padding: 1px 4px;
   }
 }
+
+
+/* ===== Estados do atendimento na agenda ===== */
+.ag-atendimento {
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  font-size: 11px;
+  border: 1px solid;
+  position: relative;
+}
+.ag-espera    { background: rgba(234, 179, 8, 0.16);  border-color: rgba(234, 179, 8, 0.45);  color: #fde68a; }
+.ag-atendendo { background: rgba(59, 130, 246, 0.16); border-color: rgba(59, 130, 246, 0.45); color: #bfdbfe; }
+.ag-finalizado{ background: rgba(161, 161, 170, 0.14);border-color: rgba(161, 161, 170, 0.4); color: #d4d4d8; }
+.ag-faltou    { background: rgba(239, 68, 68, 0.16);  border-color: rgba(239, 68, 68, 0.45);  color: #fecaca; }
+
+/* Bloco de continuação: só a faixa, sem texto repetido */
+.ag-continuacao {
+  border-radius: 0.4rem;
+  min-height: 18px;
+  opacity: 0.55;
+}
+.ag-cont-espera    { background: rgba(234, 179, 8, 0.16);  border: 1px solid rgba(234, 179, 8, 0.3); }
+.ag-cont-atendendo { background: rgba(59, 130, 246, 0.16); border: 1px solid rgba(59, 130, 246, 0.3); }
+.ag-cont-finalizado{ background: rgba(161, 161, 170, 0.14);border: 1px solid rgba(161, 161, 170, 0.28); }
+.ag-cont-faltou    { background: rgba(239, 68, 68, 0.16);  border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* Encaixe por cima de um atendimento: amarelo dentro do azul vira verde */
+.ag-encaixe {
+  background: rgba(34, 197, 94, 0.18);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  color: #bbf7d0;
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.ag-cor {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.ag-cor-espera     { background: #eab308; }
+.ag-cor-atendendo  { background: #3b82f6; }
+.ag-cor-finalizado { background: #a1a1aa; }
+.ag-cor-faltou     { background: #ef4444; }
