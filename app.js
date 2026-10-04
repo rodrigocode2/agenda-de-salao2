@@ -424,19 +424,42 @@ const App = {
             UI.showToast("Erro ao enviar resposta: " + e.message, "error");
         }
     },
-    async popularSelectProfissionais() {
+       async popularSelectProfissionais() {
         const select = document.getElementById('agendamento-profissional');
         if (!select) return;
-        const estabId = localStorage.getItem('hairconcept_estab_id');
         try {
-            const { data } = await supabaseClient.from('profissionais').select('id, nome').eq('estabelecimento_id', estabId);
-            if (data) {
+            let estabId = localStorage.getItem('hairconcept_estab_id');
+
+            if (!estabId && supabaseClient && supabaseClient.auth) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    const { data: estab } = await supabaseClient
+                        .from('estabelecimentos')
+                        .select('id')
+                        .eq('user_id', session.user.id)
+                        .maybeSingle();
+                    if (estab) {
+                        estabId = estab.id;
+                        localStorage.setItem('hairconcept_estab_id', estab.id);
+                    }
+                }
+            }
+
+            const { data } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome')
+                .eq('estabelecimento_id', estabId);
+
+            if (data && data.length > 0) {
                 select.innerHTML = data.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+            } else {
+                select.innerHTML = '<option value="">Cadastre um profissional na aba Equipe</option>';
             }
         } catch (e) {
             console.error(e);
         }
     },
+
     async handleCreateAgendamento(event) {
         event.preventDefault();
         const estabId = localStorage.getItem('hairconcept_estab_id');
