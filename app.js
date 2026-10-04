@@ -275,6 +275,7 @@ const App = {
             this.renderRelatorios();
             this.renderAvaliacoes();
             this.carregarAvisos();
+            this.renderClientes();
         }
 
         // Mostra ou esconde as partes conforme o perfil
@@ -734,7 +735,263 @@ const App = {
             UI.showToast("Erro ao enviar resposta: " + e.message, "error");
         }
     },
-       // ---------- Trocar senha do profissional ----------
+       async mudarStatusAgendamento(id, status) {
+        try {
+            const { error } = await supabaseClient
+                .from('agendamentos')
+                .update({ status: status })
+                .eq('id', id);
+            if (error) {
+                console.error('Erro ao mudar o status:', error);
+                UI.showToast('Nao foi possivel mudar o estado: ' + error.message, 'error');
+                return;
+            }
+            this.renderAgendaGrid();
+        } catch (e) {
+            console.error('Erro inesperado ao mudar status:', e);
+            UI.showToast('Erro inesperado ao mudar o estado.', 'error');
+        }
+    },
+
+    // ========== CLIENTES ==========
+    async renderClientes() {
+        const lista = document.getElementById('lista-clientes');
+        const total = document.getElementById('clientes-total');
+        if (!lista) return;
+
+        const busca = (document.getElementById('busca-clientes')?.value || '').trim();
+        const estabId = await this.obterEstabId();
+        if (!estabId) { lista.textContent = 'Não encontrei o seu salão. Recarregue a página.'; return; }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('clientes')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('nome', { ascending: true });
+
+            if (error) {
+                console.error('Erro ao buscar clientes:', error);
+                lista.textContent = 'Não foi possível carregar os clientes agora.';
+                return;
+            }
+
+            let clientes = data || [];
+            const digitosBusca = busca.replace(/\D/g, '');
+            if (busca) {
+                const alvo = busca.toLowerCase();
+                clientes = clientes.filter(function (c) {
+                    const nomeOk = (c.nome || '').toLowerCase().indexOf(alvo) >= 0;
+                    const telOk = digitosBusca && String(c.telefone || '').replace(/\D/g, '').indexOf(digitosBusca) >= 0;
+                    const cpfOk = digitosBusca && String(c.cpf || '').replace(/\D/g, '').indexOf(digitosBusca) >= 0;
+                    const emailOk = (c.email || '').toLowerCase().indexOf(alvo) >= 0;
+                    return nomeOk || telOk || cpfOk || emailOk;
+                });
+            }
+
+            if (total) {
+                total.textContent = clientes.length === 1 ? '1 cliente' : clientes.length + ' clientes';
+            }
+
+            lista.innerHTML = '';
+            if (clientes.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-zinc-500';
+                p.textContent = busca
+                    ? 'Nenhum cliente encontrado para esta busca.'
+                    : 'Nenhum cliente cadastrado ainda. Adicione o primeiro acima.';
+                lista.appendChild(p);
+                return;
+            }
+
+            clientes.forEach((c) => {
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
+
+                const topo = document.createElement('div');
+                topo.className = 'flex items-start justify-between gap-3';
+
+                const info = document.createElement('div');
+                const nome = document.createElement('h4');
+                nome.className = 'text-xs font-bold text-white uppercase';
+                nome.textContent = c.nome || '';
+                const contato = document.createElement('p');
+                contato.className = 'text-[10px] text-zinc-400';
+                contato.textContent = [c.telefone, c.cpf, c.email].filter(Boolean).join(' • ');
+                info.appendChild(nome); info.appendChild(contato);
+                topo.appendChild(info);
+                card.appendChild(topo);
+
+                const acoes = document.createElement('div');
+                acoes.className = 'flex items-center gap-2 flex-wrap';
+
+                if (c.telefone) {
+                    const btnZap = document.createElement('a');
+                    btnZap.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition';
+                    btnZap.href = 'https://wa.me/55' + String(c.telefone).replace(/\D/g, '');
+                    btnZap.target = '_blank';
+                    btnZap.innerHTML = '<i class="fa-brands fa-whatsapp"></i> WhatsApp';
+                    acoes.appendChild(btnZap);
+                }
+                if (c.email) {
+                    const btnMail = document.createElement('a');
+                    btnMail.className = 'px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 text-[10px] font-bold uppercase transition';
+                    btnMail.href = 'mailto:' + c.email;
+                    btnMail.innerHTML = '<i class="fa-solid fa-envelope"></i> E-mail';
+                    acoes.appendChild(btnMail);
+                }
+
+                const btnEditar = document.createElement('button');
+                btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-[10px] font-bold uppercase transition cursor-pointer';
+                btnEditar.textContent = 'Editar';
+                btnEditar.onclick = () => this.abrirEditarCliente(c.id, c.nome, c.telefone, c.cpf, c.email);
+                acoes.appendChild(btnEditar);
+
+                const btnExcluir = document.createElement('button');
+                btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.onclick = () => this.excluirCliente(c.id);
+                acoes.appendChild(btnExcluir);
+
+                card.appendChild(acoes);
+                lista.appendChild(card);
+            });
+        } catch (e) {
+            console.error('Erro inesperado ao listar clientes:', e);
+            lista.textContent = 'Não foi possível carregar os clientes agora.';
+        }
+    },
+
+    async handleCreateCliente(event) {
+        event.preventDefault();
+        const nome = document.getElementById('cli-nome').value.trim();
+        const telefone = document.getElementById('cli-telefone').value.trim();
+        const cpf = document.getElementById('cli-cpf').value.trim();
+        const email = document.getElementById('cli-email').value.trim();
+
+        if (!nome) {
+            UI.showToast('Escreva o nome do cliente.', 'error');
+            return;
+        }
+
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página.', 'error');
+            return;
+        }
+
+        try {
+            // Evita duplicar: procura pelo telefone ou CPF antes de gravar
+            const { data: existentes, error: erroBusca } = await supabaseClient
+                .from('clientes')
+                .select('id, nome, telefone, cpf')
+                .eq('estabelecimento_id', estabId);
+            if (erroBusca) console.warn('Não foi possível conferir duplicados:', erroBusca.message);
+
+            const telLimpo = telefone.replace(/\D/g, '');
+            const cpfLimpo = cpf.replace(/\D/g, '');
+            const repetido = (existentes || []).find(function (c) {
+                const telIgual = telLimpo && String(c.telefone || '').replace(/\D/g, '') === telLimpo;
+                const cpfIgual = cpfLimpo && String(c.cpf || '').replace(/\D/g, '') === cpfLimpo;
+                return telIgual || cpfIgual;
+            });
+
+            if (repetido) {
+                UI.showToast('Esse contato já está cadastrado: ' + repetido.nome, 'error');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('clientes').insert([{
+                estabelecimento_id: estabId,
+                nome: nome,
+                telefone: telefone || null,
+                cpf: cpf || null,
+                email: email || null
+            }]);
+            if (error) {
+                console.error('Erro ao criar cliente:', error);
+                UI.showToast('Não foi possível salvar o cliente: ' + error.message, 'error');
+                return;
+            }
+
+            UI.showToast('Cliente adicionado!');
+            document.getElementById('cli-nome').value = '';
+            document.getElementById('cli-telefone').value = '';
+            document.getElementById('cli-cpf').value = '';
+            document.getElementById('cli-email').value = '';
+            this.renderClientes();
+        } catch (e) {
+            console.error('Erro inesperado ao criar cliente:', e);
+            UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
+        }
+    },
+
+    abrirEditarCliente(id, nome, telefone, cpf, email) {
+        const campoId = document.getElementById('editar-cli-id');
+        if (campoId) campoId.value = id;
+        const n = document.getElementById('editar-cli-nome');
+        const t = document.getElementById('editar-cli-telefone');
+        const c = document.getElementById('editar-cli-cpf');
+        const m = document.getElementById('editar-cli-email');
+        if (n) n.value = nome || '';
+        if (t) t.value = telefone || '';
+        if (c) c.value = cpf || '';
+        if (m) m.value = email || '';
+        Auth.abrirModal('modal-editar-cliente');
+    },
+
+    async salvarEdicaoCliente(event) {
+        event.preventDefault();
+        const id = document.getElementById('editar-cli-id').value;
+        const nome = document.getElementById('editar-cli-nome').value.trim();
+        const telefone = document.getElementById('editar-cli-telefone').value.trim();
+        const cpf = document.getElementById('editar-cli-cpf').value.trim();
+        const email = document.getElementById('editar-cli-email').value.trim();
+
+        if (!id) { UI.showToast('Cliente não identificado. Feche e tente de novo.', 'error'); return; }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('clientes')
+                .update({ nome: nome, telefone: telefone || null, cpf: cpf || null, email: email || null })
+                .eq('id', id)
+                .select('id');
+            if (error) {
+                console.error('Erro ao editar cliente:', error);
+                UI.showToast('Não foi possível salvar: ' + error.message, 'error');
+                return;
+            }
+            if (!data || data.length === 0) {
+                UI.showToast('Nenhum cliente foi atualizado. Confira se você está no salão certo.', 'error');
+                return;
+            }
+            Auth.fecharModal('modal-editar-cliente');
+            UI.showToast('Cliente atualizado!');
+            this.renderClientes();
+        } catch (e) {
+            console.error('Erro inesperado ao editar cliente:', e);
+            UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
+        }
+    },
+
+    async excluirCliente(id) {
+        if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+        try {
+            const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
+            if (error) {
+                console.error('Erro ao excluir cliente:', error);
+                UI.showToast('Não foi possível excluir: ' + error.message, 'error');
+                return;
+            }
+            UI.showToast('Cliente excluído.');
+            this.renderClientes();
+        } catch (e) {
+            console.error('Erro inesperado ao excluir cliente:', e);
+            UI.showToast('Erro inesperado ao excluir.', 'error');
+        }
+    },
+
+    // ---------- Trocar senha do profissional ----------
     abrirTrocarSenhaProfissional(id, nome, cpf) {
         const campoId = document.getElementById('trocasenha-prof-id');
         const campoNome = document.getElementById('trocasenha-prof-nome');
@@ -1105,6 +1362,42 @@ const App = {
         }
     },
 
+    // ===== Estados do atendimento =====
+    normalizarHora(v) { return String(v || '').slice(0, 5); },
+
+    minutosDoDia(hhmm) {
+        const p = String(hhmm || '').split(':');
+        const h = parseInt(p[0], 10);
+        const m = parseInt(p[1], 10);
+        if (isNaN(h) || isNaN(m)) return -1;
+        return (h * 60) + m;
+    },
+
+    // O atendimento cobre todos os blocos entre o inicio e o fim
+    cobreHorario(ag, hhmm) {
+        const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
+        const fim = this.minutosDoDia(this.normalizarHora(ag.horario_fim)) || (inicio + 30);
+        const alvo = this.minutosDoDia(hhmm);
+        if (inicio < 0 || alvo < 0) return false;
+        return alvo >= inicio && alvo < fim;
+    },
+
+    classeEstado(status) {
+        const s = String(status || 'espera').toLowerCase();
+        if (s === 'atendendo') return 'ag-atendendo';
+        if (s === 'finalizado') return 'ag-finalizado';
+        if (s === 'faltou') return 'ag-faltou';
+        return 'ag-espera';
+    },
+
+    rotuloEstado(status) {
+        const s = String(status || 'espera').toLowerCase();
+        if (s === 'atendendo') return 'Atendendo';
+        if (s === 'finalizado') return 'Finalizado';
+        if (s === 'faltou') return 'Nao veio';
+        return 'Em espera';
+    },
+
     aplicarIdentidadeNoHeader(nomeSalao, logoUrl) {
         const elNome = document.getElementById('saloon-name-header');
         const assinatura = document.getElementById('header-assinatura');
@@ -1170,6 +1463,16 @@ const App = {
         const campoHora = document.getElementById('agendamento-horario');
         if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
         if (campoHora) campoHora.value = horario || '08:00';
+        const campoFim = document.getElementById('agendamento-horario-fim');
+        if (campoFim) {
+            const m = this.minutosDoDia(campoHora ? campoHora.value : '08:00');
+            const fim = m >= 0 ? m + 30 : 510;
+            const hh = String(Math.floor(fim / 60)).padStart(2, '0');
+            const mm = String(fim % 60).padStart(2, '0');
+            campoFim.value = hh + ':' + mm;
+        }
+        const cxEncaixe = document.getElementById('agendamento-encaixe');
+        if (cxEncaixe) cxEncaixe.checked = false;
         Auth.abrirModal('modal-marcar');
     },
 
@@ -1182,7 +1485,15 @@ const App = {
         }
         const data = document.getElementById('agendamento-data').value;
         const profissional_id = document.getElementById('agendamento-profissional').value;
-        const horario = document.getElementById('agendamento-horario').value;
+        // Envia só HH:MM para o banco, sem os segundos
+        const horario = String(document.getElementById('agendamento-horario')?.value || '').slice(0, 5);
+        const horarioFim = String(document.getElementById('agendamento-horario-fim')?.value || '').slice(0, 5);
+        const aceitaEncaixe = !!document.getElementById('agendamento-encaixe')?.checked;
+
+        if (!horarioFim || horarioFim <= horario) {
+            UI.showToast('O horário de fim precisa ser depois do horário de início.', 'error');
+            return;
+        }
         const cliente = document.getElementById('cliente-nome').value;
         const servico = document.getElementById('cliente-servico').value;
         const valor = parseValor(document.getElementById('cliente-valor').value);
@@ -1191,7 +1502,10 @@ const App = {
                 estabelecimento_id: estabId,
                 data,
                 profissional_id,
-                horario,
+                horario: horario,
+                horario_fim: horarioFim,
+                status: 'espera',
+                aceita_encaixe: aceitaEncaixe,
                 cliente,
                 servico,
                 valor
@@ -1253,7 +1567,9 @@ const App = {
                 tr.appendChild(tdHora);
 
                 profsExibicao.forEach(p => {
-                    const ag = (agendamentos || []).find(a => a.profissional_id == p.id && a.horario === h);
+                    // O banco guarda 14:00:00 e a grade usa 14:00: compara só HH:MM
+                    const hhmm = (v) => String(v || '').slice(0, 5);
+                    const ag = (agendamentos || []).find(a => a.profissional_id == p.id && hhmm(a.horario) === hhmm(h));
                     if (ag && this.user.role === 'profissional') {
                         atendimentoCount++;
                         totalGanhos += (ag.valor * 0.5);
@@ -1263,34 +1579,69 @@ const App = {
                     td.className = 'py-3 px-4';
 
                     if (ag) {
-                        const caixa = document.createElement('div');
-                        caixa.className = 'p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px]';
+                        const ehInicio = this.normalizarHora(ag.horario) === this.normalizarHora(h);
 
+                        if (!ehInicio) {
+                            // Bloco de continuacao: apenas a faixa colorida
+                            const cont = document.createElement('div');
+                            const est = String(ag.status || 'espera').toLowerCase();
+                            cont.className = 'ag-continuacao ' + ('ag-cont-' + (['espera','atendendo','finalizado','faltou'].indexOf(est) >= 0 ? est : 'espera'));
+                            td.appendChild(cont);
+                        } else {
+                        const caixa = document.createElement('div');
+                        caixa.className = 'ag-atendimento ' + this.classeEstado(ag.status);
+
+                        const cor = document.createElement('span');
+                        cor.className = 'ag-cor ag-cor-' + (String(ag.status || 'espera').toLowerCase());
                         const nome = document.createElement('strong');
                         nome.className = 'text-white block';
                         nome.textContent = ag.cliente;
+                        nome.prepend(cor);
 
                         const serv = document.createElement('span');
-                        serv.className = 'text-zinc-300';
+                        serv.className = 'block opacity-90';
                         serv.textContent = ag.servico;
 
+                        const faixa = document.createElement('span');
+                        faixa.className = 'block text-[9px] opacity-80';
+                        faixa.textContent = this.normalizarHora(ag.horario) + ' - ' + (this.normalizarHora(ag.horario_fim) || '?') + ' • ' + this.rotuloEstado(ag.status);
+
                         const val = document.createElement('span');
-                        val.className = 'text-brand-400 block font-bold mt-0.5';
+                        val.className = 'block font-bold mt-0.5';
                         val.textContent = 'R$ ' + parseFloat(ag.valor).toFixed(2);
 
                         caixa.appendChild(nome);
                         caixa.appendChild(serv);
+                        caixa.appendChild(faixa);
                         caixa.appendChild(val);
 
+                        // Encaixes dentro deste atendimento
+                        const encaixes = (agendamentos || []).filter(x =>
+                            x.id !== ag.id && x.aceita_encaixe && this.cobreHorario(ag, this.normalizarHora(x.horario)));
+                        if (encaixes.length > 0) {
+                            encaixes.forEach(x => {
+                                const e = document.createElement('span');
+                                e.className = 'ag-encaixe';
+                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + x.cliente;
+                                caixa.appendChild(e);
+                            });
+                        }
+
                         if (this.user.role === 'admin') {
-                            const btn = document.createElement('button');
-                            btn.className = 'mt-1 text-[9px] font-bold uppercase text-yellow-400 hover:text-yellow-300 transition cursor-pointer';
-                            btn.innerHTML = '<i class="fa-solid fa-star"></i> Avaliar';
-                            btn.onclick = () => this.abrirAvaliar(ag.id, ag.profissional_id);
-                            caixa.appendChild(btn);
+                            const acoes = document.createElement('div');
+                            acoes.className = 'flex flex-wrap gap-1 mt-1.5';
+                            ['espera','atendendo','finalizado','faltou'].forEach(st => {
+                                const b = document.createElement('button');
+                                b.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-white/20 hover:bg-white/10 transition cursor-pointer';
+                                b.textContent = this.rotuloEstado(st);
+                                b.onclick = () => this.mudarStatusAgendamento(ag.id, st);
+                                acoes.appendChild(b);
+                            });
+                            caixa.appendChild(acoes);
                         }
 
                         td.appendChild(caixa);
+                        }
                     } else if (this.user.role === 'admin') {
                         const btnLivre = document.createElement('button');
                         btnLivre.className = 'text-zinc-600 hover:text-brand-500 text-[11px] transition cursor-pointer';
@@ -1716,8 +2067,8 @@ const App = {
                 if (inputEndereco && data.endereco) inputEndereco.value = data.endereco;
                 if (inputInstagram && data.instagram) inputInstagram.value = data.instagram;
                 if (inputFacebook && data.facebook) inputFacebook.value = data.facebook;
-                if (inputAbertura && data.horario_abertura) inputAbertura.value = data.horario_abertura;
-                if (inputFechamento && data.horario_fechamento) inputFechamento.value = data.horario_fechamento;
+                if (inputAbertura && data.horario_abertura) inputAbertura.value = String(data.horario_abertura).slice(0, 5);
+                if (inputFechamento && data.horario_fechamento) inputFechamento.value = String(data.horario_fechamento).slice(0, 5);
 
                 if (data.logo_url) {
                     this.logoBase64Temp = data.logo_url;
@@ -1746,8 +2097,9 @@ const App = {
         const endereco = document.getElementById('config-endereco')?.value.trim() || '';
         const instagram = document.getElementById('config-instagram')?.value.trim() || '';
         const facebook = document.getElementById('config-facebook')?.value.trim() || '';
-        const horario_abertura = document.getElementById('config-horario-abertura')?.value || '';
-        const horario_fechamento = document.getElementById('config-horario-fechamento')?.value || '';
+        // Campo de hora vazio precisa virar null: o banco recusa string vazia
+        const horario_abertura = document.getElementById('config-horario-abertura')?.value || null;
+        const horario_fechamento = document.getElementById('config-horario-fechamento')?.value || null;
         const logo_url = this.logoBase64Temp;
 
         if (!estabId || !supabaseClient) {
@@ -1775,7 +2127,13 @@ const App = {
             // Aplica nome, assinatura e logo na hora
             this.aplicarIdentidadeNoHeader(nome_salao, logo_url || null);
         } catch (e) {
-            UI.showToast('Erro ao salvar configurações: ' + e.message, 'error');
+            console.error('Erro ao salvar configurações:', e);
+            const msg = String(e && e.message ? e.message : e);
+            if (msg.toLowerCase().indexOf('time') >= 0) {
+                UI.showToast('Preencha os dois horários de funcionamento antes de salvar.', 'error');
+            } else {
+                UI.showToast('Erro ao salvar configurações: ' + msg, 'error');
+            }
         }
     }
 };
@@ -1827,6 +2185,7 @@ const UI = {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
         alvo.classList.remove('hidden');
         if (tabId === 'aba-gestao') this.trocarEspaco('servicos');
+        if (tabId === 'aba-clientes') App.renderClientes();
     },
     toggleMobileMenu(forceState) {
         const menu = document.getElementById('mobile-nav-menu');
@@ -1898,4 +2257,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
