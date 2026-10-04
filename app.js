@@ -579,6 +579,8 @@ const App = {
                 preview.classList.remove('hidden');
             }
             if (icon) icon.classList.add('hidden');
+            // Mostra no cabeçalho já, antes mesmo de salvar
+            this.aplicarLogoNoHeader(this.logoBase64Temp);
         };
         reader.readAsDataURL(file);
     },
@@ -1034,6 +1036,21 @@ const App = {
             }
         } catch (e) {
             console.error(e);
+        }
+    },
+
+    aplicarLogoNoHeader(logoUrl) {
+        const img = document.getElementById('header-logo-img');
+        const icone = document.getElementById('header-icon-scissors');
+        if (!img || !icone) return;
+        if (logoUrl) {
+            img.src = logoUrl;
+            img.classList.remove('hidden');
+            icone.classList.add('hidden');
+        } else {
+            img.src = '';
+            img.classList.add('hidden');
+            icone.classList.remove('hidden');
         }
     },
 
@@ -1576,6 +1593,10 @@ const App = {
                         preview.classList.remove('hidden');
                     }
                     if (icon) icon.classList.add('hidden');
+                    // A tesoura do cabeçalho vira a logo do salão
+                    this.aplicarLogoNoHeader(data.logo_url);
+                } else {
+                    this.aplicarLogoNoHeader(null);
                 }
             }
         } catch (e) {
@@ -1620,6 +1641,8 @@ const App = {
             UI.showToast('Configurações salvas com sucesso!');
             const headerSub = document.getElementById('saloon-name-header');
             if (headerSub) headerSub.textContent = nome_salao;
+            // Troca a tesoura pela logo na hora
+            this.aplicarLogoNoHeader(logo_url || null);
         } catch (e) {
             UI.showToast('Erro ao salvar configurações: ' + e.message, 'error');
         }
