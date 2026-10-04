@@ -253,6 +253,36 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ============ MODAL: EDITAR CLIENTE ============ -->
+  <div id="modal-editar-cliente" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Editar cliente</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-editar-cliente')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="App.salvarEdicaoCliente(event)" class="space-y-4">
+        <input type="hidden" id="editar-cli-id">
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo</label>
+          <input type="text" id="editar-cli-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
+          <input type="tel" id="editar-cli-telefone" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF</label>
+          <input type="text" id="editar-cli-cpf" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
+          <input type="email" id="editar-cli-email" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar alterações</button>
+      </form>
+    </div>
+  </div>
+
   <!-- ============ MODAL: TROCAR SENHA DO PROFISSIONAL ============ -->
   <div id="modal-trocar-senha" class="modal-overlay hidden">
     <div class="modal-caixa">
@@ -544,7 +574,7 @@ tailwind.config = {
         <input id="cliente-servico" type="text" required placeholder="Ex: Corte de Cabelo / Barba" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
       </div>
       <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário *</label>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Início *</label>
         <select id="agendamento-horario" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
           <option value="08:00">08:00</option>
           <option value="08:30">08:30</option>
@@ -568,6 +598,39 @@ tailwind.config = {
           <option value="17:30">17:30</option>
           <option value="18:00">18:00</option>
         </select>
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fim *</label>
+        <select id="agendamento-horario-fim" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          <option value="08:30">08:30</option>
+          <option value="09:00">09:00</option>
+          <option value="09:30">09:30</option>
+          <option value="10:00">10:00</option>
+          <option value="10:30">10:30</option>
+          <option value="11:00">11:00</option>
+          <option value="11:30">11:30</option>
+          <option value="12:00">12:00</option>
+          <option value="12:30">12:30</option>
+          <option value="13:00">13:00</option>
+          <option value="13:30">13:30</option>
+          <option value="14:00">14:00</option>
+          <option value="14:30">14:30</option>
+          <option value="15:00">15:00</option>
+          <option value="15:30">15:30</option>
+          <option value="16:00">16:00</option>
+          <option value="16:30">16:30</option>
+          <option value="17:00">17:00</option>
+          <option value="17:30">17:30</option>
+          <option value="18:00">18:00</option>
+          <option value="18:30">18:30</option>
+          <option value="19:00">19:00</option>
+          <option value="19:30">19:30</option>
+          <option value="20:00">20:00</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2 p-3 rounded-xl bg-zinc-950 border border-white/10">
+        <input type="checkbox" id="agendamento-encaixe" class="w-4 h-4">
+        <label for="agendamento-encaixe" class="text-[11px] text-zinc-300">Aceita encaixe dentro deste atendimento (ex: escova durante o notavel)</label>
       </div>
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Cliente *</label>
@@ -905,6 +968,52 @@ tailwind.config = {
       </button>
     </div>
     <div id="lista-avisos" class="space-y-3"></div>
+  </div>
+</section>
+
+<!-- CLIENTES CADASTRADOS -->
+<section id="aba-clientes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+  <div class="glass-water rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
+    <div class="flex items-center justify-between border-b border-white/10 pb-4 gap-4 flex-wrap">
+      <div>
+        <h2 class="text-xl font-bold uppercase text-white"><i class="fa-solid fa-address-book text-brand-500 mr-2"></i>Clientes</h2>
+        <p class="text-xs text-zinc-400">Contatos do salão. Busque por telefone, nome ou CPF e fale com o cliente.</p>
+      </div>
+      <span id="clientes-total" class="text-xs font-bold text-brand-500 uppercase"></span>
+    </div>
+
+    <form onsubmit="App.handleCreateCliente(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="sm:col-span-2">
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo *</label>
+        <input type="text" id="cli-nome" required placeholder="Ex: Antonia Silva" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
+        <input type="tel" id="cli-telefone" placeholder="(11) 90000-0000" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF</label>
+        <input type="text" id="cli-cpf" placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div class="sm:col-span-2 lg:col-span-3">
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
+        <input type="email" id="cli-email" placeholder="cliente@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div class="flex items-end">
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg"><i class="fa-solid fa-plus mr-1"></i> Adicionar</button>
+      </div>
+    </form>
+
+    <div class="border-t border-white/10 pt-5 space-y-4">
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="relative flex-grow min-w-[200px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
+          <input type="text" id="busca-clientes" oninput="App.renderClientes()" placeholder="Buscar por telefone, nome ou CPF..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
+        </div>
+        <span class="text-[10px] text-zinc-500 uppercase font-bold">Sem duplicar contatos</span>
+      </div>
+      <div id="lista-clientes" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </div>
   </div>
 </section>
 
