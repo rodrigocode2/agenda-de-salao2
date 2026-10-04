@@ -70,6 +70,9 @@ tailwind.config = {
     <button onclick="UI.switchTab('aba-avaliacoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Avaliações</button>
     <button onclick="UI.switchTab('aba-relatorios')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Relatórios</button>
     <button onclick="UI.switchTab('aba-configuracoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Configurações</button>
+          <button onclick="UI.switchTab('aba-avisos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition relative">Avisos
+            <span id="badge-avisos" class="hidden absolute -top-1 -right-1 bg-brand-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+          </button>
   </nav>
   <div class="flex items-center gap-3 shrink-0">
     <button onclick="UI.toggleMobileMenu()" class="lg:hidden p-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition">
@@ -96,6 +99,7 @@ tailwind.config = {
     <button onclick="UI.switchTab('aba-avaliacoes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avaliações</button>
     <button onclick="UI.switchTab('aba-relatorios'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Relatórios</button>
     <button onclick="UI.switchTab('aba-configuracoes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
+            <button onclick="UI.switchTab('aba-avisos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avisos</button>
   </div>
 </div>
 </header>
@@ -146,6 +150,10 @@ tailwind.config = {
           <input type="password" id="login-admin-senha" required placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition shadow-lg shadow-brand-500/20">Entrar como Admin</button>
+        <div class="flex items-center justify-between pt-1">
+          <button type="button" onclick="Auth.abrirRecuperarSenha()" class="text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Esqueci minha senha</button>
+          <button type="button" onclick="Auth.abrirCadastro()" class="text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Criar conta</button>
+        </div>
       </form>
     </div>
     <!-- Login Profissional -->
@@ -173,6 +181,112 @@ tailwind.config = {
           <input type="password" id="login-prof-senha" required placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Entrar na Agenda</button>
+        <button type="button" onclick="Auth.abrirAjuda()" class="w-full text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Esqueci minha senha / Preciso de ajuda</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: CRIAR CONTA ============ -->
+  <div id="modal-cadastro" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Criar minha conta</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-cadastro')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="Auth.criarConta(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão</label>
+          <input type="text" id="cad-nome-salao" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
+          <input type="email" id="cad-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha (mínimo 6 caracteres)</label>
+          <input type="password" id="cad-senha" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Confirmar senha</label>
+          <input type="password" id="cad-senha2" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Criar conta e entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: RECUPERAR SENHA ============ -->
+  <div id="modal-recuperar" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Recuperar minha senha</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-recuperar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="Auth.enviarRecuperacao(event)" class="space-y-4">
+        <p class="text-[11px] text-zinc-400">Digite o e-mail que você usa para entrar. Vamos enviar um link para você criar uma senha nova.</p>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail do Salão</label>
+          <input type="email" id="rec-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Enviar link</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: DEFINE NOVA SENHA (abre pelo link do e-mail) ============ -->
+  <div id="modal-nova-senha" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Criar senha nova</h3>
+      </div>
+      <form onsubmit="Auth.salvarNovaSenha(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nova senha (mínimo 6 caracteres)</label>
+          <input type="password" id="nova-senha" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Repetir a nova senha</label>
+          <input type="password" id="nova-senha2" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar nova senha</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: PRECISO DE AJUDA (profissional) ============ -->
+  <div id="modal-ajuda" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Preciso de ajuda</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-ajuda')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="Auth.enviarAjuda(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Estabelecimento</label>
+          <input type="text" id="ajuda-salao" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu nome</label>
+          <input type="text" id="ajuda-nome" required placeholder="Seu nome completo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu CPF</label>
+          <input type="text" id="ajuda-cpf" required placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">O que aconteceu?</label>
+          <select id="ajuda-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+            <option value="esqueci_senha">Esqueci minha senha</option>
+            <option value="reclamacao">Reclamação</option>
+            <option value="excluir_dados">Quero excluir meus dados</option>
+            <option value="outro">Outro assunto</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Mensagem</label>
+          <textarea id="ajuda-mensagem" rows="3" required placeholder="Escreva aqui o que você precisa" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Enviar pedido</button>
       </form>
     </div>
   </div>
@@ -664,6 +778,22 @@ tailwind.config = {
   </div>
 </section>
 </main>
+
+<!-- AVISOS E PEDIDOS DOS CLIENTES -->
+<section id="aba-avisos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+  <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h2 class="text-lg font-bold uppercase text-white">Avisos e Pedidos</h2>
+        <p class="text-[11px] text-zinc-400">Pedidos de senha, reclamações e solicitações de exclusão enviados pelos clientes</p>
+      </div>
+      <button onclick="App.carregarAvisos()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition">
+        <i class="fa-solid fa-rotate"></i> Atualizar
+      </button>
+    </div>
+    <div id="lista-avisos" class="space-y-3"></div>
+  </div>
+</section>
 
 <!-- Rodapé com Créditos e Copyright -->
 <footer class="mt-12 py-6 text-center text-zinc-500 text-xs border-t border-white/10">
