@@ -1241,27 +1241,73 @@ const App = {
             let atendimentoCount = 0;
             let totalGanhos = 0;
 
-            tbody.innerHTML = horarios.map(h => {
-                return `<tr class="border-b border-white/5">
-                    <td class="py-3 px-4 text-brand-500 font-bold">${h}</td>` +
-                    profsExibicao.map(p => {
-                        const ag = (agendamentos || []).find(a => a.profissional_id == p.id && a.horario === h);
-                        if (ag && this.user.role === 'profissional') {
-                            atendimentoCount++;
-                            totalGanhos += (ag.valor * 0.5);
+            tbody.innerHTML = '';
+            horarios.forEach(h => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-white/5';
+
+                const tdHora = document.createElement('td');
+                tdHora.className = 'py-3 px-4 text-brand-500 font-bold';
+                tdHora.textContent = h;
+                tr.appendChild(tdHora);
+
+                profsExibicao.forEach(p => {
+                    const ag = (agendamentos || []).find(a => a.profissional_id == p.id && a.horario === h);
+                    if (ag && this.user.role === 'profissional') {
+                        atendimentoCount++;
+                        totalGanhos += (ag.valor * 0.5);
+                    }
+
+                    const td = document.createElement('td');
+                    td.className = 'py-3 px-4';
+
+                    if (ag) {
+                        const caixa = document.createElement('div');
+                        caixa.className = 'p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px]';
+
+                        const nome = document.createElement('strong');
+                        nome.className = 'text-white block';
+                        nome.textContent = ag.cliente;
+
+                        const serv = document.createElement('span');
+                        serv.className = 'text-zinc-300';
+                        serv.textContent = ag.servico;
+
+                        const val = document.createElement('span');
+                        val.className = 'text-brand-400 block font-bold mt-0.5';
+                        val.textContent = 'R$ ' + parseFloat(ag.valor).toFixed(2);
+
+                        caixa.appendChild(nome);
+                        caixa.appendChild(serv);
+                        caixa.appendChild(val);
+
+                        if (this.user.role === 'admin') {
+                            const btn = document.createElement('button');
+                            btn.className = 'mt-1 text-[9px] font-bold uppercase text-yellow-400 hover:text-yellow-300 transition cursor-pointer';
+                            btn.innerHTML = '<i class="fa-solid fa-star"></i> Avaliar';
+                            btn.onclick = () => this.abrirAvaliar(ag.id, ag.profissional_id);
+                            caixa.appendChild(btn);
                         }
-                        return `<td class="py-3 px-4">
-                            ${ag ? `
-                                <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-[11px]">
-                                    <strong class="text-white block">${ag.cliente}</strong>
-                                    <span class="text-zinc-300">${ag.servico}</span>
-                                    <span class="text-brand-400 block font-bold mt-0.5">R$ ${parseFloat(ag.valor).toFixed(2)}</span>
-                                </div>
-                            ` : '<button onclick="App.abrirMarcar('${h}')" class="text-zinc-600 hover:text-brand-500 text-[11px] transition cursor-pointer">Disponível</button>'}
-                        </td>`;
-                    }).join('') +
-                `</tr>`;
-            }).join('');
+
+                        td.appendChild(caixa);
+                    } else if (this.user.role === 'admin') {
+                        const btnLivre = document.createElement('button');
+                        btnLivre.className = 'text-zinc-600 hover:text-brand-500 text-[11px] transition cursor-pointer';
+                        btnLivre.textContent = 'Disponível';
+                        btnLivre.onclick = () => this.abrirMarcar(h);
+                        td.appendChild(btnLivre);
+                    } else {
+                        const span = document.createElement('span');
+                        span.className = 'text-zinc-600 text-[11px]';
+                        span.textContent = 'Disponível';
+                        td.appendChild(span);
+                    }
+
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
 
             if (this.user.role === 'profissional') {
                 document.getElementById('prof-stat-atendimentos').textContent = atendimentoCount;
@@ -1853,3 +1899,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
