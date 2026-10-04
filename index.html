@@ -283,6 +283,40 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- ============ MODAL: VOTAR NO CLIENTE ============ -->
+  <div id="modal-voto" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Avaliar cliente</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-voto')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="App.salvarVoto(event)" class="space-y-4">
+        <input type="hidden" id="voto-cliente-id">
+        <p class="text-[11px] text-zinc-400">Avaliando <span id="voto-cliente-nome" class="text-white font-bold"></span>. Este registro é interno do salão.</p>
+
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">O que aconteceu</label>
+          <select id="voto-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+            <option value="mais">👍 Cliente boa — elogiou, é fácil de atender</option>
+            <option value="menos">👎 Cliente difícil — deu trabalho, atrasou, reclamou</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Qual profissional ela elogiou (opcional)</label>
+          <select id="voto-profissional" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Observação (opcional)</label>
+          <textarea id="voto-obs" rows="2" placeholder="Ex: elogiou o corte da Antonia" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Registrar</button>
+      </form>
+    </div>
+  </div>
+
   <!-- ============ MODAL: TROCAR SENHA DO PROFISSIONAL ============ -->
   <div id="modal-trocar-senha" class="modal-overlay hidden">
     <div class="modal-caixa">
@@ -645,6 +679,17 @@ tailwind.config = {
     <div class="border-t border-white/10 pt-6 space-y-4">
       <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
       <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+
+    <div class="border-t border-white/10 pt-6 space-y-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 class="text-xs font-bold text-zinc-400 uppercase"><i class="fa-solid fa-star text-yellow-400 mr-1"></i> Avaliação da Equipe</h3>
+          <p class="text-[10px] text-zinc-500">Pontos registrados pelo salão quando a cliente elogia. Uso interno.</p>
+        </div>
+        <span id="ranking-total-clientes" class="text-[10px] font-bold text-zinc-500 uppercase"></span>
+      </div>
+      <div id="ranking-profissionais" class="space-y-3"></div>
     </div>
   </div>
 </section>
@@ -1026,5 +1071,3 @@ handleParticles();
 <script src="app.js"></script>
 </body>
 </html>
-
-
