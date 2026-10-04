@@ -256,19 +256,28 @@ const App = {
         if (dataInput && !dataInput.value) {
             dataInput.value = dataLocalISO();
         }
-        this.renderListaProfissionais();
-        this.renderProdutos();
-        this.renderServicos();
+        const ehProfissional = this.user.role === 'profissional';
+
+        // Todo mundo precisa da agenda e das notas
         this.renderAgendaGrid();
         this.carregarPostIts();
-        this.popularSelectProfissionais();
         this.carregarRecadosEstabelecimento();
-        this.carregarConfiguracoes();
-        this.renderRelatorios();
-        this.renderAvaliacoes();
-        if (this.user.role === 'admin') this.carregarAvisos();
-        
-        if (this.user.role === 'profissional') {
+        this.proximaFrase();
+
+        if (!ehProfissional) {
+            // Só o salão carrega o resto (deixa o login do profissional leve)
+            this.renderListaProfissionais();
+            this.renderProdutos();
+            this.renderServicos();
+            this.popularSelectProfissionais();
+            this.carregarConfiguracoes();
+            this.renderRelatorios();
+            this.renderAvaliacoes();
+            this.carregarAvisos();
+        }
+
+        // Mostra ou esconde as partes conforme o perfil
+        if (ehProfissional) {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
             document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
         } else {
@@ -372,6 +381,20 @@ const App = {
             };
             localStorage.setItem('hairconcept_prof_dados', JSON.stringify(dadosProf));
 
+            // Autentica a conta interna dele (invisível): assim o banco sabe quem é
+            const emailInterno = this.montarEmailInterno(cpf, dadosProf.estabelecimento_id);
+            if (emailInterno && supabaseClient && supabaseClient.auth) {
+                try {
+                    const { error: erroAuth } = await supabaseClient.auth.signInWithPassword({
+                        email: emailInterno,
+                        password: senha
+                    });
+                    if (erroAuth) console.warn('Conta interna não autenticada:', erroAuth.message);
+                } catch (e) {
+                    console.warn('Erro ao autenticar a conta interna:', e);
+                }
+            }
+
             this.user = { loggedIn: true, role: 'profissional', name: dadosProf.nome, id: dadosProf.id };
             const headerSub = document.getElementById('saloon-name-header');
             if (headerSub) headerSub.textContent = dadosProf.nome_salao;
@@ -469,6 +492,26 @@ const App = {
             if (erroSenha) {
                 console.error('Erro ao definir a senha:', erroSenha);
                 UI.showToast('Profissional criado, mas a senha falhou. Use "Trocar senha" na lista.', 'error');
+            }
+
+            // Cria a conta interna dele (invisível para o profissional)
+            const emailInterno = this.montarEmailInterno(cpf, idSalao);
+            if (emailInterno) {
+                const { data: conta, error: erroConta } = await supabaseClient.auth.signUp({
+                    email: emailInterno,
+                    password: senha
+                });
+                if (erroConta) {
+                    // Conta já existente ou e-mail repetido: não trava o cadastro
+                    console.warn('Conta interna não criada:', erroConta.message);
+                } else if (conta && conta.user) {
+                    await supabaseClient
+                        .from('profissionais')
+                        .update({ user_id: conta.user.id })
+                        .eq('id', novoProf[0].id);
+                }
+                // A conta do salão continua logada: só os dados dos profissionais ficam acessíveis
+                localStorage.setItem('hairconcept_ultimo_email_interno', emailInterno);
             }
             UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
@@ -646,13 +689,15 @@ const App = {
         }
     },
        // ---------- Trocar senha do profissional ----------
-    abrirTrocarSenhaProfissional(id, nome) {
+    abrirTrocarSenhaProfissional(id, nome, cpf) {
         const campoId = document.getElementById('trocasenha-prof-id');
         const campoNome = document.getElementById('trocasenha-prof-nome');
+        const campoCpf = document.getElementById('trocasenha-prof-cpf');
         const s1 = document.getElementById('trocasenha-senha');
         const s2 = document.getElementById('trocasenha-senha2');
         if (campoId) campoId.value = id;
         if (campoNome) campoNome.textContent = nome;
+        if (campoCpf) campoCpf.value = cpf || '';
         if (s1) s1.value = '';
         if (s2) s2.value = '';
         Auth.abrirModal('modal-trocar-senha');
@@ -687,6 +732,22 @@ const App = {
                 UI.showToast('Não foi possível salvar a senha: ' + error.message, 'error');
                 return;
             }
+
+            // Atualiza também a conta interna dele, se existir
+            const emailInterno = this.montarEmailInterno(
+                document.getElementById('trocasenha-prof-cpf')?.value || '',
+                localStorage.getItem('hairconcept_estab_id')
+            );
+            if (emailInterno && supabaseClient && supabaseClient.auth) {
+                try {
+                    // A conta interna usa a senha antiga; se ela não estiver logada, tentamos reaproveitar a sessão do salão
+                    const { error: erroConta } = await supabaseClient.auth.updateUser({ password: senha });
+                    if (erroConta) console.warn('Conta interna não atualizada:', erroConta.message);
+                } catch (e) {
+                    console.warn('Erro ao atualizar a conta interna:', e);
+                }
+            }
+
             Auth.fecharModal('modal-trocar-senha');
             UI.showToast('Senha alterada! Passe a senha nova para o profissional.');
         } catch (e) {
@@ -858,7 +919,7 @@ const App = {
                                 UI.showToast('Não achei nenhum profissional com esse CPF. Procure na aba Equipe.', 'error');
                                 return;
                             }
-                            this.abrirTrocarSenhaProfissional(achado.id, achado.nome);
+                            this.abrirTrocarSenhaProfissional(achado.id, achado.nome, achado.cpf);
                         } catch (e) {
                             console.error('Erro ao abrir troca de senha pelo aviso:', e);
                             UI.showToast('Erro inesperado ao abrir a troca de senha.', 'error');
@@ -974,6 +1035,14 @@ const App = {
         } catch (e) {
             console.error(e);
         }
+    },
+
+    montarEmailInterno(cpf, idSalao) {
+        // E-mail invisível: o profissional continua entrando só com CPF e senha.
+        const cpfLimpo = String(cpf || '').replace(/\D/g, '');
+        const salaoCurto = String(idSalao || '').replace(/-/g, '').slice(0, 8);
+        if (!cpfLimpo || !salaoCurto) return null;
+        return `prof.${cpfLimpo}.${salaoCurto}@hairconcept.local`;
     },
 
     async obterEstabId() {
@@ -1236,7 +1305,7 @@ const App = {
                 const btnSenha = document.createElement('button');
                 btnSenha.className = 'px-3 py-1.5 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-500 hover:bg-brand-500/20 text-xs font-bold uppercase transition cursor-pointer';
                 btnSenha.textContent = 'Trocar senha';
-                btnSenha.onclick = () => this.abrirTrocarSenhaProfissional(p.id, p.nome || '');
+                btnSenha.onclick = () => this.abrirTrocarSenhaProfissional(p.id, p.nome || '', p.cpf || '');
 
                 const btnEditar = document.createElement('button');
                 btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-xs font-bold uppercase transition cursor-pointer';
@@ -1645,4 +1714,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
