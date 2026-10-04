@@ -55,8 +55,8 @@ tailwind.config = {
           <img id="header-logo-img" src="" alt="Logo do salao" class="w-full h-full object-cover hidden">
     </div>
     <div class="overflow-hidden">
-      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight">Meu Sal&atilde;o</span>
-            <span class="block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
+      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight">Bem-vindo</span>
+            <span id="header-assinatura" class="hidden block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
     </div>
   </div>
   <nav id="nav-menu" class="hidden lg:flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
@@ -340,6 +340,48 @@ tailwind.config = {
         </div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Enviar pedido</button>
       </form>
+    </div>
+  </div>
+</section>
+
+<!-- TELA DE BOAS-VINDAS (primeiro login) -->
+<section id="aba-boasvindas" class="tab-content hidden max-w-3xl mx-auto space-y-6">
+  <div class="glass-water p-8 md:p-12 rounded-3xl border border-white/10 space-y-8 shadow-2xl relative overflow-hidden gota-agua">
+    <div class="relative z-10 space-y-3 text-center">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center overflow-hidden">
+        <img id="welcome-logo-img" src="" alt="Logo do salão" class="w-full h-full object-cover hidden">
+        <i id="welcome-logo-icon" class="fa-solid fa-scissors text-2xl text-brand-500"></i>
+      </div>
+      <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Bem-vindo ao HairConcept</p>
+      <h1 id="welcome-nome-salao" class="text-2xl md:text-3xl font-black uppercase text-white">Seu Salão</h1>
+      <p class="text-xs text-zinc-400 max-w-lg mx-auto">Este é o painel do seu salão. Aqui você organiza a agenda, a equipe, os serviços e o estoque, tudo no mesmo lugar.</p>
+    </div>
+
+    <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
+        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-user-plus"></i></div>
+        <h3 class="text-xs font-bold uppercase text-white">1. Monte a equipe</h3>
+        <p class="text-[11px] text-zinc-400">Cadastre seus profissionais na aba Equipe, com foto, cargo e uma senha de acesso.</p>
+      </div>
+      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
+        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-scissors"></i></div>
+        <h3 class="text-xs font-bold uppercase text-white">2. Crie os serviços</h3>
+        <p class="text-[11px] text-zinc-400">Cadastre os procedimentos com preço e comissão, e monte o catálogo do salão.</p>
+      </div>
+      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
+        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-calendar-check"></i></div>
+        <h3 class="text-xs font-bold uppercase text-white">3. Comece a agendar</h3>
+        <p class="text-[11px] text-zinc-400">Marque os atendimentos na aba Agendar, em blocos de 30 minutos. A agenda aparece para todos.</p>
+      </div>
+    </div>
+
+    <div class="relative z-10 p-4 rounded-2xl bg-zinc-950/80 border border-white/10">
+      <p class="text-[11px] text-zinc-400"><i class="fa-solid fa-circle-info text-brand-500"></i> Dica: em <span class="text-white font-bold">Configurações</span> você define o nome do salão, a logo, o endereço e os horários de funcionamento. O nome e a logo aparecem no topo do sistema.</p>
+    </div>
+
+    <div class="relative z-10 flex flex-col md:flex-row items-center justify-center gap-3">
+      <button onclick="App.concluirBoasVindas()" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-brand-500/20">Começar agora</button>
+      <button onclick="UI.switchTab('aba-configuracoes')" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider transition">Configurar o salão</button>
     </div>
   </div>
 </section>
