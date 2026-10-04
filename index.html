@@ -55,19 +55,19 @@ tailwind.config = {
           <img id="header-logo-img" src="" alt="Logo do salao" class="w-full h-full object-cover hidden">
     </div>
     <div class="overflow-hidden">
-      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight">Bem-vindo</span>
+      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight max-w-[22rem]">Bem-vindo</span>
             <span id="header-assinatura" class="hidden block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
     </div>
   </div>
   <nav id="nav-menu" class="hidden lg:flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
-    <button onclick="UI.switchTab('aba-agenda')" class="px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Agenda</button>
-    <button onclick="UI.switchTab('aba-agendar')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Agendar</button>
-    <button onclick="UI.switchTab('aba-servicos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Serviços</button>
-    <button onclick="UI.switchTab('aba-equipe')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Equipe</button>
-    <button onclick="UI.switchTab('aba-produtos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Estoque</button>
-    <button onclick="UI.switchTab('aba-planos')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Planos</button>
-    <button onclick="UI.switchTab('aba-avaliacoes')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Avaliações</button>
-    <button onclick="UI.switchTab('aba-relatorios')" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition">Relatórios</button>
+    <button onclick="UI.switchTab('aba-agenda')" title="Agenda" class="px-4 py-2 bg-brand-500/15 text-brand-500 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition"><i class="fa-solid fa-calendar-days mr-1"></i> Agenda</button>
+    <button onclick="UI.abrirGestao('servicos')" title="Serviços, Estoque e Avaliação" aria-label="Gestão do salão" class="admin-only px-3 py-2 text-zinc-400 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition"><i class="fa-solid fa-scissors mr-1"></i> Gestão</button>
+    <button onclick="UI.switchTab('aba-equipe')" title="Equipe" aria-label="Equipe" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-users text-sm"></i></button>
+    <button onclick="UI.switchTab('aba-clientes')" title="Clientes" aria-label="Clientes" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-address-book text-sm"></i></button>
+
+    <button onclick="UI.switchTab('aba-planos')" title="Planos" aria-label="Planos" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-crown text-sm"></i></button>
+
+    <button onclick="UI.switchTab('aba-relatorios')" title="Relatórios" aria-label="Relatórios" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-chart-line text-sm"></i></button>
     <button onclick="UI.switchTab('aba-configuracoes')" title="Configurações" aria-label="Configurações" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
             <i class="fa-solid fa-gear text-sm"></i>
           </button>
@@ -81,7 +81,7 @@ tailwind.config = {
       <i class="fa-solid fa-bars text-base"></i>
     </button>
     <div class="text-right hidden sm:block">
-      <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[120px]">Nome</span>
+      <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[90px] sm:max-w-[200px]">Nome</span>
       <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase">Cargo</span>
     </div>
     <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition flex items-center gap-2">
@@ -93,15 +93,13 @@ tailwind.config = {
 <div id="mobile-nav-menu" class="hidden lg:hidden glass-water border-t border-white/10 px-4 py-3">
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
     <button onclick="UI.switchTab('aba-agenda'); UI.toggleMobileMenu(false);" class="p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agenda</button>
-    <button onclick="UI.switchTab('aba-agendar'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agendar</button>
-    <button onclick="UI.switchTab('aba-servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços</button>
     <button onclick="UI.switchTab('aba-equipe'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Equipe</button>
-    <button onclick="UI.switchTab('aba-produtos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Estoque</button>
+    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços, Estoque e Avaliação</button>
+    <button onclick="UI.switchTab('aba-clientes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Clientes</button>
     <button onclick="UI.switchTab('aba-planos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Planos</button>
-    <button onclick="UI.switchTab('aba-avaliacoes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avaliações</button>
     <button onclick="UI.switchTab('aba-relatorios'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Relatórios</button>
     <button onclick="UI.switchTab('aba-configuracoes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
-            <button onclick="UI.switchTab('aba-avisos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avisos</button>
+    <button onclick="UI.switchTab('aba-avisos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avisos</button>
   </div>
 </div>
 </header>
@@ -405,7 +403,7 @@ tailwind.config = {
           <p id="prof-header-cargo" class="text-xs text-zinc-400">Especialidade</p>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-3 w-full md:w-auto">
+      <div class="grid grid-cols-2 gap-3 w-full sm:w-auto">
         <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 text-center">
           <span class="block text-[10px] text-zinc-400 uppercase">Atendimentos</span>
           <strong id="prof-stat-atendimentos" class="text-brand-500 text-sm font-bold">0</strong>
@@ -508,13 +506,13 @@ tailwind.config = {
         <option value="11">Dezembro 2026</option>
         <option value="0">Janeiro 2027</option>
       </select>
-      <button onclick="UI.switchTab('aba-agendar')" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
+      <button onclick="App.abrirMarcar()" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
     </div>
   </div>
 
   <!-- TABELA DA AGENDA -->
   <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
-    <table class="w-full text-left border-collapse min-w-[800px]">
+    <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
       <thead>
         <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
           <th class="py-3 px-4 w-24">Horário</th>
@@ -526,9 +524,12 @@ tailwind.config = {
 </section>
 
 <!-- AGENDAR -->
-<section id="aba-agendar" class="tab-content hidden max-w-xl mx-auto">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <h2 class="text-xl font-bold uppercase text-white">Marcar Atendimento</h2>
+<div id="modal-marcar" class="modal-overlay hidden">
+  <div class="modal-caixa">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-base font-bold uppercase text-white">Marcar Atendimento</h3>
+      <button type="button" onclick="Auth.fecharModal('modal-marcar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
     <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
@@ -579,37 +580,10 @@ tailwind.config = {
       <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Confirmar Agendamento</button>
     </form>
   </div>
-</section>
+</div>
 
 <!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
-<section id="aba-servicos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Catálogo de Serviços & Comissões</h2>
-        <p class="text-xs text-zinc-400">Cadastro de procedimentos e comissão percentual</p>
-      </div>
-    </div>
-    <form onsubmit="App.handleCreateServico(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="md:col-span-2">
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Serviço *</label>
-        <input type="text" id="serv-nome" required placeholder="Ex: Progressiva / Corte" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
-        <input type="number" step="0.01" id="serv-preco" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Comissão (%)</label>
-        <input type="number" id="serv-comissao" value="50" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="md:col-span-4 flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar Serviço</button>
-      </div>
-    </form>
-    <div id="lista-servicos" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-  </div>
-</section>
+
 
 <!-- EQUIPE -->
 <section id="aba-equipe" class="tab-content hidden max-w-4xl mx-auto space-y-6">
@@ -659,7 +633,48 @@ tailwind.config = {
 </section>
 
 <!-- ESTOQUE / PRODUTOS -->
-<section id="aba-produtos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+
+
+<!-- GESTÃO DO SALÃO: Serviços, Estoque e Avaliação de Profissional -->
+<section id="aba-gestao" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+
+  <!-- Botões do espaço -->
+  <div class="glass-water rounded-3xl p-3 border border-white/10 flex flex-wrap gap-2">
+    <button id="btn-espaco-servicos" onclick="UI.trocarEspaco('servicos')" class="flex-1 min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2.5 rounded-2xl bg-brand-500/15 text-brand-500 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-scissors"></i> Serviços</button>
+    <button id="btn-espaco-produtos" onclick="UI.trocarEspaco('produtos')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-boxes-stacked"></i> Estoque</button>
+    <button id="btn-espaco-avaliacoes" onclick="UI.trocarEspaco('avaliacoes')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-star"></i> Avaliação de Profissional</button>
+  </div>
+
+<section id="aba-servicos" class="espaco-painel hidden">
+  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+    <div class="flex justify-between items-center border-b border-white/10 pb-4">
+      <div>
+        <h2 class="text-xl font-bold uppercase text-white">Catálogo de Serviços & Comissões</h2>
+        <p class="text-xs text-zinc-400">Cadastro de procedimentos e comissão percentual</p>
+      </div>
+    </div>
+    <form onsubmit="App.handleCreateServico(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="md:col-span-2">
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Serviço *</label>
+        <input type="text" id="serv-nome" required placeholder="Ex: Progressiva / Corte" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
+        <input type="number" step="0.01" id="serv-preco" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Comissão (%)</label>
+        <input type="number" id="serv-comissao" value="50" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div class="md:col-span-4 flex items-end">
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar Serviço</button>
+      </div>
+    </form>
+    <div id="lista-servicos" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </div>
+</section>
+
+<section id="aba-produtos" class="espaco-painel hidden">
   <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
     <div class="flex justify-between items-center border-b border-white/10 pb-4">
       <div>
@@ -668,7 +683,7 @@ tailwind.config = {
       </div>
       <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">Estoque Regular</span>
     </div>
-    <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Produto *</label>
         <input type="text" id="prod-nome" required placeholder="Ex: Máscara Hidratação" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
@@ -698,6 +713,20 @@ tailwind.config = {
     </form>
     <div id="lista-produtos" class="grid grid-cols-1 gap-4"></div>
   </div>
+</section>
+
+<section id="aba-avaliacoes" class="espaco-painel hidden">
+  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+    <div class="flex justify-between items-center border-b border-white/10 pb-4">
+      <div>
+        <h2 class="text-xl font-bold uppercase text-white">Avaliações e Feedback</h2>
+        <p class="text-xs text-zinc-400">Moderação de notas pós-atendimento</p>
+      </div>
+    </div>
+    <div id="lista-avaliacoes" class="space-y-4"></div>
+  </div>
+</section>
+
 </section>
 
 <!-- PLANOS & MERCADO PAGO -->
@@ -738,17 +767,7 @@ tailwind.config = {
 </section>
 
 <!-- AVALIAÇÕES -->
-<section id="aba-avaliacoes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Avaliações e Feedback</h2>
-        <p class="text-xs text-zinc-400">Moderação de notas pós-atendimento</p>
-      </div>
-    </div>
-    <div id="lista-avaliacoes" class="space-y-4"></div>
-  </div>
-</section>
+
 
 <!-- RELATÓRIOS -->
 <section id="aba-relatorios" class="tab-content hidden max-w-4xl mx-auto space-y-6">
