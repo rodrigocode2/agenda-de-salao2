@@ -215,6 +215,7 @@ const Auth = {
             supabaseClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
                 if (error) {
                     console.error('Erro no login do admin:', error);
+                    UI.showToast('E-mail ou senha incorretos.', 'error');
                     UI.showToast('Erro ao entrar: ' + error.message, 'error');
                 } else {
                     App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
@@ -350,25 +351,39 @@ const App = {
                 p_senha: senha
             });
             const data = Array.isArray(lista) ? lista[0] : lista;
-            if (error || !data) {
+            if (error || !data || !data.id) {
                 if (error) console.error('Erro no login do profissional:', error);
                 UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
                 return;
             }
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
-                localStorage.setItem('hairconcept_prof_id', data.id);
             }
-            localStorage.setItem('hairconcept_prof_dados', JSON.stringify(data));
-            this.user = { loggedIn: true, role: 'profissional', name: data.nome, id: data.id };
+            localStorage.setItem('hairconcept_prof_id', data.id);
+
+            // Guarda só o necessário (o servidor não devolve CPF nem senha)
+            const dadosProf = {
+                id: data.id,
+                nome: data.nome || '',
+                cargo: data.cargo || '',
+                foto_url: data.foto_url || '',
+                estabelecimento_id: data.estabelecimento_id || '',
+                nome_salao: data.nome_salao || nomeEstabelecimento
+            };
+            localStorage.setItem('hairconcept_prof_dados', JSON.stringify(dadosProf));
+
+            this.user = { loggedIn: true, role: 'profissional', name: dadosProf.nome, id: dadosProf.id };
             const headerSub = document.getElementById('saloon-name-header');
-            if (headerSub) headerSub.textContent = data.nome_salao || nomeEstabelecimento;
-            document.getElementById('prof-header-nome').textContent = data.nome;
-            document.getElementById('prof-header-cargo').textContent = data.cargo;
-            if (data.foto_url) {
-                document.getElementById('prof-header-foto').src = data.foto_url;
-            }
-            this.finishLogin(`Bem-vindo, ${data.nome}!`);
+            if (headerSub) headerSub.textContent = dadosProf.nome_salao;
+
+            const elNome = document.getElementById('prof-header-nome');
+            const elCargo = document.getElementById('prof-header-cargo');
+            const elFoto = document.getElementById('prof-header-foto');
+            if (elNome) elNome.textContent = dadosProf.nome;
+            if (elCargo) elCargo.textContent = dadosProf.cargo;
+            if (elFoto && dadosProf.foto_url) elFoto.src = dadosProf.foto_url;
+
+            this.finishLogin(`Bem-vindo, ${dadosProf.nome}!`);
         } catch (e) {
             UI.showToast('Erro ao validar login do profissional.', 'error');
         }
@@ -379,16 +394,32 @@ const App = {
         const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
         const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
 
-        if (!estabelecimentoId) {
-            UI.showToast('Sessão ainda carregando. Aguarde um instante e tente novamente.', 'error');
-            return;
-        }
-
         try {
+            // Garante o ID do salão: se o navegador ainda não tem, busca no banco agora.
+            let idSalao = estabelecimentoId;
+            if (!idSalao) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    const { data: estab, error: erroEstab } = await supabaseClient
+                        .from('estabelecimentos')
+                        .select('id')
+                        .eq('user_id', session.user.id)
+                        .maybeSingle();
+                    if (erroEstab) console.error('Erro ao buscar o salão:', erroEstab);
+                    if (estab) {
+                        idSalao = estab.id;
+                        localStorage.setItem('hairconcept_estab_id', estab.id);
+                    }
+                }
+            }
+            if (!idSalao) {
+                UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+                return;
+            }
             const { count, error: countError } = await supabaseClient
                 .from('profissionais')
                 .select('*', { count: 'exact', head: true })
-                .eq('estabelecimento_id', estabelecimentoId);
+                .eq('estabelecimento_id', idSalao);
             if (countError) throw countError;
             
             let limiteMaximo = 2;
@@ -400,21 +431,45 @@ const App = {
                 return;
             }
             
-            const nome = document.getElementById('prof-nome').value;
-            const cargo = document.getElementById('prof-cargo').value;
-            const cpf = document.getElementById('prof-cpf').value;
+            const nome = document.getElementById('prof-nome').value.trim();
+            const cargo = document.getElementById('prof-cargo').value.trim();
+            const cpf = document.getElementById('prof-cpf').value.trim();
             const senha = document.getElementById('prof-senha').value;
             const foto_url = this.fotoBase64Temp;
-            const { error } = await supabaseClient.from('profissionais').insert([{
-                estabelecimento_id: estabelecimentoId,
-                estabelecimento: nomeEstabelecimentoHeader,
-                nome,
-                cargo,
-                cpf,
-                senha,
-                foto_url
-            }]);
+
+            if (senha.length < 4) {
+                UI.showToast('A senha precisa ter pelo menos 4 caracteres.', 'error');
+                return;
+            }
+
+            // Cria o profissional SEM a senha (ela nunca trafega em texto puro)
+            const { data: novoProf, error } = await supabaseClient
+                .from('profissionais')
+                .insert([{
+                    estabelecimento_id: idSalao,
+                    estabelecimento: nomeEstabelecimentoHeader,
+                    nome,
+                    cargo,
+                    cpf,
+                    foto_url
+                }])
+                .select('id');
+
             if (error) throw error;
+            if (!novoProf || novoProf.length === 0) {
+                UI.showToast('Não foi possível criar o profissional. Tente novamente.', 'error');
+                return;
+            }
+
+            // Grava a senha embaralhada pelo banco
+            const { error: erroSenha } = await supabaseClient.rpc('definir_senha_profissional', {
+                p_id: novoProf[0].id,
+                p_senha: senha
+            });
+            if (erroSenha) {
+                console.error('Erro ao definir a senha:', erroSenha);
+                UI.showToast('Profissional criado, mas a senha falhou. Use "Trocar senha" na lista.', 'error');
+            }
             UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
             this.fotoBase64Temp = '';
@@ -622,19 +677,14 @@ const App = {
             return;
         }
         try {
-            const { data, error } = await supabaseClient
-                .from('profissionais')
-                .update({ senha: senha })
-                .eq('id', id)
-                .select('id');
+            const { error } = await supabaseClient.rpc('definir_senha_profissional', {
+                p_id: id,
+                p_senha: senha
+            });
 
             if (error) {
                 console.error('Erro ao trocar senha:', error);
                 UI.showToast('Não foi possível salvar a senha: ' + error.message, 'error');
-                return;
-            }
-            if (!data || data.length === 0) {
-                UI.showToast('Nenhum profissional foi atualizado. Confira se você está no salão certo.', 'error');
                 return;
             }
             Auth.fecharModal('modal-trocar-senha');
@@ -796,11 +846,11 @@ const App = {
                         try {
                             const { data, error } = await supabaseClient
                                 .from('profissionais')
-                                .select('id, nome')
-                                .eq('estabelecimento_id', localStorage.getItem('hairconcept_estab_id'))
-                                .limit(50);
+                                .select('id, nome, cpf')
+                                .eq('estabelecimento_id', localStorage.getItem('hairconcept_estab_id'));
                             if (error) {
-                                UI.showToast('Não foi possível buscar o profissional.', 'error');
+                                console.error('Erro ao buscar profissionais:', error);
+                                UI.showToast('Não foi possível buscar o profissional. Use a aba Equipe.', 'error');
                                 return;
                             }
                             const achado = (data || []).find(p => String(p.cpf || '').replace(/\D/g, '') === cpfLimpo);
@@ -926,9 +976,37 @@ const App = {
         }
     },
 
+    async obterEstabId() {
+        // Devolve o ID do salão, buscando no banco se o navegador ainda não tiver.
+        let id = localStorage.getItem('hairconcept_estab_id');
+        if (id) return id;
+        try {
+            if (!supabaseClient || !supabaseClient.auth) return null;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) return null;
+            const { data: estab, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('id')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+            if (error) { console.error('Erro ao buscar o salão:', error); return null; }
+            if (estab) {
+                localStorage.setItem('hairconcept_estab_id', estab.id);
+                return estab.id;
+            }
+        } catch (e) {
+            console.error('Erro ao obter o salão:', e);
+        }
+        return null;
+    },
+
     async handleCreateAgendamento(event) {
         event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
         const data = document.getElementById('agendamento-data').value;
         const profissional_id = document.getElementById('agendamento-profissional').value;
         const horario = document.getElementById('agendamento-horario').value;
@@ -1021,7 +1099,11 @@ const App = {
     },
     async handleCreateProduto(event) {
         event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
         const nome = document.getElementById('prod-nome').value;
         const tipo = document.getElementById('prod-tipo').value;
         const preco_venda = parseValor(document.getElementById('prod-preco').value);
@@ -1046,7 +1128,11 @@ const App = {
     },
     async handleCreateServico(event) {
         event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
         const nome = document.getElementById('serv-nome').value;
         const preco = parseValor(document.getElementById('serv-preco').value);
         const comissao = parseFloat(document.getElementById('serv-comissao').value) || 50;
@@ -1507,14 +1593,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (profSalvo) {
         try {
             const data = JSON.parse(profSalvo);
-            App.user = { loggedIn: true, role: 'profissional', name: data.nome, id: data.id };
+            if (!data || !data.id) throw new Error('dados incompletos');
+            App.user = { loggedIn: true, role: 'profissional', name: data.nome || '', id: data.id };
             const headerSub = document.getElementById('saloon-name-header');
             if (headerSub) headerSub.textContent = data.nome_salao || '';
             const nomeEl = document.getElementById('prof-header-nome');
             const cargoEl = document.getElementById('prof-header-cargo');
-            if (nomeEl) nomeEl.textContent = data.nome;
-            if (cargoEl) cargoEl.textContent = data.cargo;
-            if (data.foto_url) document.getElementById('prof-header-foto').src = data.foto_url;
+            const fotoEl = document.getElementById('prof-header-foto');
+            if (nomeEl) nomeEl.textContent = data.nome || '';
+            if (cargoEl) cargoEl.textContent = data.cargo || '';
+            if (fotoEl && data.foto_url) fotoEl.src = data.foto_url;
             App.finishLogin();
             return;
         } catch (e) {
@@ -1557,3 +1645,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
