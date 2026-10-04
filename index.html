@@ -50,14 +50,13 @@ tailwind.config = {
 <header id="main-header" class="hidden sticky top-0 z-40 glass-water border-b border-white/10">
 <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-2">
   <div class="flex items-center gap-3 overflow-hidden">
-    <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0">
-      <i class="fa-solid fa-scissors text-lg"></i>
+    <div id="header-logo-box" class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0 overflow-hidden">
+      <i id="header-icon-scissors" class="fa-solid fa-scissors text-lg"></i>
+          <img id="header-logo-img" src="" alt="Logo do salao" class="w-full h-full object-cover hidden">
     </div>
     <div class="overflow-hidden">
-      <span class="font-syne text-xl font-extrabold text-white uppercase">HairConcept</span>
-      <div class="flex items-center gap-1 overflow-hidden">
-        <span id="saloon-name-header" class="text-[10px] text-zinc-400 font-medium tracking-wider uppercase truncate">Salão</span>
-      </div>
+      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight">Meu Sal&atilde;o</span>
+            <span class="block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
     </div>
   </div>
   <nav id="nav-menu" class="hidden lg:flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
