@@ -403,3 +403,58 @@ html, body {
 .ag-cor-atendendo  { background: #3b82f6; }
 .ag-cor-finalizado { background: #a1a1aa; }
 .ag-cor-faltou     { background: #ef4444; }
+
+
+/* ===== Votos do cliente ===== */
+.cli-votos {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.cli-mais  { color: #4ade80; }
+.cli-menos { color: #f87171; }
+.cli-alerta {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+.cli-boa {
+  background: rgba(34, 197, 94, 0.10);
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+.cli-estrela-vermelha { color: #ef4444; }
+.cli-estrela-amarela  { color: #eab308; }
+.cli-obs {
+  font-size: 10px;
+  color: #a1a1aa;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===== Estrelas do profissional (na lista da equipe) ===== */
+.prof-estrelas {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #eab308;
+}
+.prof-barra {
+  width: 100%;
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(63, 63, 70, 0.8);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.prof-barra-cheia {
+  height: 100%;
+  border-radius: 9999px;
+  background: #eab308;
+  transition: width 0.3s ease;
+}
+.ag-cor-espera     { background: #eab308; }
+.ag-cor-atendendo  { background: #3b82f6; }
+.ag-cor-finalizado { background: #a1a1aa; }
+.ag-cor-faltou     { background: #ef4444; }
