@@ -1658,6 +1658,21 @@ const App = {
                             const estOk = ['espera','atendendo','finalizado','faltou'].indexOf(est) >= 0 ? est : 'espera';
                             cont.className = 'ag-continuacao ag-cont-' + estOk;
                             cont.title = ag.cliente + ' • ' + this.rotuloEstado(ag.status);
+
+                            // Se um encaixe COMECA neste bloco, ele aparece aqui em verde
+                            const encaixesAqui = (agendamentos || []).filter(x => {
+                                if (x.id === ag.id || x.profissional_id != p.id) return false;
+                                if (this.normalizarHora(x.horario) !== this.normalizarHora(h)) return false;
+                                if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
+                                return this.duracaoMinutos(x) < this.duracaoMinutos(ag);
+                            });
+                            encaixesAqui.forEach(x => {
+                                const e = document.createElement('span');
+                                e.className = 'ag-encaixe';
+                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + this.normalizarHora(x.horario_fim) + ' - ' + x.cliente;
+                                cont.appendChild(e);
+                            });
+
                             td.appendChild(cont);
                         } else {
                         const caixa = document.createElement('div');
@@ -1693,8 +1708,10 @@ const App = {
                         caixa.appendChild(val);
 
                         // Encaixes dentro deste atendimento
+                        // Encaixes que COMECAM neste bloco exato (nao no bloco inicial do pai)
                         const encaixes = (agendamentos || []).filter(x => {
                             if (x.id === ag.id || x.profissional_id != p.id) return false;
+                            if (this.normalizarHora(x.horario) !== this.normalizarHora(h)) return false;
                             if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
                             // So entra como encaixe se for um atendimento curto dentro do longo
                             return this.duracaoMinutos(x) < this.duracaoMinutos(ag);
@@ -1703,7 +1720,7 @@ const App = {
                             encaixes.forEach(x => {
                                 const e = document.createElement('span');
                                 e.className = 'ag-encaixe';
-                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + x.cliente;
+                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + this.normalizarHora(x.horario_fim) + ' - ' + x.cliente;
                                 caixa.appendChild(e);
                             });
                         }
@@ -2352,4 +2369,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
