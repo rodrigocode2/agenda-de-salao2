@@ -187,3 +187,129 @@ header .font-syne {
 header .overflow-hidden {
   min-width: 0;
 }
+
+
+/* ===== Tela de boas-vindas ===== */
+#aba-boasvindas .gota-agua {
+  animation: fadeInUp 0.45s ease both;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Espaço de Gestão: Serviços, Estoque e Avaliação ===== */
+/* Os painéis são controlados pelos botões do topo, não pelo sistema de abas. */
+.espaco-painel {
+  animation: fadeInUp 0.25s ease both;
+}
+
+.espaco-painel.hidden {
+  display: none !important;
+}
+
+
+/* ==========================================================
+   RESPONSIVO — PC, tablet e celular
+   ========================================================== */
+
+/* Evita rolagem lateral e melhora o toque no celular */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+  /* Cabeçalho mais baixo no celular */
+  header > div {
+    height: 4.25rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* O nome do salão ocupa o espaço disponível sem empurrar o resto */
+  #saloon-name-header {
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  /* Conteúdo principal com respiro menor */
+  main {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  /* Todas as seções ocupam a largura disponível */
+  .tab-content {
+    max-width: 100% !important;
+  }
+
+  /* Caixas internas com menos preenchimento */
+  .glass-water.rounded-3xl,
+  .glass-water.rounded-2xl {
+    padding: 1rem;
+  }
+
+  /* A grade da agenda rola na horizontal, sem empurrar a página */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Células da agenda mais compactas */
+  table th, table td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Botões de largura total, fáceis de tocar */
+  .tab-content button:not([class*="px-2"]) {
+    min-height: 2.5rem;
+  }
+
+  /* Janelas (modais) quase de tela cheia, com rolagem interna */
+  .modal-caixa {
+    max-width: 100%;
+    max-height: 88vh;
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+  }
+
+  /* Tabelas longas nunca esticam a página */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* Tablet: mantém duas colunas confortáveis */
+@media (min-width: 768px) and (max-width: 1023px) {
+  main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .tab-content {
+    max-width: 100% !important;
+  }
+}
+
+/* Telas muito estreitas: agenda ainda utilizável */
+@media (max-width: 420px) {
+  .modal-caixa {
+    padding: 1rem;
+  }
+
+  #saloon-name-header {
+    font-size: 0.9rem;
+  }
+
+  /* O contador de avisos não cobre o ícone */
+  #badge-avisos {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+}
