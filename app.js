@@ -304,7 +304,7 @@ const App = {
         }
     },
     mostrarBoasVindas(estab) {
-        const nome = (estab && estab.nome_salao) || localStorage.getItem('hairconcept_nome_novo_salao') || 'Meu Salão';
+        const nome = (estab && estab.nome_salao) || localStorage.getItem('hairconcept_nome_novo_salao') || 'Seu Salão';
         const el = document.getElementById('welcome-nome-salao');
         if (el) el.textContent = nome;
 
@@ -329,6 +329,7 @@ const App = {
     concluirBoasVindas() {
         const id = this._userIdBoasVindas;
         if (id) localStorage.setItem('hairconcept_boasvindas_' + id, 'visto');
+        this._userIdBoasVindas = null;
         this.init();
         UI.switchTab('aba-agenda');
     },
@@ -1886,8 +1887,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (session && !App.user.loggedIn) {
             const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
             App.user = { loggedIn: true, role: 'admin', name: name };
-            // Só na primeira vez: marca como visto para não repetir
-            localStorage.setItem('hairconcept_boasvindas_' + session.user.id, 'visto');
             App.finishLogin();
         }
         supabaseClient.auth.onAuthStateChange((event, session) => {
