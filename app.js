@@ -590,7 +590,120 @@ const App = {
             UI.showToast("Erro ao enviar resposta: " + e.message, "error");
         }
     },
-       // ---------- Avisos e pedidos dos clientes ----------
+       // ---------- Trocar senha do profissional ----------
+    abrirTrocarSenhaProfissional(id, nome) {
+        const campoId = document.getElementById('trocasenha-prof-id');
+        const campoNome = document.getElementById('trocasenha-prof-nome');
+        const s1 = document.getElementById('trocasenha-senha');
+        const s2 = document.getElementById('trocasenha-senha2');
+        if (campoId) campoId.value = id;
+        if (campoNome) campoNome.textContent = nome;
+        if (s1) s1.value = '';
+        if (s2) s2.value = '';
+        Auth.abrirModal('modal-trocar-senha');
+    },
+
+    async salvarNovaSenhaProfissional(event) {
+        event.preventDefault();
+        const id = document.getElementById('trocasenha-prof-id').value;
+        const senha = document.getElementById('trocasenha-senha').value;
+        const senha2 = document.getElementById('trocasenha-senha2').value;
+
+        if (!id) {
+            UI.showToast('Profissional não identificado. Feche e tente de novo.', 'error');
+            return;
+        }
+        if (senha !== senha2) {
+            UI.showToast('As duas senhas precisam ser iguais.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .update({ senha: senha })
+                .eq('id', id)
+                .select('id');
+
+            if (error) {
+                console.error('Erro ao trocar senha:', error);
+                UI.showToast('Não foi possível salvar a senha: ' + error.message, 'error');
+                return;
+            }
+            if (!data || data.length === 0) {
+                UI.showToast('Nenhum profissional foi atualizado. Confira se você está no salão certo.', 'error');
+                return;
+            }
+            Auth.fecharModal('modal-trocar-senha');
+            UI.showToast('Senha alterada! Passe a senha nova para o profissional.');
+        } catch (e) {
+            console.error('Erro inesperado ao trocar senha:', e);
+            UI.showToast('Erro inesperado ao salvar a senha.', 'error');
+        }
+    },
+
+    // ---------- Editar profissional ----------
+    abrirEditarProfissional(id, nome, cargo, cpf) {
+        const campoId = document.getElementById('editar-prof-id');
+        if (campoId) campoId.value = id;
+        const campoNome = document.getElementById('editar-prof-nome');
+        const campoCargo = document.getElementById('editar-prof-cargo');
+        const campoCpf = document.getElementById('editar-prof-cpf');
+        if (campoNome) campoNome.value = nome || '';
+        if (campoCargo) campoCargo.value = cargo || '';
+        if (campoCpf) campoCpf.value = cpf || '';
+        Auth.abrirModal('modal-editar-prof');
+    },
+
+    async salvarEdicaoProfissional(event) {
+        event.preventDefault();
+        const id = document.getElementById('editar-prof-id').value;
+        const nome = document.getElementById('editar-prof-nome').value.trim();
+        const cargo = document.getElementById('editar-prof-cargo').value.trim();
+        const cpf = document.getElementById('editar-prof-cpf').value.trim();
+
+        if (!id) {
+            UI.showToast('Profissional não identificado. Feche e tente de novo.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .update({ nome: nome, cargo: cargo, cpf: cpf })
+                .eq('id', id)
+                .select('id');
+
+            if (error) {
+                console.error('Erro ao editar profissional:', error);
+                if (error.code === '23505') {
+                    UI.showToast('Já existe um profissional com esse CPF.', 'error');
+                } else {
+                    UI.showToast('Não foi possível salvar: ' + error.message, 'error');
+                }
+                return;
+            }
+            if (!data || data.length === 0) {
+                UI.showToast('Nenhum profissional foi atualizado. Confira se você está no salão certo.', 'error');
+                return;
+            }
+            Auth.fecharModal('modal-editar-prof');
+            UI.showToast('Dados do profissional atualizados!');
+            this.renderListaProfissionais();
+            this.popularSelectProfissionais();
+        } catch (e) {
+            console.error('Erro inesperado ao editar:', e);
+            UI.showToast('Erro inesperado ao salvar os dados.', 'error');
+        }
+    },
+
+    // ---------- Avisos e pedidos dos clientes ----------
     async carregarAvisos() {
         const container = document.getElementById('lista-avisos');
         if (!container) return;
@@ -668,6 +781,42 @@ const App = {
                 btnExcluir.onclick = () => this.excluirAviso(a.id);
 
                 acoes.appendChild(btnResolver);
+
+                // Se for pedido de senha, oferece o atalho para trocar direto
+                if (a.tipo === 'esqueci_senha') {
+                    const btnTrocar = document.createElement('button');
+                    btnTrocar.className = 'px-3 py-1.5 rounded-lg bg-brand-500/10 text-brand-500 border border-brand-500/20 text-[10px] font-bold uppercase hover:bg-brand-500/20 transition';
+                    btnTrocar.textContent = 'Trocar senha deste profissional';
+                    btnTrocar.onclick = async () => {
+                        const cpfLimpo = String(a.cpf || '').replace(/\D/g, '');
+                        if (!cpfLimpo) {
+                            UI.showToast('O aviso não trouxe CPF. Procure na aba Equipe.', 'error');
+                            return;
+                        }
+                        try {
+                            const { data, error } = await supabaseClient
+                                .from('profissionais')
+                                .select('id, nome')
+                                .eq('estabelecimento_id', localStorage.getItem('hairconcept_estab_id'))
+                                .limit(50);
+                            if (error) {
+                                UI.showToast('Não foi possível buscar o profissional.', 'error');
+                                return;
+                            }
+                            const achado = (data || []).find(p => String(p.cpf || '').replace(/\D/g, '') === cpfLimpo);
+                            if (!achado) {
+                                UI.showToast('Não achei nenhum profissional com esse CPF. Procure na aba Equipe.', 'error');
+                                return;
+                            }
+                            this.abrirTrocarSenhaProfissional(achado.id, achado.nome);
+                        } catch (e) {
+                            console.error('Erro ao abrir troca de senha pelo aviso:', e);
+                            UI.showToast('Erro inesperado ao abrir a troca de senha.', 'error');
+                        }
+                    };
+                    acoes.appendChild(btnTrocar);
+                }
+
                 acoes.appendChild(btnExcluir);
 
                 item.appendChild(linhaTopo);
@@ -956,24 +1105,74 @@ const App = {
         if (!lista) return;
         try {
             const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
-            if (error) throw error;
-            lista.innerHTML = data && data.length > 0 ? data.map(p => `
-                <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <img src="${p.foto_url || FOTO_PADRAO}" class="w-10 h-10 rounded-xl object-cover">
-                        <div>
-                            <h4 class="text-xs font-bold text-white">${p.nome}</h4>
-                            <p class="text-[10px] text-brand-500">${p.cargo}</p>
-                            <p class="text-[9px] text-zinc-500">CPF: ${p.cpf}</p>
-                        </div>
-                    </div>
-                    <button onclick="App.excluirProfissional('${p.id}')" class="px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold uppercase transition cursor-pointer">
-                        Excluir
-                    </button>
-                </div>
-            `).join('') : '<p class="text-xs text-zinc-500">Nenhum profissional cadastrado.</p>';
+            if (error) {
+                console.error('Erro ao buscar profissionais:', error);
+                lista.textContent = 'Não foi possível carregar a equipe agora.';
+                return;
+            }
+
+            lista.innerHTML = '';
+            if (!data || data.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-zinc-500';
+                p.textContent = 'Nenhum profissional cadastrado.';
+                lista.appendChild(p);
+                return;
+            }
+
+            data.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between gap-3 flex-wrap';
+
+                const esquerda = document.createElement('div');
+                esquerda.className = 'flex items-center gap-3';
+
+                const img = document.createElement('img');
+                img.src = p.foto_url || FOTO_PADRAO;
+                img.className = 'w-10 h-10 rounded-xl object-cover';
+
+                const info = document.createElement('div');
+                const h4 = document.createElement('h4');
+                h4.className = 'text-xs font-bold text-white';
+                h4.textContent = p.nome || '';
+                const pcargo = document.createElement('p');
+                pcargo.className = 'text-[10px] text-brand-500';
+                pcargo.textContent = p.cargo || '';
+                const pcpf = document.createElement('p');
+                pcpf.className = 'text-[9px] text-zinc-500';
+                pcpf.textContent = 'CPF: ' + (p.cpf || '');
+                info.appendChild(h4); info.appendChild(pcargo); info.appendChild(pcpf);
+                esquerda.appendChild(img); esquerda.appendChild(info);
+
+                const acoes = document.createElement('div');
+                acoes.className = 'flex items-center gap-2 flex-wrap';
+
+                const btnSenha = document.createElement('button');
+                btnSenha.className = 'px-3 py-1.5 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-500 hover:bg-brand-500/20 text-xs font-bold uppercase transition cursor-pointer';
+                btnSenha.textContent = 'Trocar senha';
+                btnSenha.onclick = () => this.abrirTrocarSenhaProfissional(p.id, p.nome || '');
+
+                const btnEditar = document.createElement('button');
+                btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-xs font-bold uppercase transition cursor-pointer';
+                btnEditar.textContent = 'Editar';
+                btnEditar.onclick = () => this.abrirEditarProfissional(p.id, p.nome, p.cargo, p.cpf);
+
+                const btnExcluir = document.createElement('button');
+                btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold uppercase transition cursor-pointer';
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.onclick = () => this.excluirProfissional(p.id);
+
+                acoes.appendChild(btnSenha);
+                acoes.appendChild(btnEditar);
+                acoes.appendChild(btnExcluir);
+
+                card.appendChild(esquerda);
+                card.appendChild(acoes);
+                lista.appendChild(card);
+            });
         } catch (e) {
-            console.error(e);
+            console.error('Erro inesperado ao listar profissionais:', e);
+            lista.textContent = 'Não foi possível carregar a equipe agora.';
         }
     },
     async renderProdutos() {
