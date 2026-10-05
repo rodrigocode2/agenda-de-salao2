@@ -6,24 +6,20 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 // Foto padrão (o site via.placeholder.com saiu do ar)
 const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
 
-// Traduz erro tecnico para portugues claro. O erro original vai para o Console.
+// Traduz erro tecnico para portugues claro. O erro original fica no Console.
 function mensagemAmigavel(err) {
     const bruto = String((err && err.message) ? err.message : err || '');
     const codigo = String((err && err.code) ? err.code : '');
     const txt = (bruto + ' ' + codigo).toLowerCase();
     console.warn('Erro tecnico:', bruto, codigo);
-
     if (txt.indexOf('rate limit') >= 0) return 'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
-    if (txt.indexOf('invalid') >= 0 && txt.indexOf('email') >= 0) return 'O e-mail informado nao foi aceito. Confira e tente de novo.';
     if (codigo === '23505' || txt.indexOf('duplicate key') >= 0) return 'Este registro ja existe. Confira os dados e tente de novo.';
     if (codigo === '23503' || txt.indexOf('foreign key') >= 0) return 'Este item tem historico ligado a ele e nao pode ser apagado.';
-    if (codigo === '42P01' || txt.indexOf('does not exist') >= 0) return 'Falta uma configuracao no sistema. Avise o suporte.';
-    if (txt.indexOf('row-level security') >= 0 || txt.indexOf('rls') >= 0) return 'Voce nao tem permissao para esta acao. Saia e entre de novo.';
-    if (txt.indexOf('jwt') >= 0 || txt.indexOf('token') >= 0 || txt.indexOf('session') >= 0) return 'Sua sessao expirou. Saia e entre de novo.';
+    if (txt.indexOf('row-level security') >= 0) return 'Voce nao tem permissao para esta acao. Saia e entre de novo.';
+    if (txt.indexOf('jwt') >= 0 || txt.indexOf('session') >= 0) return 'Sua sessao expirou. Saia e entre de novo.';
     if (txt.indexOf('failed to fetch') >= 0 || txt.indexOf('network') >= 0) return 'Sem conexao com o servidor. Confira a internet e tente de novo.';
     if (txt.indexOf('invalid login') >= 0 || txt.indexOf('credentials') >= 0) return 'E-mail ou senha incorretos.';
-    if (txt.indexOf('password') >= 0 && txt.indexOf('6') >= 0) return 'A senha precisa ter pelo menos 6 caracteres.';
-    if (txt.indexOf('user already registered') >= 0) return 'Este e-mail ja tem uma conta. Use "Esqueci minha senha".';
+    if (txt.indexOf('user already registered') >= 0) return 'Este e-mail ja tem uma conta. Use Esqueci minha senha.';
     return 'Nao consegui concluir agora. Tente de novo em instantes.';
 }
 
@@ -98,7 +94,7 @@ const Auth = {
         try {
             const { data, error } = await supabaseClient.auth.signUp({ email, password: senha });
             if (error) {
-                UI.showToast('Nao consegui criar a conta. ' + mensagemAmigavel(error), 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             if (!data.user) {
@@ -260,7 +256,7 @@ const App = {
         const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
         
         if (statusPagamento === 'approved') {
-            const estabId = await this.obterEstabId();
+            const estabId = localStorage.getItem('hairconcept_estab_id');
             const planoPago = localStorage.getItem('hairconcept_plan_pendente') || 'mensal';
             localStorage.setItem('hairconcept_plan', planoPago);
             localStorage.removeItem('hairconcept_plan_pendente');
@@ -482,7 +478,7 @@ const App = {
     async handleCreateProfissional(e) {
         e.preventDefault();
         const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
-        const estabelecimentoId = await this.obterEstabId();
+        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
         const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
 
         try {
@@ -547,33 +543,13 @@ const App = {
                 });
                 if (erroConta) {
                     console.error('Conta interna nao criada:', erroConta.message);
-                    UI.showToast(mensagemAmigavel(erroConta), 'error');
+                    UI.showToast('Nao consegui criar o acesso deste profissional. ' + mensagemAmigavel(erroConta), 'error');
                     return;
                 }
                 userIdInterno = (conta && conta.user && conta.user.id) ? conta.user.id : null;
-
-                // Se o Supabase pedir confirmacao de e-mail, o signUp nao devolve o user.
-                // Nesse caso a conta existe; precisamos do id dela para ligar o profissional.
-                if (!userIdInterno) {
-                    try {
-                        const { data: achou } = await supabaseClient
-                            .from('profissionais')
-                            .select('user_id')
-                            .eq('cpf', cpf)
-                            .not('user_id', 'is', null)
-                            .limit(1)
-                            .maybeSingle();
-                        if (achou && achou.user_id) userIdInterno = achou.user_id;
-                    } catch (e) { /* segue */ }
-                }
-
-                if (!userIdInterno) {
-                    console.error('Conta interna sem id de retorno:', conta);
-                    UI.showToast('A conta de acesso foi criada, mas o Supabase pediu confirmacao de e-mail. Desligue a confirmacao em Authentication > Providers > Email.', 'error');
-                }
             }
 
-            // 2) O cadastro nunca morre: se este CPF ja existe no salao, reativamos a ficha
+            // 2) O cadastro nunca morre: se o CPF ja existe no salao, reativamos a ficha
             const { data: jaExiste } = await supabaseClient
                 .from('profissionais')
                 .select('id, nome, ativo, user_id')
@@ -586,45 +562,22 @@ const App = {
             let error = null;
 
             if (jaExiste && jaExiste.id) {
-                // CPF ja cadastrado neste salao
-                const estavaInativo = jaExiste.ativo === false;
-                if (!estavaInativo) {
+                if (jaExiste.ativo !== false) {
                     UI.showToast('Este CPF ja esta cadastrado e ativo na equipe: ' + (jaExiste.nome || '') + '.', 'error');
                     return;
                 }
-                const confirmar = confirm(
-                    'Profissional ja cadastrado: ' + (jaExiste.nome || '') + '\n\nDeseja reativar ele na equipe?\n\nTodos os dados e o historico dele serao mantidos.'
-                );
-                if (!confirmar) {
+                if (!confirm('Profissional ja cadastrado: ' + (jaExiste.nome || '') + '\n\nDeseja reativar ele na equipe?\n\nOs dados e o historico serao mantidos.')) {
                     UI.showToast('Cadastro mantido como inativo. Nada foi alterado.');
                     return;
                 }
-                // Reativa e atualiza os dados visiveis, sem apagar historico
-                const atualizar = {
-                    nome: nome,
-                    cargo: cargo,
-                    foto_url: foto_url,
-                    ativo: true,
-                    estabelecimento: nomeEstabelecimentoHeader
-                };
+                const atualizar = { nome: nome, cargo: cargo, foto_url: foto_url, ativo: true, estabelecimento: nomeEstabelecimentoHeader };
                 if (userIdInterno) atualizar.user_id = userIdInterno;
-                const res = await supabaseClient
-                    .from('profissionais')
-                    .update(atualizar)
-                    .eq('id', jaExiste.id)
-                    .select();
-                error = res.error;
-                novoProf = res.data;
+                const res = await supabaseClient.from('profissionais').update(atualizar).eq('id', jaExiste.id).select();
+                error = res.error; novoProf = res.data;
                 if (!error) {
-                    const rp = await supabaseClient.rpc('definir_senha_profissional', {
-                        p_id: jaExiste.id,
-                        p_senha: senha
-                    });
-                    if (rp.error) console.warn('Senha nao atualizada na reativacao:', rp.error.message);
+                    await supabaseClient.rpc('definir_senha_profissional', { p_id: jaExiste.id, p_senha: senha });
                     e.target.reset();
                     this.fotoBase64Temp = '';
-                    document.getElementById('preview-foto-prof').classList.add('hidden');
-                    document.getElementById('icon-foto-prof').classList.remove('hidden');
                     this.renderListaProfissionais();
                     this.popularSelectProfissionais();
                     this.renderAgendaGrid();
@@ -632,7 +585,6 @@ const App = {
                     return;
                 }
             } else {
-                // CPF novo: cria normalmente, ja com o user_id
                 const res = await supabaseClient
                     .from('profissionais')
                     .insert([{
@@ -645,8 +597,7 @@ const App = {
                         user_id: userIdInterno
                     }])
                     .select();
-                error = res.error;
-                novoProf = res.data;
+                error = res.error; novoProf = res.data;
             }
 
             if (error) throw error;
@@ -673,19 +624,18 @@ const App = {
             this.popularSelectProfissionais();
         } catch (err) {
             if (err && err.code === '23505') {
-                UI.showToast('Ja existe um profissional com esse CPF neste salao. Use o botao Reativar na lista da equipe.', 'error');
+                UI.showToast('Já existe um profissional com esse CPF. Apague o cadastro antigo ou use outro CPF.', 'error');
             } else {
                 UI.showToast(mensagemAmigavel(err), 'error');
             }
         }
     },
-    // Desativar / reativar: o cadastro do profissional NUNCA e apagado.
-    // Desativado ele sai da agenda, mas o historico e os dados continuam guardados.
+    // Desativar / reativar: o cadastro do profissional NAO e apagado.
     async alternarAtivoProfissional(id, ativoAtual) {
         const vaiAtivar = !ativoAtual;
         const pergunta = vaiAtivar
-            ? 'Colocar este profissional de volta na agenda?\n\nO cadastro e o historico dele serao mantidos.'
-            : 'Tirar este profissional da agenda?\n\nO cadastro continua guardado e ele pode ser reativado depois pelo CPF.';
+            ? 'Colocar este profissional de volta na agenda? O cadastro e o historico serao mantidos.'
+            : 'Tirar este profissional da agenda? O cadastro fica guardado e ele pode ser reativado pelo CPF.';
         if (!confirm(pergunta)) return;
         try {
             const { error } = await supabaseClient
@@ -698,20 +648,12 @@ const App = {
             this.popularSelectProfissionais();
             this.renderAgendaGrid();
         } catch (e) {
-            console.error('Erro ao alterar o profissional:', e);
-            const msg = String(e && e.message ? e.message : e);
-            if (/ativo/.test(msg) && /column|coluna/.test(msg)) {
-                UI.showToast('Falta a coluna "ativo" no banco. Rode o SQL de atualizacao.', 'error');
-            } else {
-                UI.showToast('Nao foi possivel alterar: ' + msg, 'error');
-            }
+            UI.showToast(mensagemAmigavel(e), 'error');
         }
     },
 
-    // Excluir de verdade: so passa se o profissional nunca teve historico.
-    // O banco tambem bloqueia (on delete restrict), entao nao ha como perder dado.
     async excluirProfissional(id) {
-        if (!confirm("Excluir DEFINITIVAMENTE este profissional?\n\nUse isto apenas para cadastros criados por engano. Se ele ja atendeu alguem, o sistema vai recusar e voce deve apenas desativar.")) return;
+        if (!confirm("Excluir DEFINITIVAMENTE este profissional? Use apenas para cadastros criados por engano.")) return;
         try {
             const { error } = await supabaseClient
                 .from('profissionais')
@@ -722,12 +664,11 @@ const App = {
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
         } catch (e) {
-            console.error('Erro ao excluir profissional:', e);
             const msg = String(e && e.message ? e.message : e);
             if (msg.indexOf('23503') >= 0 || msg.toLowerCase().indexOf('foreign key') >= 0) {
-                UI.showToast('Este profissional tem historico (atendimentos, vendas ou fechamentos). Use DESATIVAR: o cadastro e os dados ficam guardados.', 'error');
+                UI.showToast('Este profissional tem historico. Use DESATIVAR: o cadastro e os dados ficam guardados.', 'error');
             } else {
-                UI.showToast('Nao foi possivel excluir: ' + msg, 'error');
+                UI.showToast(mensagemAmigavel(e), 'error');
             }
         }
     },
@@ -780,7 +721,7 @@ const App = {
             return;
         }
         const remetente = this.user.name || 'Profissional';
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         
         try {
             const { error } = await supabaseClient.from('recados').insert([{
@@ -798,7 +739,7 @@ const App = {
     async carregarRecadosEstabelecimento() {
         const containerAdmin = document.getElementById('lista-recados-estab');
         const containerProf = document.getElementById('chat-historico-prof');
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         
         try {
             const { data, error } = await supabaseClient
@@ -852,7 +793,7 @@ const App = {
             UI.showToast("Mensagem apagada.", "success");
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast(mensagemAmigavel(e), "error");
+            UI.showToast("Erro ao apagar recado: " + e.message, "error");
         }
     },
     async enviarRespostaAdmin() {
@@ -862,7 +803,7 @@ const App = {
             UI.showToast("Escreva uma resposta antes de enviar.", "error");
             return;
         }
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         
         try {
             const { error } = await supabaseClient.from('recados').insert([{
@@ -875,7 +816,7 @@ const App = {
             input.value = '';
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast(mensagemAmigavel(e), "error");
+            UI.showToast("Erro ao enviar resposta: " + e.message, "error");
         }
     },
        async excluirAgendamento(id, cliente) {
@@ -904,7 +845,7 @@ const App = {
                 .eq('id', id);
             if (error) {
                 console.error('Erro ao mudar o status:', error);
-                UI.showToast(mensagemAmigavel(error), 'error');
+                UI.showToast('Nao foi possivel mudar o estado: ' + error.message, 'error');
                 return;
             }
             this.renderAgendaGrid();
@@ -938,8 +879,7 @@ const App = {
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('id, nome')
-                .eq('estabelecimento_id', estabId)
-                .eq('ativo', true);
+                .eq('estabelecimento_id', estabId);
             if (error) { console.warn('Erro ao buscar profissionais:', error.message); return; }
             sel.innerHTML = '';
             const op = document.createElement('option');
@@ -978,7 +918,7 @@ const App = {
             }]);
             if (error) {
                 console.error('Erro ao registrar voto:', error);
-                UI.showToast(mensagemAmigavel(error), 'error');
+                UI.showToast('Nao foi possivel registrar: ' + error.message, 'error');
                 return;
             }
             Auth.fecharModal('modal-voto');
@@ -1591,7 +1531,7 @@ const App = {
     async carregarAvisos() {
         const container = document.getElementById('lista-avisos');
         if (!container) return;
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
 
         try {
             const { data, error } = await supabaseClient
@@ -1681,7 +1621,7 @@ const App = {
                             const { data, error } = await supabaseClient
                                 .from('profissionais')
                                 .select('id, nome, cpf')
-                                .eq('estabelecimento_id', await App.obterEstabId());
+                                .eq('estabelecimento_id', localStorage.getItem('hairconcept_estab_id'));
                             if (error) {
                                 console.error('Erro ao buscar profissionais:', error);
                                 UI.showToast('Não foi possível buscar o profissional. Use a aba Equipe.', 'error');
@@ -1734,7 +1674,7 @@ const App = {
                 .update({ resolvido: resolvido })
                 .eq('id', id);
             if (error) {
-                UI.showToast(mensagemAmigavel(error), 'error');
+                UI.showToast('Não foi possível atualizar o aviso: ' + error.message, 'error');
                 return;
             }
             this.carregarAvisos();
@@ -1749,7 +1689,7 @@ const App = {
         try {
             const { error } = await supabaseClient.from('solicitacoes').delete().eq('id', id);
             if (error) {
-                UI.showToast(mensagemAmigavel(error), 'error');
+                UI.showToast('Não foi possível excluir o aviso: ' + error.message, 'error');
                 return;
             }
             UI.showToast('Aviso excluído.');
@@ -1764,7 +1704,7 @@ const App = {
         const select = document.getElementById('agendamento-profissional');
         if (!select) return;
         try {
-            let estabId = await this.obterEstabId();
+            let estabId = localStorage.getItem('hairconcept_estab_id');
 
             if (!estabId && supabaseClient && supabaseClient.auth) {
                 const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1784,8 +1724,7 @@ const App = {
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('id, nome')
-                .eq('estabelecimento_id', estabId)
-                .eq('ativo', true);
+                .eq('estabelecimento_id', estabId);
 
             if (error) {
                 console.error('Erro ao buscar profissionais:', error);
@@ -1997,15 +1936,13 @@ const App = {
     },
 
     async obterEstabId() {
-        // Devolve o ID do salao. Valida o valor guardado: se estiver velho (de outro
-        // salao ou de um teste antigo), busca o correto no banco e regenera.
+        // Devolve o ID do salao VALIDANDO contra o banco. Se o valor guardado estiver
+        // velho (de outro salao ou de um teste), busca o correto e regenera.
         let id = localStorage.getItem('hairconcept_estab_id');
         if (!supabaseClient || !supabaseClient.auth) return id || null;
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return id || null;
-
-            // Confere se o id guardado realmente pertence a este usuario
             if (id) {
                 const { data: confere } = await supabaseClient
                     .from('estabelecimentos')
@@ -2015,8 +1952,6 @@ const App = {
                     .maybeSingle();
                 if (confere && confere.id) return id;
             }
-
-            // Guardado nao serve: busca o salao verdadeiro deste usuario
             const { data: estab } = await supabaseClient
                 .from('estabelecimentos')
                 .select('id')
@@ -2236,7 +2171,7 @@ const App = {
 
         try {
             const { error } = await supabaseClient.from('fechamentos').insert([{
-                estabelecimento_id: await this.obterEstabId(),
+                estabelecimento_id: localStorage.getItem('hairconcept_estab_id'),
                 profissional_id: profId,
                 inicio: this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : dataLocalISO(),
                 fim: dataLocalISO(),
@@ -2248,7 +2183,7 @@ const App = {
             }]);
             if (error) {
                 console.error('Erro ao fechar o ciclo:', error);
-                UI.showToast(mensagemAmigavel(error), 'error');
+                UI.showToast('Nao foi possivel fechar: ' + error.message, 'error');
                 return;
             }
             Auth.fecharModal('modal-fechar');
@@ -2352,12 +2287,10 @@ const App = {
         const tbody = document.getElementById('grid-horarios-body');
         const headerRow = document.getElementById('grid-header-row');
         if (!tbody || !headerRow) return;
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         const dataFiltro = document.getElementById('filtro-data-agenda').value;
         try {
-            const { data: profsTodos } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
-            // Profissional inativo sai da grade, mas o historico dele continua no banco.
-            const profs = (profsTodos || []).filter(function (p) { return p.ativo !== false; });
+            const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
             // Pontos de elogio e total de clientes, para as estrelas do cabeçalho
             let votosProf = {};
@@ -2651,7 +2584,7 @@ const App = {
         }
     },
     async renderServicos() {
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         const lista = document.getElementById('lista-servicos');
         if (!lista) return;
         try {
@@ -2727,11 +2660,6 @@ const App = {
                 pcpf.className = 'text-[9px] text-zinc-500';
                 pcpf.textContent = 'CPF: ' + (p.cpf || '');
                 info.appendChild(h4); info.appendChild(pcargo); info.appendChild(pcpf);
-                if (p.ativo === false) {
-                    h4.textContent = (p.nome || '') + '  (INATIVO)';
-                    h4.className = 'text-xs font-bold text-zinc-500';
-                    card.className = card.className.replace('bg-zinc-950', 'bg-zinc-950/40') + ' opacity-60';
-                }
                 esquerda.appendChild(img); esquerda.appendChild(info);
 
                 const acoes = document.createElement('div');
@@ -2747,23 +2675,13 @@ const App = {
                 btnEditar.textContent = 'Editar';
                 btnEditar.onclick = () => this.abrirEditarProfissional(p.id, p.nome, p.cargo, p.cpf);
 
-                const btnAtivo = document.createElement('button');
-                const estaAtivo = p.ativo !== false;
-                btnAtivo.className = estaAtivo
-                    ? 'px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 text-xs font-bold uppercase transition cursor-pointer'
-                    : 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold uppercase transition cursor-pointer';
-                btnAtivo.textContent = estaAtivo ? 'Desativar' : 'Reativar';
-                btnAtivo.onclick = () => this.alternarAtivoProfissional(p.id, estaAtivo);
-
                 const btnExcluir = document.createElement('button');
                 btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold uppercase transition cursor-pointer';
-                btnExcluir.textContent = 'Apagar';
-                btnExcluir.title = 'Só para cadastros criados por engano. Quem tem histórico deve ser desativado.';
+                btnExcluir.textContent = 'Excluir';
                 btnExcluir.onclick = () => this.excluirProfissional(p.id);
 
                 acoes.appendChild(btnSenha);
                 acoes.appendChild(btnEditar);
-                acoes.appendChild(btnAtivo);
                 acoes.appendChild(btnExcluir);
 
                 card.appendChild(esquerda);
@@ -2776,7 +2694,7 @@ const App = {
         }
     },
     async renderProdutos() {
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         const lista = document.getElementById('lista-produtos');
         const alertaBadge = document.getElementById('alerta-validade-badge');
         if (!lista) return;
@@ -2809,7 +2727,7 @@ const App = {
         }
     },
     async renderRelatorios() {
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         if (!estabId || !supabaseClient) return;
         try {
             const { data: agendamentos, error } = await supabaseClient
@@ -2840,7 +2758,7 @@ const App = {
         }
     },
     async renderAvaliacoes() {
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         const container = document.getElementById('lista-avaliacoes');
         if (!container) return;
         try {
@@ -2929,7 +2847,7 @@ const App = {
         document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
     },
     async setPlan(plano) {
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         
         if (plano === 'gratis') {
             localStorage.setItem('hairconcept_plan', 'gratis');
@@ -2982,7 +2900,7 @@ const App = {
         }
     },
     async carregarConfiguracoes() {
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         if (!estabId || !supabaseClient) return;
         try {
             const { data, error } = await supabaseClient
@@ -3031,7 +2949,7 @@ const App = {
     },
     async handleSalvarConfiguracoes(event) {
         event.preventDefault();
-        const estabId = await this.obterEstabId();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
         const nome_salao = document.getElementById('config-nome-salao').value.trim();
         const email = document.getElementById('config-email-salao').value.trim();
         const cnpj = document.getElementById('config-cnpj')?.value.trim() || '';
@@ -3199,3 +3117,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
