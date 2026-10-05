@@ -233,7 +233,6 @@ const Auth = {
             supabaseClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
                 if (error) {
                     console.error('Erro no login do admin:', error);
-                    UI.showToast('E-mail ou senha incorretos.', 'error');
                     UI.showToast(mensagemAmigavel(error), 'error');
                 } else {
                     App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
@@ -793,7 +792,7 @@ const App = {
             UI.showToast("Mensagem apagada.", "success");
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast("Erro ao apagar recado: " + e.message, "error");
+            UI.showToast(mensagemAmigavel(e), "error");
         }
     },
     async enviarRespostaAdmin() {
@@ -816,7 +815,7 @@ const App = {
             input.value = '';
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast("Erro ao enviar resposta: " + e.message, "error");
+            UI.showToast(mensagemAmigavel(e), "error");
         }
     },
        async excluirAgendamento(id, cliente) {
@@ -845,7 +844,7 @@ const App = {
                 .eq('id', id);
             if (error) {
                 console.error('Erro ao mudar o status:', error);
-                UI.showToast('Nao foi possivel mudar o estado: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             this.renderAgendaGrid();
@@ -918,7 +917,7 @@ const App = {
             }]);
             if (error) {
                 console.error('Erro ao registrar voto:', error);
-                UI.showToast('Nao foi possivel registrar: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             Auth.fecharModal('modal-voto');
@@ -1674,7 +1673,7 @@ const App = {
                 .update({ resolvido: resolvido })
                 .eq('id', id);
             if (error) {
-                UI.showToast('Não foi possível atualizar o aviso: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             this.carregarAvisos();
@@ -1689,7 +1688,7 @@ const App = {
         try {
             const { error } = await supabaseClient.from('solicitacoes').delete().eq('id', id);
             if (error) {
-                UI.showToast('Não foi possível excluir o aviso: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             UI.showToast('Aviso excluído.');
@@ -2183,7 +2182,7 @@ const App = {
             }]);
             if (error) {
                 console.error('Erro ao fechar o ciclo:', error);
-                UI.showToast('Nao foi possivel fechar: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             Auth.fecharModal('modal-fechar');
