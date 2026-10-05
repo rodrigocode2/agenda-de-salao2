@@ -544,7 +544,11 @@ const App = {
             // Cria a conta interna dele (invisível para o profissional)
             const emailInterno = this.montarEmailInterno(cpf, idSalao);
             if (emailInterno) {
-                const { data: conta, error: erroConta } = await supabaseClient.auth.signUp({
+                // Cliente separado: criar a conta do profissional NAO pode trocar a sessao do salao
+                const clienteIsolado = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'hc-cadastro-temp' }
+                });
+                const { data: conta, error: erroConta } = await clienteIsolado.auth.signUp({
                     email: emailInterno,
                     password: senha
                 });
@@ -1384,21 +1388,7 @@ const App = {
                 return;
             }
 
-            // Atualiza também a conta interna dele, se existir
-            const emailInterno = this.montarEmailInterno(
-                document.getElementById('trocasenha-prof-cpf')?.value || '',
-                localStorage.getItem('hairconcept_estab_id')
-            );
-            if (emailInterno && supabaseClient && supabaseClient.auth) {
-                try {
-                    // A conta interna usa a senha antiga; se ela não estiver logada, tentamos reaproveitar a sessão do salão
-                    const { error: erroConta } = await supabaseClient.auth.updateUser({ password: senha });
-                    if (erroConta) console.warn('Conta interna não atualizada:', erroConta.message);
-                } catch (e) {
-                    console.warn('Erro ao atualizar a conta interna:', e);
-                }
-            }
-
+            // (a conta interna é atualizada pelo banco; não mexe na sessão do salão)
             Auth.fecharModal('modal-trocar-senha');
             UI.showToast('Senha alterada! Passe a senha nova para o profissional.');
         } catch (e) {
@@ -3045,3 +3035,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
