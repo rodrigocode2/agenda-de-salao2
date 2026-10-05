@@ -471,3 +471,131 @@ html, body {
 .fech-linha .dia { color: #eab308; font-weight: 700; }
 .fech-linha .cli { color: #ffffff; font-weight: 700; }
 .fech-linha .val { color: #4ade80; font-weight: 700; white-space: nowrap; }
+
+
+/* ===== Aba Biossegurança: cards que viram ao passar o dedo / mouse ===== */
+.bio-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 640px) { .bio-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .bio-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.bio-card {
+  perspective: 1000px;
+  min-height: 230px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bio-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 230px;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+/* Mouse em cima: vira. Dedo encostou: vira. */
+.bio-card:hover .bio-inner,
+.bio-card:focus-within .bio-inner,
+.bio-card.virado .bio-inner {
+  transform: rotateY(180deg);
+}
+
+.bio-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 1.25rem;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  background: rgba(24, 24, 27, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.bio-costas {
+  transform: rotateY(180deg);
+  justify-content: space-between;
+}
+
+.bio-icone {
+  width: 40px; height: 40px;
+  border-radius: 0.75rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  color: #ec4899;
+  font-size: 16px;
+}
+
+.bio-titulo {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+.bio-meta {
+  font-size: 10px;
+  color: #a1a1aa;
+  line-height: 1.5;
+}
+
+.bio-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-right: 5px;
+  margin-top: 6px;
+}
+.bio-tag.gratis { background: rgba(74, 222, 128, 0.12); border: 1px solid rgba(74, 222, 128, 0.35); color: #4ade80; }
+.bio-tag.pago { background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35); color: #eab308; }
+.bio-tag.oficial { background: rgba(96, 165, 250, 0.12); border: 1px solid rgba(96, 165, 250, 0.35); color: #60a5fa; }
+
+.bio-desc {
+  font-size: 10.5px;
+  color: #d4d4d8;
+  line-height: 1.55;
+}
+
+.bio-btn {
+  display: block;
+  text-align: center;
+  padding: 9px 12px;
+  border-radius: 0.75rem;
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  color: #ec4899;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.2s;
+  margin-top: 10px;
+}
+.bio-btn:hover { background: rgba(236, 72, 153, 0.3); color: #fff; }
+
+.bio-grupo-titulo {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #ec4899;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
