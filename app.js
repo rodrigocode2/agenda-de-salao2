@@ -503,9 +503,9 @@ const App = {
             
             const nome = document.getElementById('prof-nome').value.trim();
             const cargo = document.getElementById('prof-cargo').value.trim();
-            const cpf = document.getElementById('prof-cpf').value.trim();
+            const cpf = (document.getElementById('prof-cpf').value || '').replace(/\D/g, '');
             const senha = document.getElementById('prof-senha').value;
-            const foto_url = this.fotoBase64Temp;
+            const foto_url = this.fotoBase64Temp || null;
 
             if (senha.length < 4) {
                 UI.showToast('A senha precisa ter pelo menos 4 caracteres.', 'error');
@@ -530,6 +530,26 @@ const App = {
                     return;
                 }
                 userIdInterno = (conta && conta.user && conta.user.id) ? conta.user.id : null;
+
+                // Se o Supabase pedir confirmacao de e-mail, o signUp nao devolve o user.
+                // Nesse caso a conta existe; precisamos do id dela para ligar o profissional.
+                if (!userIdInterno) {
+                    try {
+                        const { data: achou } = await supabaseClient
+                            .from('profissionais')
+                            .select('user_id')
+                            .eq('cpf', cpf)
+                            .not('user_id', 'is', null)
+                            .limit(1)
+                            .maybeSingle();
+                        if (achou && achou.user_id) userIdInterno = achou.user_id;
+                    } catch (e) { /* segue */ }
+                }
+
+                if (!userIdInterno) {
+                    console.error('Conta interna sem id de retorno:', conta);
+                    UI.showToast('A conta de acesso foi criada, mas o Supabase pediu confirmacao de e-mail. Desligue a confirmacao em Authentication > Providers > Email.', 'error');
+                }
             }
 
             // 2) Cria o profissional JA COM o user_id (a senha nunca trafega em texto puro)
@@ -544,7 +564,7 @@ const App = {
                     foto_url,
                     user_id: userIdInterno
                 }])
-                .select('id, user_id');
+                .select();
 
             if (error) throw error;
             if (!novoProf || novoProf.length === 0) {
@@ -3032,4 +3052,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
