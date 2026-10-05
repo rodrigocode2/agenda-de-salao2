@@ -6,6 +6,27 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 // Foto padrão (o site via.placeholder.com saiu do ar)
 const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
 
+// Traduz erro tecnico para portugues claro. O erro original vai para o Console.
+function mensagemAmigavel(err) {
+    const bruto = String((err && err.message) ? err.message : err || '');
+    const codigo = String((err && err.code) ? err.code : '');
+    const txt = (bruto + ' ' + codigo).toLowerCase();
+    console.warn('Erro tecnico:', bruto, codigo);
+
+    if (txt.indexOf('rate limit') >= 0) return 'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
+    if (txt.indexOf('invalid') >= 0 && txt.indexOf('email') >= 0) return 'O e-mail informado nao foi aceito. Confira e tente de novo.';
+    if (codigo === '23505' || txt.indexOf('duplicate key') >= 0) return 'Este registro ja existe. Confira os dados e tente de novo.';
+    if (codigo === '23503' || txt.indexOf('foreign key') >= 0) return 'Este item tem historico ligado a ele e nao pode ser apagado.';
+    if (codigo === '42P01' || txt.indexOf('does not exist') >= 0) return 'Falta uma configuracao no sistema. Avise o suporte.';
+    if (txt.indexOf('row-level security') >= 0 || txt.indexOf('rls') >= 0) return 'Voce nao tem permissao para esta acao. Saia e entre de novo.';
+    if (txt.indexOf('jwt') >= 0 || txt.indexOf('token') >= 0 || txt.indexOf('session') >= 0) return 'Sua sessao expirou. Saia e entre de novo.';
+    if (txt.indexOf('failed to fetch') >= 0 || txt.indexOf('network') >= 0) return 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+    if (txt.indexOf('invalid login') >= 0 || txt.indexOf('credentials') >= 0) return 'E-mail ou senha incorretos.';
+    if (txt.indexOf('password') >= 0 && txt.indexOf('6') >= 0) return 'A senha precisa ter pelo menos 6 caracteres.';
+    if (txt.indexOf('user already registered') >= 0) return 'Este e-mail ja tem uma conta. Use "Esqueci minha senha".';
+    return 'Nao consegui concluir agora. Tente de novo em instantes.';
+}
+
 // Data local no formato AAAA-MM-DD (toISOString usa UTC e adianta o dia à noite)
 function dataLocalISO(d = new Date()) {
     const y = d.getFullYear();
@@ -77,7 +98,7 @@ const Auth = {
         try {
             const { data, error } = await supabaseClient.auth.signUp({ email, password: senha });
             if (error) {
-                UI.showToast('Não foi possível criar a conta: ' + error.message, 'error');
+                UI.showToast('Nao consegui criar a conta. ' + mensagemAmigavel(error), 'error');
                 return;
             }
             if (!data.user) {
@@ -122,7 +143,7 @@ const Auth = {
                 redirectTo: window.location.origin + window.location.pathname
             });
             if (error) {
-                UI.showToast('Erro ao enviar o link: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             this.fecharModal('modal-recuperar');
@@ -149,7 +170,7 @@ const Auth = {
         try {
             const { error } = await supabaseClient.auth.updateUser({ password: senha });
             if (error) {
-                UI.showToast('Não foi possível salvar a senha: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             this.fecharModal('modal-nova-senha');
@@ -196,7 +217,7 @@ const Auth = {
                 mensagem: mensagem
             }]);
             if (error) {
-                UI.showToast('Não foi possível enviar o pedido: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             this.fecharModal('modal-ajuda');
@@ -217,7 +238,7 @@ const Auth = {
                 if (error) {
                     console.error('Erro no login do admin:', error);
                     UI.showToast('E-mail ou senha incorretos.', 'error');
-                    UI.showToast('Erro ao entrar: ' + error.message, 'error');
+                    UI.showToast(mensagemAmigavel(error), 'error');
                 } else {
                     App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
                     App.finishLogin('Bem-vindo ao Painel!');
@@ -239,7 +260,7 @@ const App = {
         const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
         
         if (statusPagamento === 'approved') {
-            const estabId = localStorage.getItem('hairconcept_estab_id');
+            const estabId = await this.obterEstabId();
             const planoPago = localStorage.getItem('hairconcept_plan_pendente') || 'mensal';
             localStorage.setItem('hairconcept_plan', planoPago);
             localStorage.removeItem('hairconcept_plan_pendente');
@@ -461,7 +482,7 @@ const App = {
     async handleCreateProfissional(e) {
         e.preventDefault();
         const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
-        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
+        const estabelecimentoId = await this.obterEstabId();
         const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
 
         try {
@@ -526,7 +547,7 @@ const App = {
                 });
                 if (erroConta) {
                     console.error('Conta interna nao criada:', erroConta.message);
-                    UI.showToast('Nao consegui criar o acesso deste profissional: ' + erroConta.message, 'error');
+                    UI.showToast(mensagemAmigavel(erroConta), 'error');
                     return;
                 }
                 userIdInterno = (conta && conta.user && conta.user.id) ? conta.user.id : null;
@@ -552,19 +573,81 @@ const App = {
                 }
             }
 
-            // 2) Cria o profissional JA COM o user_id (a senha nunca trafega em texto puro)
-            const { data: novoProf, error } = await supabaseClient
+            // 2) O cadastro nunca morre: se este CPF ja existe no salao, reativamos a ficha
+            const { data: jaExiste } = await supabaseClient
                 .from('profissionais')
-                .insert([{
-                    estabelecimento_id: idSalao,
-                    estabelecimento: nomeEstabelecimentoHeader,
-                    nome,
-                    cargo,
-                    cpf,
-                    foto_url,
-                    user_id: userIdInterno
-                }])
-                .select();
+                .select('id, nome, ativo, user_id')
+                .eq('estabelecimento_id', idSalao)
+                .eq('cpf', cpf)
+                .limit(1)
+                .maybeSingle();
+
+            let novoProf = null;
+            let error = null;
+
+            if (jaExiste && jaExiste.id) {
+                // CPF ja cadastrado neste salao
+                const estavaInativo = jaExiste.ativo === false;
+                if (!estavaInativo) {
+                    UI.showToast('Este CPF ja esta cadastrado e ativo na equipe: ' + (jaExiste.nome || '') + '.', 'error');
+                    return;
+                }
+                const confirmar = confirm(
+                    'Profissional ja cadastrado: ' + (jaExiste.nome || '') + '\n\nDeseja reativar ele na equipe?\n\nTodos os dados e o historico dele serao mantidos.'
+                );
+                if (!confirmar) {
+                    UI.showToast('Cadastro mantido como inativo. Nada foi alterado.');
+                    return;
+                }
+                // Reativa e atualiza os dados visiveis, sem apagar historico
+                const atualizar = {
+                    nome: nome,
+                    cargo: cargo,
+                    foto_url: foto_url,
+                    ativo: true,
+                    estabelecimento: nomeEstabelecimentoHeader
+                };
+                if (userIdInterno) atualizar.user_id = userIdInterno;
+                const res = await supabaseClient
+                    .from('profissionais')
+                    .update(atualizar)
+                    .eq('id', jaExiste.id)
+                    .select();
+                error = res.error;
+                novoProf = res.data;
+                if (!error) {
+                    const rp = await supabaseClient.rpc('definir_senha_profissional', {
+                        p_id: jaExiste.id,
+                        p_senha: senha
+                    });
+                    if (rp.error) console.warn('Senha nao atualizada na reativacao:', rp.error.message);
+                    e.target.reset();
+                    this.fotoBase64Temp = '';
+                    document.getElementById('preview-foto-prof').classList.add('hidden');
+                    document.getElementById('icon-foto-prof').classList.remove('hidden');
+                    this.renderListaProfissionais();
+                    this.popularSelectProfissionais();
+                    this.renderAgendaGrid();
+                    UI.showToast('Profissional reativado! Ele ja esta na agenda com o historico dele.', 'success');
+                    return;
+                }
+            } else {
+                // CPF novo: cria normalmente, ja com o user_id
+                const res = await supabaseClient
+                    .from('profissionais')
+                    .insert([{
+                        estabelecimento_id: idSalao,
+                        estabelecimento: nomeEstabelecimentoHeader,
+                        nome,
+                        cargo,
+                        cpf,
+                        foto_url,
+                        user_id: userIdInterno
+                    }])
+                    .select();
+                error = res.error;
+                novoProf = res.data;
+            }
 
             if (error) throw error;
             if (!novoProf || novoProf.length === 0) {
@@ -590,30 +673,61 @@ const App = {
             this.popularSelectProfissionais();
         } catch (err) {
             if (err && err.code === '23505') {
-                UI.showToast('Já existe um profissional com esse CPF. Apague o cadastro antigo ou use outro CPF.', 'error');
+                UI.showToast('Ja existe um profissional com esse CPF neste salao. Use o botao Reativar na lista da equipe.', 'error');
             } else {
-                UI.showToast('Erro ao cadastrar profissional: ' + err.message, 'error');
+                UI.showToast(mensagemAmigavel(err), 'error');
             }
         }
     },
+    // Desativar / reativar: o cadastro do profissional NUNCA e apagado.
+    // Desativado ele sai da agenda, mas o historico e os dados continuam guardados.
+    async alternarAtivoProfissional(id, ativoAtual) {
+        const vaiAtivar = !ativoAtual;
+        const pergunta = vaiAtivar
+            ? 'Colocar este profissional de volta na agenda?\n\nO cadastro e o historico dele serao mantidos.'
+            : 'Tirar este profissional da agenda?\n\nO cadastro continua guardado e ele pode ser reativado depois pelo CPF.';
+        if (!confirm(pergunta)) return;
+        try {
+            const { error } = await supabaseClient
+                .from('profissionais')
+                .update({ ativo: vaiAtivar })
+                .eq('id', id);
+            if (error) throw error;
+            UI.showToast(vaiAtivar ? 'Profissional reativado! Ele ja esta na agenda.' : 'Profissional desativado. O cadastro foi mantido.');
+            this.renderListaProfissionais();
+            this.popularSelectProfissionais();
+            this.renderAgendaGrid();
+        } catch (e) {
+            console.error('Erro ao alterar o profissional:', e);
+            const msg = String(e && e.message ? e.message : e);
+            if (/ativo/.test(msg) && /column|coluna/.test(msg)) {
+                UI.showToast('Falta a coluna "ativo" no banco. Rode o SQL de atualizacao.', 'error');
+            } else {
+                UI.showToast('Nao foi possivel alterar: ' + msg, 'error');
+            }
+        }
+    },
+
+    // Excluir de verdade: so passa se o profissional nunca teve historico.
+    // O banco tambem bloqueia (on delete restrict), entao nao ha como perder dado.
     async excluirProfissional(id) {
-        if (!confirm("Tem certeza que deseja excluir este profissional?")) return;
+        if (!confirm("Excluir DEFINITIVAMENTE este profissional?\n\nUse isto apenas para cadastros criados por engano. Se ele ja atendeu alguem, o sistema vai recusar e voce deve apenas desativar.")) return;
         try {
             const { error } = await supabaseClient
                 .from('profissionais')
                 .delete()
                 .eq('id', id);
             if (error) throw error;
-            UI.showToast('Profissional excluído com sucesso!');
+            UI.showToast('Cadastro excluido.');
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
         } catch (e) {
             console.error('Erro ao excluir profissional:', e);
             const msg = String(e && e.message ? e.message : e);
             if (msg.indexOf('23503') >= 0 || msg.toLowerCase().indexOf('foreign key') >= 0) {
-                UI.showToast('Este profissional tem atendimentos na agenda. Apague os atendimentos dele primeiro.', 'error');
+                UI.showToast('Este profissional tem historico (atendimentos, vendas ou fechamentos). Use DESATIVAR: o cadastro e os dados ficam guardados.', 'error');
             } else {
-                UI.showToast('Não foi possível excluir: ' + msg, 'error');
+                UI.showToast('Nao foi possivel excluir: ' + msg, 'error');
             }
         }
     },
@@ -635,7 +749,7 @@ const App = {
                 UI.showToast('Foto de perfil atualizada e salva com sucesso!');
                 this.renderListaProfissionais();
             } catch (err) {
-                UI.showToast('Erro ao atualizar foto: ' + err.message, 'error');
+                UI.showToast(mensagemAmigavel(err), 'error');
             }
         };
         reader.readAsDataURL(file);
@@ -666,7 +780,7 @@ const App = {
             return;
         }
         const remetente = this.user.name || 'Profissional';
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         
         try {
             const { error } = await supabaseClient.from('recados').insert([{
@@ -678,13 +792,13 @@ const App = {
             input.value = '';
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast('Erro ao enviar mensagem: ' + e.message, 'error');
+            UI.showToast(mensagemAmigavel(e), 'error');
         }
     },
     async carregarRecadosEstabelecimento() {
         const containerAdmin = document.getElementById('lista-recados-estab');
         const containerProf = document.getElementById('chat-historico-prof');
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         
         try {
             const { data, error } = await supabaseClient
@@ -738,7 +852,7 @@ const App = {
             UI.showToast("Mensagem apagada.", "success");
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast("Erro ao apagar recado: " + e.message, "error");
+            UI.showToast(mensagemAmigavel(e), "error");
         }
     },
     async enviarRespostaAdmin() {
@@ -748,7 +862,7 @@ const App = {
             UI.showToast("Escreva uma resposta antes de enviar.", "error");
             return;
         }
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         
         try {
             const { error } = await supabaseClient.from('recados').insert([{
@@ -761,7 +875,7 @@ const App = {
             input.value = '';
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast("Erro ao enviar resposta: " + e.message, "error");
+            UI.showToast(mensagemAmigavel(e), "error");
         }
     },
        async excluirAgendamento(id, cliente) {
@@ -770,7 +884,7 @@ const App = {
             const { error } = await supabaseClient.from('agendamentos').delete().eq('id', id);
             if (error) {
                 console.error('Erro ao desmarcar:', error);
-                UI.showToast('Não foi possível desmarcar: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             UI.showToast('Atendimento desmarcado.');
@@ -790,7 +904,7 @@ const App = {
                 .eq('id', id);
             if (error) {
                 console.error('Erro ao mudar o status:', error);
-                UI.showToast('Nao foi possivel mudar o estado: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             this.renderAgendaGrid();
@@ -824,7 +938,8 @@ const App = {
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('id, nome')
-                .eq('estabelecimento_id', estabId);
+                .eq('estabelecimento_id', estabId)
+                .eq('ativo', true);
             if (error) { console.warn('Erro ao buscar profissionais:', error.message); return; }
             sel.innerHTML = '';
             const op = document.createElement('option');
@@ -863,7 +978,7 @@ const App = {
             }]);
             if (error) {
                 console.error('Erro ao registrar voto:', error);
-                UI.showToast('Nao foi possivel registrar: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             Auth.fecharModal('modal-voto');
@@ -1279,7 +1394,7 @@ const App = {
             }]);
             if (error) {
                 console.error('Erro ao criar cliente:', error);
-                UI.showToast('Não foi possível salvar o cliente: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
 
@@ -1327,7 +1442,7 @@ const App = {
                 .select('id');
             if (error) {
                 console.error('Erro ao editar cliente:', error);
-                UI.showToast('Não foi possível salvar: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             if (!data || data.length === 0) {
@@ -1349,7 +1464,7 @@ const App = {
             const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
             if (error) {
                 console.error('Erro ao excluir cliente:', error);
-                UI.showToast('Não foi possível excluir: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             UI.showToast('Cliente excluído.');
@@ -1401,7 +1516,7 @@ const App = {
 
             if (error) {
                 console.error('Erro ao trocar senha:', error);
-                UI.showToast('Não foi possível salvar a senha: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
 
@@ -1454,7 +1569,7 @@ const App = {
                 if (error.code === '23505') {
                     UI.showToast('Já existe um profissional com esse CPF.', 'error');
                 } else {
-                    UI.showToast('Não foi possível salvar: ' + error.message, 'error');
+                    UI.showToast(mensagemAmigavel(error), 'error');
                 }
                 return;
             }
@@ -1476,7 +1591,7 @@ const App = {
     async carregarAvisos() {
         const container = document.getElementById('lista-avisos');
         if (!container) return;
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
 
         try {
             const { data, error } = await supabaseClient
@@ -1566,7 +1681,7 @@ const App = {
                             const { data, error } = await supabaseClient
                                 .from('profissionais')
                                 .select('id, nome, cpf')
-                                .eq('estabelecimento_id', localStorage.getItem('hairconcept_estab_id'));
+                                .eq('estabelecimento_id', await App.obterEstabId());
                             if (error) {
                                 console.error('Erro ao buscar profissionais:', error);
                                 UI.showToast('Não foi possível buscar o profissional. Use a aba Equipe.', 'error');
@@ -1619,7 +1734,7 @@ const App = {
                 .update({ resolvido: resolvido })
                 .eq('id', id);
             if (error) {
-                UI.showToast('Não foi possível atualizar o aviso: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             this.carregarAvisos();
@@ -1634,7 +1749,7 @@ const App = {
         try {
             const { error } = await supabaseClient.from('solicitacoes').delete().eq('id', id);
             if (error) {
-                UI.showToast('Não foi possível excluir o aviso: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             UI.showToast('Aviso excluído.');
@@ -1649,7 +1764,7 @@ const App = {
         const select = document.getElementById('agendamento-profissional');
         if (!select) return;
         try {
-            let estabId = localStorage.getItem('hairconcept_estab_id');
+            let estabId = await this.obterEstabId();
 
             if (!estabId && supabaseClient && supabaseClient.auth) {
                 const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1669,7 +1784,8 @@ const App = {
             const { data, error } = await supabaseClient
                 .from('profissionais')
                 .select('id, nome')
-                .eq('estabelecimento_id', estabId);
+                .eq('estabelecimento_id', estabId)
+                .eq('ativo', true);
 
             if (error) {
                 console.error('Erro ao buscar profissionais:', error);
@@ -1877,32 +1993,46 @@ const App = {
         const cpfLimpo = String(cpf || '').replace(/\D/g, '');
         const salaoCurto = String(idSalao || '').replace(/-/g, '').slice(0, 8);
         if (!cpfLimpo || !salaoCurto) return null;
-        return `prof.${cpfLimpo}.${salaoCurto}@hairconcept.local`;
+        return `prof.${cpfLimpo}.${salaoCurto}@hairconcept.com.br`;
     },
 
     async obterEstabId() {
-        // Devolve o ID do salão, buscando no banco se o navegador ainda não tiver.
+        // Devolve o ID do salao. Valida o valor guardado: se estiver velho (de outro
+        // salao ou de um teste antigo), busca o correto no banco e regenera.
         let id = localStorage.getItem('hairconcept_estab_id');
-        if (id) return id;
+        if (!supabaseClient || !supabaseClient.auth) return id || null;
         try {
-            if (!supabaseClient || !supabaseClient.auth) return null;
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session || !session.user) return null;
-            const { data: estab, error } = await supabaseClient
+            if (!session || !session.user) return id || null;
+
+            // Confere se o id guardado realmente pertence a este usuario
+            if (id) {
+                const { data: confere } = await supabaseClient
+                    .from('estabelecimentos')
+                    .select('id')
+                    .eq('id', id)
+                    .eq('user_id', session.user.id)
+                    .maybeSingle();
+                if (confere && confere.id) return id;
+            }
+
+            // Guardado nao serve: busca o salao verdadeiro deste usuario
+            const { data: estab } = await supabaseClient
                 .from('estabelecimentos')
                 .select('id')
                 .eq('user_id', session.user.id)
+                .limit(1)
                 .maybeSingle();
-            if (error) { console.error('Erro ao buscar o salão:', error); return null; }
-            if (estab) {
+            if (estab && estab.id) {
                 localStorage.setItem('hairconcept_estab_id', estab.id);
                 return estab.id;
             }
         } catch (e) {
-            console.error('Erro ao obter o salão:', e);
+            console.warn('Erro ao validar o salao:', e);
         }
-        return null;
+        return id || null;
     },
+,
 
     // Abre a janela para colocar um serviço DENTRO de um atendimento
     abrirEncaixe(pai) {
@@ -2106,7 +2236,7 @@ const App = {
 
         try {
             const { error } = await supabaseClient.from('fechamentos').insert([{
-                estabelecimento_id: localStorage.getItem('hairconcept_estab_id'),
+                estabelecimento_id: await this.obterEstabId(),
                 profissional_id: profId,
                 inicio: this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : dataLocalISO(),
                 fim: dataLocalISO(),
@@ -2118,7 +2248,7 @@ const App = {
             }]);
             if (error) {
                 console.error('Erro ao fechar o ciclo:', error);
-                UI.showToast('Nao foi possivel fechar: ' + error.message, 'error');
+                UI.showToast(mensagemAmigavel(error), 'error');
                 return;
             }
             Auth.fecharModal('modal-fechar');
@@ -2215,17 +2345,19 @@ const App = {
             this.renderAgendaGrid();
             this.renderRelatorios();
         } catch (e) {
-            UI.showToast('Erro ao agendar: ' + e.message, 'error');
+            UI.showToast('Nao consegui marcar o atendimento. ' + mensagemAmigavel(e), 'error');
         }
     },
     async renderAgendaGrid() {
         const tbody = document.getElementById('grid-horarios-body');
         const headerRow = document.getElementById('grid-header-row');
         if (!tbody || !headerRow) return;
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         const dataFiltro = document.getElementById('filtro-data-agenda').value;
         try {
-            const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
+            const { data: profsTodos } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
+            // Profissional inativo sai da grade, mas o historico dele continua no banco.
+            const profs = (profsTodos || []).filter(function (p) { return p.ativo !== false; });
             const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
             // Pontos de elogio e total de clientes, para as estrelas do cabeçalho
             let votosProf = {};
@@ -2490,7 +2622,7 @@ const App = {
             event.target.reset();
             this.renderProdutos();
         } catch (e) {
-            UI.showToast('Erro ao cadastrar produto: ' + e.message, 'error');
+            UI.showToast(mensagemAmigavel(e), 'error');
         }
     },
     async handleCreateServico(event) {
@@ -2515,11 +2647,11 @@ const App = {
             event.target.reset();
             this.renderServicos();
         } catch (e) {
-            UI.showToast('Erro ao cadastrar serviço: ' + e.message, 'error');
+            UI.showToast(mensagemAmigavel(e), 'error');
         }
     },
     async renderServicos() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         const lista = document.getElementById('lista-servicos');
         if (!lista) return;
         try {
@@ -2549,14 +2681,14 @@ const App = {
             UI.showToast('Serviço excluído com sucesso!');
             this.renderServicos();
         } catch (e) {
-            UI.showToast('Erro ao excluir serviço: ' + e.message, 'error');
+            UI.showToast(mensagemAmigavel(e), 'error');
         }
     },
     async renderListaProfissionais() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
         const lista = document.getElementById('lista-profissionais');
         if (!lista) return;
         try {
+            const estabId = await this.obterEstabId();
             const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             if (error) {
                 console.error('Erro ao buscar profissionais:', error);
@@ -2595,6 +2727,11 @@ const App = {
                 pcpf.className = 'text-[9px] text-zinc-500';
                 pcpf.textContent = 'CPF: ' + (p.cpf || '');
                 info.appendChild(h4); info.appendChild(pcargo); info.appendChild(pcpf);
+                if (p.ativo === false) {
+                    h4.textContent = (p.nome || '') + '  (INATIVO)';
+                    h4.className = 'text-xs font-bold text-zinc-500';
+                    card.className = card.className.replace('bg-zinc-950', 'bg-zinc-950/40') + ' opacity-60';
+                }
                 esquerda.appendChild(img); esquerda.appendChild(info);
 
                 const acoes = document.createElement('div');
@@ -2610,13 +2747,23 @@ const App = {
                 btnEditar.textContent = 'Editar';
                 btnEditar.onclick = () => this.abrirEditarProfissional(p.id, p.nome, p.cargo, p.cpf);
 
+                const btnAtivo = document.createElement('button');
+                const estaAtivo = p.ativo !== false;
+                btnAtivo.className = estaAtivo
+                    ? 'px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 text-xs font-bold uppercase transition cursor-pointer'
+                    : 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold uppercase transition cursor-pointer';
+                btnAtivo.textContent = estaAtivo ? 'Desativar' : 'Reativar';
+                btnAtivo.onclick = () => this.alternarAtivoProfissional(p.id, estaAtivo);
+
                 const btnExcluir = document.createElement('button');
                 btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold uppercase transition cursor-pointer';
-                btnExcluir.textContent = 'Excluir';
+                btnExcluir.textContent = 'Apagar';
+                btnExcluir.title = 'Só para cadastros criados por engano. Quem tem histórico deve ser desativado.';
                 btnExcluir.onclick = () => this.excluirProfissional(p.id);
 
                 acoes.appendChild(btnSenha);
                 acoes.appendChild(btnEditar);
+                acoes.appendChild(btnAtivo);
                 acoes.appendChild(btnExcluir);
 
                 card.appendChild(esquerda);
@@ -2629,7 +2776,7 @@ const App = {
         }
     },
     async renderProdutos() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         const lista = document.getElementById('lista-produtos');
         const alertaBadge = document.getElementById('alerta-validade-badge');
         if (!lista) return;
@@ -2662,7 +2809,7 @@ const App = {
         }
     },
     async renderRelatorios() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         if (!estabId || !supabaseClient) return;
         try {
             const { data: agendamentos, error } = await supabaseClient
@@ -2693,7 +2840,7 @@ const App = {
         }
     },
     async renderAvaliacoes() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         const container = document.getElementById('lista-avaliacoes');
         if (!container) return;
         try {
@@ -2782,7 +2929,7 @@ const App = {
         document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
     },
     async setPlan(plano) {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         
         if (plano === 'gratis') {
             localStorage.setItem('hairconcept_plan', 'gratis');
@@ -2835,7 +2982,7 @@ const App = {
         }
     },
     async carregarConfiguracoes() {
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         if (!estabId || !supabaseClient) return;
         try {
             const { data, error } = await supabaseClient
@@ -2884,7 +3031,7 @@ const App = {
     },
     async handleSalvarConfiguracoes(event) {
         event.preventDefault();
-        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const estabId = await this.obterEstabId();
         const nome_salao = document.getElementById('config-nome-salao').value.trim();
         const email = document.getElementById('config-email-salao').value.trim();
         const cnpj = document.getElementById('config-cnpj')?.value.trim() || '';
