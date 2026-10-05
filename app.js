@@ -512,7 +512,27 @@ const App = {
                 return;
             }
 
-            // Cria o profissional SEM a senha (ela nunca trafega em texto puro)
+            // 1) Cria a conta interna PRIMEIRO, para gravar o profissional já ligado a ela
+            const emailInterno = this.montarEmailInterno(cpf, idSalao);
+            let userIdInterno = null;
+            if (emailInterno) {
+                // Cliente separado: criar a conta do profissional NAO pode trocar a sessao do salao
+                const clienteIsolado = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'hc-cadastro-temp' }
+                });
+                const { data: conta, error: erroConta } = await clienteIsolado.auth.signUp({
+                    email: emailInterno,
+                    password: senha
+                });
+                if (erroConta) {
+                    console.error('Conta interna nao criada:', erroConta.message);
+                    UI.showToast('Nao consegui criar o acesso deste profissional: ' + erroConta.message, 'error');
+                    return;
+                }
+                userIdInterno = (conta && conta.user && conta.user.id) ? conta.user.id : null;
+            }
+
+            // 2) Cria o profissional JA COM o user_id (a senha nunca trafega em texto puro)
             const { data: novoProf, error } = await supabaseClient
                 .from('profissionais')
                 .insert([{
@@ -521,9 +541,10 @@ const App = {
                     nome,
                     cargo,
                     cpf,
-                    foto_url
+                    foto_url,
+                    user_id: userIdInterno
                 }])
-                .select('id');
+                .select('id, user_id');
 
             if (error) throw error;
             if (!novoProf || novoProf.length === 0) {
@@ -541,30 +562,6 @@ const App = {
                 UI.showToast('Profissional criado, mas a senha falhou. Use "Trocar senha" na lista.', 'error');
             }
 
-            // Cria a conta interna dele (invisível para o profissional)
-            const emailInterno = this.montarEmailInterno(cpf, idSalao);
-            if (emailInterno) {
-                // Cliente separado: criar a conta do profissional NAO pode trocar a sessao do salao
-                const clienteIsolado = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'hc-cadastro-temp' }
-                });
-                const { data: conta, error: erroConta } = await clienteIsolado.auth.signUp({
-                    email: emailInterno,
-                    password: senha
-                });
-                if (erroConta) {
-                    // Conta já existente ou e-mail repetido: não trava o cadastro
-                    console.warn('Conta interna não criada:', erroConta.message);
-                } else if (conta && conta.user) {
-                    await supabaseClient
-                        .from('profissionais')
-                        .update({ user_id: conta.user.id })
-                        .eq('id', novoProf[0].id);
-                }
-                // A conta do salão continua logada: só os dados dos profissionais ficam acessíveis
-                localStorage.setItem('hairconcept_ultimo_email_interno', emailInterno);
-            }
-            UI.showToast('Profissional cadastrado com sucesso!');
             e.target.reset();
             this.fotoBase64Temp = '';
             document.getElementById('preview-foto-prof').classList.add('hidden');
@@ -3035,4 +3032,5 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
 
