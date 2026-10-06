@@ -317,6 +317,9 @@ const App = {
     },
     async finishLogin(msg) {
         if (msg) UI.showToast(msg);
+        try { if (this.carregarModeloAgenda) await this.carregarModeloAgenda(); } catch (e) {}
+        try { if (this.verificarExclusaoPendente) await this.verificarExclusaoPendente(); } catch (e) {}
+        try { if (this.carregarModeloAgenda) await this.carregarModeloAgenda(); } catch (e) {}
         // Restaura o modo de agenda salvo (dia ou semana)
         try {
             if (this.modoAgendaAtual && this.modoAgendaAtual() === 'semana') {
@@ -541,6 +544,18 @@ const App = {
                 return;
             }
             
+            const elNome = document.getElementById('prof-nome');
+            const elCargo = document.getElementById('prof-cargo');
+            const elCpf = document.getElementById('prof-cpf');
+            const elSenha = document.getElementById('prof-senha');
+            if (!elNome || !elCargo || !elCpf || !elSenha) {
+                UI.showToast('Abra a aba Equipe e recarregue a pagina antes de cadastrar.', 'error');
+                return;
+            }
+            if (!elNome.value.trim()) { UI.showToast('Escreva o nome do profissional.', 'error'); elNome.focus(); return; }
+            if (!elCargo.value.trim()) { UI.showToast('Escreva o cargo ou especialidade.', 'error'); elCargo.focus(); return; }
+            if (!elCpf.value.trim()) { UI.showToast('Escreva o CPF do profissional.', 'error'); elCpf.focus(); return; }
+            if (!elSenha.value || elSenha.value.length < 4) { UI.showToast('A senha precisa ter pelo menos 4 caracteres.', 'error'); elSenha.focus(); return; }
             const nome = document.getElementById('prof-nome').value.trim();
             const cargo = document.getElementById('prof-cargo').value.trim();
             const cpf = (document.getElementById('prof-cpf').value || '').replace(/\D/g, '');
@@ -2570,6 +2585,141 @@ const App = {
                '<span class="text-[9px] font-black text-amber-400 align-super">+' + (n - 1) + '</span>';
     },
 
+// ===== MODELO DE AGENDA DO SALAO (preferencia no banco) =====
+    async salvarModeloAgenda(modelo) {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { error } = await supabaseClient
+                .from('estabelecimentos')
+                .update({ modelo_agenda: modelo })
+                .eq('id', estabId);
+            if (error) throw error;
+            localStorage.setItem('hairconcept_modo_agenda', modelo);
+            UI.showToast('Modelo da agenda salvo! Ele abre assim para o salao inteiro.');
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // Le a preferencia do salao ao entrar
+    async carregarModeloAgenda() {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('estabelecimentos')
+                .select('modelo_agenda')
+                .eq('id', estabId)
+                .maybeSingle();
+            const modo = (data && data.modelo_agenda) || 'semana';
+            localStorage.setItem('hairconcept_modo_agenda', modo);
+            const sel = document.getElementById('config-modelo-agenda');
+            if (sel) sel.value = modo;
+        } catch (e) { /* segue no padrao */ }
+    },
+
+// ===== EXCLUIR CONTA (carencia de 7 dias) =====
+    async pedirExclusaoConta() {
+        const nomeSalao = (document.getElementById('config-nome-salao') || {}).value || '';
+        const digitado = prompt('EXCLUIR A CONTA\n\nSeus dados serao apagados definitivamente em 7 dias.\nDurante esse prazo voce pode entrar e cancelar.\n\nPara confirmar, digite o nome do salao:');
+        if (digitado === null) return;
+        if (String(digitado).trim().toLowerCase() !== String(nomeSalao).trim().toLowerCase()) {
+            UI.showToast('O nome digitado nao confere. Nada foi alterado.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.rpc('pedir_exclusao_conta');
+            if (error) throw error;
+            UI.showToast('Conta marcada para exclusao. Voce tem 7 dias para voltar atras.', 'success');
+            setTimeout(function () { Auth.logout(); }, 2500);
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async cancelarExclusaoConta() {
+        try {
+            const { error } = await supabaseClient.rpc('cancelar_exclusao_conta');
+            if (error) throw error;
+            UI.showToast('Exclusao cancelada. Sua conta continua ativa.', 'success');
+            this.verificarExclusaoPendente();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async verificarExclusaoPendente() {
+        const caixa = document.getElementById('aviso-exclusao');
+        if (!caixa) return;
+        try {
+            const s = await supabaseClient.auth.getSession();
+            const uid = s && s.data && s.data.session ? s.data.session.user.id : null;
+            if (!uid) return;
+            const { data } = await supabaseClient.from('estabelecimentos')
+                .select('excluido_em').eq('user_id', uid).maybeSingle();
+            if (data && data.excluido_em) {
+                const limite = new Date(data.excluido_em);
+                limite.setDate(limite.getDate() + 7);
+                const txt = document.getElementById('aviso-exclusao-data');
+                if (txt) txt.textContent = limite.toLocaleDateString('pt-BR');
+                caixa.classList.remove('hidden');
+            } else {
+                caixa.classList.add('hidden');
+            }
+        } catch (e) { /* silencioso */ }
+    },
+
+    async checarContaExcluida(session) {
+        if (!session || !session.user) return false;
+        try {
+            const { data } = await supabaseClient.from('estabelecimentos')
+                .select('excluido_em').eq('user_id', session.user.id).maybeSingle();
+            if (data && data.excluido_em) {
+                const limite = new Date(data.excluido_em);
+                limite.setDate(limite.getDate() + 7);
+                UI.showToast('Esta conta foi excluida. Os dados serao apagados em ' + limite.toLocaleDateString('pt-BR') + '.', 'error');
+                return true;
+            }
+        } catch (e) { /* segue */ }
+        return false;
+    },
+
+    // ===== MODELO DE AGENDA DO SALAO =====
+    async salvarModeloAgenda(modelo) {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { error } = await supabaseClient
+                .from('estabelecimentos').update({ modelo_agenda: modelo }).eq('id', estabId);
+            if (error) throw error;
+            localStorage.setItem('hairconcept_modo_agenda', modelo);
+            UI.showToast('Modelo da agenda salvo! Ele abre assim para o salao inteiro.');
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarModeloAgenda() {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('estabelecimentos').select('modelo_agenda').eq('id', estabId).maybeSingle();
+            const modo = (data && data.modelo_agenda) || 'semana';
+            localStorage.setItem('hairconcept_modo_agenda', modo);
+            const sel = document.getElementById('config-modelo-agenda');
+            if (sel) sel.value = modo;
+        } catch (e) { /* segue no padrao */ }
+    },
+
+    // Rotulo do modelo escolhido (mostrado no topo da agenda)
+    rotuloModeloAgenda() {
+        const m = this.modoAgendaAtual ? this.modoAgendaAtual() : 'semana';
+        if (m === 'dia') return 'Agenda do dia (todos os profissionais)';
+        return 'Semana do profissional';
+    },
+
 // ===== GRADE DA SEMANA =====
     // Seg a Sab do profissional selecionado. No celular mostra um dia por vez.
     diasDaSemana(baseISO) {
@@ -3755,7 +3905,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Link de recuperação de senha: o Supabase entrega o token na barra de endereços
     const hash = window.location.hash || '';
     const query = window.location.search || '';
-    if (/type=recovery/.test(hash) || /type=recovery/.test(query) || /code=/.test(query)) {
+    // IMPORTANTE: o Supabase poe ?code=... em QUALQUER retorno de login.
+    // Por isso so tratamos como recuperacao se for explicitamente de recuperacao.
+    const params = new URLSearchParams(query);
+    const ehRecuperacao = /type=recovery/.test(hash) ||
+                          params.get('type') === 'recovery' ||
+                          (/access_token/.test(hash) && /type=recovery/.test(hash));
+    if (ehRecuperacao) {
         if (supabaseClient && supabaseClient.auth) {
             try {
                 const { error } = await supabaseClient.auth.getSessionFromUrl
@@ -3773,6 +3929,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Admin: restaura a sessão do Supabase
     if (supabaseClient && supabaseClient.auth) {
         const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && App.checarContaExcluida && await App.checarContaExcluida(session)) {
+            await supabaseClient.auth.signOut();
+            localStorage.clear();
+            location.reload();
+            return;
+        }
         if (session && !App.user.loggedIn) {
             const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
             App.user = { loggedIn: true, role: 'admin', name: name };
