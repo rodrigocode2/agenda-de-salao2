@@ -2403,6 +2403,173 @@ const App = {
         this.renderAgendaGrid();
     },
 
+// ===== CERTIFICADOS DO PROFISSIONAL =====
+    handleFotoCertificado(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this._certFotoTemp = e.target.result;
+            const prev = document.getElementById('cert-preview');
+            if (prev) { prev.src = this._certFotoTemp; prev.classList.remove('hidden'); }
+            const nome = document.getElementById('cert-arquivo-nome');
+            if (nome) nome.textContent = file.name;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async salvarCertificado(event) {
+        if (event) event.preventDefault();
+        const curso = (document.getElementById('cert-curso') || {}).value || '';
+        const instituicao = (document.getElementById('cert-instituicao') || {}).value || '';
+        const dataConc = (document.getElementById('cert-data') || {}).value || null;
+        const link = (document.getElementById('cert-link') || {}).value || '';
+        if (!String(curso).trim()) { UI.showToast('Escreva o nome do curso.', 'error'); return; }
+        if (!this._certFotoTemp && !String(link).trim()) {
+            UI.showToast('Anexe a foto ou cole o link do certificado.', 'error');
+            return;
+        }
+        try {
+            const estabId = await this.obterEstabId();
+            const profId = localStorage.getItem('hairconcept_prof_id');
+            if (!profId) { UI.showToast('Nao encontrei o seu cadastro. Saia e entre de novo.', 'error'); return; }
+            const { error } = await supabaseClient.from('certificados').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                curso: String(curso).trim(),
+                instituicao: instituicao ? String(instituicao).trim() : null,
+                data_conclusao: dataConc || null,
+                comprovante_url: this._certFotoTemp || String(link).trim() || null
+            }]);
+            if (error) throw error;
+            this._certFotoTemp = null;
+            if (event && event.target && event.target.reset) event.target.reset();
+            const prev = document.getElementById('cert-preview');
+            if (prev) { prev.src = ''; prev.classList.add('hidden'); }
+            const nome = document.getElementById('cert-arquivo-nome');
+            if (nome) nome.textContent = '';
+            UI.showToast('Certificado salvo!');
+            this.carregarMeusCertificados();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarMeusCertificados() {
+        const lista = document.getElementById('lista-certificados');
+        if (!lista) return;
+        try {
+            const profId = localStorage.getItem('hairconcept_prof_id');
+            if (!profId) return;
+            const { data, error } = await supabaseClient
+                .from('certificados').select('*')
+                .eq('profissional_id', profId)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            const itens = data || [];
+            lista.innerHTML = '';
+            if (itens.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-[10px] text-zinc-500';
+                p.textContent = 'Nenhum certificado cadastrado ainda.';
+                lista.appendChild(p);
+                return;
+            }
+            itens.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-white/10';
+                const ehLink = c.comprovante_url && c.comprovante_url.indexOf('http') === 0;
+                let img;
+                if (ehLink) {
+                    img = document.createElement('a');
+                    img.href = c.comprovante_url;
+                    img.target = '_blank';
+                    img.rel = 'noopener';
+                    img.className = 'w-12 h-12 rounded-lg border border-white/10 shrink-0 flex items-center justify-center bg-zinc-950 text-brand-500';
+                    img.title = 'Abrir o certificado';
+                    img.innerHTML = '<i class="fa-solid fa-up-right-from-square"></i>';
+                } else {
+                    img = document.createElement('img');
+                    img.src = c.comprovante_url || FOTO_PADRAO;
+                    img.className = 'w-12 h-12 rounded-lg object-cover cursor-pointer border border-white/10 shrink-0';
+                    img.title = 'Ver certificado';
+                    img.onclick = () => App.verCertificado(c.comprovante_url, c.curso);
+                }
+                const info = document.createElement('div');
+                info.className = 'flex-1 min-w-0';
+                const h = document.createElement('p');
+                h.className = 'text-[11px] font-bold text-white truncate';
+                h.textContent = c.curso || '';
+                const sub = document.createElement('p');
+                sub.className = 'text-[9px] text-zinc-400';
+                const partes = [];
+                if (c.instituicao) partes.push(c.instituicao);
+                if (c.data_conclusao) partes.push(new Date(c.data_conclusao + 'T00:00:00').toLocaleDateString('pt-BR'));
+                sub.textContent = partes.join(' · ') || 'Certificado registrado';
+                info.appendChild(h); info.appendChild(sub);
+                const btn = document.createElement('button');
+                btn.className = 'px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[9px] font-bold uppercase hover:bg-rose-500/20 transition shrink-0';
+                btn.textContent = 'Apagar';
+                btn.onclick = () => App.apagarCertificado(c.id, c.curso);
+                card.appendChild(img); card.appendChild(info); card.appendChild(btn);
+                lista.appendChild(card);
+            });
+        } catch (e) {
+            console.warn('Nao foi possivel carregar os certificados:', e);
+        }
+    },
+
+    verCertificado(url, curso) {
+        if (!url) return;
+        const janela = window.open('', '_blank');
+        if (!janela) return;
+        janela.document.write('<html><head><title>' + (curso || 'Certificado') + '</title><style>body{margin:0;background:#18181b;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:96vw;max-height:96vh;box-shadow:0 8px 40px rgba(0,0,0,.6)}</style></head><body><img src="' + url + '" alt="Certificado"></body></html>');
+    },
+
+    async apagarCertificado(id, curso) {
+        if (!confirm('Apagar o certificado "' + (curso || '') + '"?')) return;
+        try {
+            const { error } = await supabaseClient.from('certificados').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Certificado apagado.');
+            this.carregarMeusCertificados();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarSeloCertificados() {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('certificados').select('profissional_id')
+                .eq('estabelecimento_id', estabId);
+            // Conta quantos certificados cada profissional tem
+            const mapa = {};
+            (data || []).forEach(c => {
+                if (!c.profissional_id) return;
+                mapa[c.profissional_id] = (mapa[c.profissional_id] || 0) + 1;
+            });
+            this._certPorProf = mapa;
+            this._temCertificado = new Set(Object.keys(mapa));
+        } catch (e) {
+            this._certPorProf = {};
+            this._temCertificado = new Set();
+        }
+    },
+
+    // Devolve o selo. Com 1 curso: 🎓  Com 2+: 🎓 + o numero
+    seloCertificado(profId) {
+        const n = (this._certPorProf && this._certPorProf[profId]) || 0;
+        if (n === 0) return '';
+        if (n === 1) {
+            return ' <i class="fa-solid fa-graduation-cap text-amber-400" title="1 curso registrado"></i>';
+        }
+        return ' <i class="fa-solid fa-graduation-cap text-amber-400" title="' + n + ' cursos registrados"></i>' +
+               '<span class="text-[9px] font-black text-amber-400 align-super">+' + (n - 1) + '</span>';
+    },
+
 // ===== GRADE DA SEMANA =====
     // Seg a Sab do profissional selecionado. No celular mostra um dia por vez.
     diasDaSemana(baseISO) {
@@ -2773,6 +2940,8 @@ const App = {
         if (this.user && this.user.role !== 'profissional' && !this._profsLateral) {
             this.montarLateralProfs();
         }
+        // Selos de certificado (🎓) junto das estrelas
+        if (!this._temCertificado) await this.carregarSeloCertificados();
         const estabId = localStorage.getItem('hairconcept_estab_id');
         const dataFiltro = document.getElementById('filtro-data-agenda').value;
         try {
@@ -2850,6 +3019,14 @@ const App = {
                 bloco.appendChild(nomeEl);
                 bloco.appendChild(cargoEl);
                 bloco.appendChild(linhaEst);
+                const qtdCert = (App._certPorProf && App._certPorProf[p.id]) || 0;
+                if (qtdCert > 0) {
+                    const selo = document.createElement('span');
+                    selo.className = 'text-[9px] text-amber-400 font-bold';
+                    selo.title = qtdCert === 1 ? '1 curso registrado' : (qtdCert + ' cursos registrados');
+                    selo.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> ' + qtdCert + (qtdCert === 1 ? ' curso' : ' cursos');
+                    bloco.appendChild(selo);
+                }
                 linha.appendChild(img);
                 linha.appendChild(bloco);
                 th.appendChild(linha);
@@ -3113,6 +3290,7 @@ const App = {
         const lista = document.getElementById('lista-profissionais');
         if (!lista) return;
         try {
+            await this.carregarSeloCertificados();
             const estabId = await this.obterEstabId();
             const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             if (error) {
@@ -3144,7 +3322,7 @@ const App = {
                 const info = document.createElement('div');
                 const h4 = document.createElement('h4');
                 h4.className = 'text-xs font-bold text-white';
-                h4.textContent = p.nome || '';
+                h4.innerHTML = (p.nome || '') + App.seloCertificado(p.id);
                 const pcargo = document.createElement('p');
                 pcargo.className = 'text-[10px] text-brand-500';
                 pcargo.textContent = p.cargo || '';
@@ -3609,5 +3787,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
-
