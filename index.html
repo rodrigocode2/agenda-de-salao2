@@ -1627,6 +1627,42 @@ tailwind.config = {
         Salvar Todas as Alterações
       </button>
     </form>
+
+    <!-- ===== MODELO DA AGENDA ===== -->
+    <div class="border-t border-white/10 pt-6 mt-6">
+      <h3 class="text-xs font-bold text-white uppercase mb-1"><i class="fa-solid fa-calendar-week text-brand-500 mr-1.5"></i> Modelo da Agenda</h3>
+      <p class="text-[11px] text-zinc-400 mb-3">Escolha como a agenda abre para o salão inteiro, em qualquer aparelho.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Modelo padrão</label>
+          <select id="config-modelo-agenda" onchange="App.salvarModeloAgenda(this.value)" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+            <option value="semana">Semana do profissional (Seg a Sáb)</option>
+            <option value="dia">Agenda do dia (todos os profissionais)</option>
+          </select>
+        </div>
+        <div class="p-3 rounded-xl bg-zinc-900 border border-white/10">
+          <p class="text-[10px] text-zinc-400"><strong class="text-white">Semana</strong> mostra a semana de um profissional por vez — bom para planejar.<br><strong class="text-white">Dia</strong> mostra todos lado a lado — bom para o balcão.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== AVISO DE EXCLUSÃO ===== -->
+    <div id="aviso-exclusao" class="hidden border border-rose-500/40 bg-rose-500/10 rounded-2xl p-4 mt-6">
+      <p class="text-xs font-bold text-rose-300 uppercase"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Conta marcada para exclusão</p>
+      <p class="text-[11px] text-rose-200/90 mt-1">Seus dados serão apagados definitivamente em <strong id="aviso-exclusao-data">—</strong>. Você ainda pode voltar atrás.</p>
+      <button type="button" onclick="App.cancelarExclusaoConta()" class="mt-3 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 font-bold text-[10px] uppercase transition">
+        <i class="fa-solid fa-rotate-left mr-1"></i> Cancelar exclusão
+      </button>
+    </div>
+
+    <!-- ===== ZONA DE EXCLUSÃO ===== -->
+    <div id="zona-exclusao" class="border-t border-rose-500/20 pt-6 mt-6">
+      <h3 class="text-xs font-bold text-rose-400 uppercase mb-1"><i class="fa-solid fa-user-xmark mr-1.5"></i> Excluir minha conta</h3>
+      <p class="text-[11px] text-zinc-400">Ao excluir, seus dados ficam guardados por <strong class="text-white">7 dias</strong> e depois são apagados definitivamente — agenda, clientes, profissionais, comissões e histórico. Nesse prazo você pode entrar e cancelar.</p>
+      <button type="button" onclick="App.pedirExclusaoConta()" class="mt-3 px-4 py-2 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 font-bold text-[10px] uppercase transition">
+        <i class="fa-solid fa-trash mr-1"></i> Excluir minha conta
+      </button>
+    </div>
   </div>
 </section>
 </main>
