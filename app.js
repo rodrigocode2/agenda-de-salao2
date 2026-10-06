@@ -1966,7 +1966,6 @@ const App = {
         }
         return id || null;
     },
-,
 
     // Abre a janela para colocar um serviço DENTRO de um atendimento
     abrirEncaixe(pai) {
@@ -3116,4 +3115,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
