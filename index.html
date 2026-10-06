@@ -33,7 +33,198 @@ tailwind.config = {
 <!-- Google Fonts (Space Grotesk + Syne, usadas no Tailwind) -->
 
 
-<style type="text/css">@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}</style>
+<style type="text/css">@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}
+/* ===== Barra lateral de profissionais da agenda ===== */
+.ag-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 1024px) {
+  .ag-layout { grid-template-columns: 230px 1fr; align-items: start; }
+}
+
+.ag-lateral {
+  background: rgba(24, 24, 27, 0.55);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 12px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.ag-lateral-titulo {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #ec4899;
+  letter-spacing: 0.05em;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ag-busca {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  border-radius: 0.6rem;
+  background: rgba(9, 9, 11, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 11px;
+}
+
+.ag-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s;
+  margin-bottom: 4px;
+}
+.ag-item:hover { background: rgba(255, 255, 255, 0.05); }
+.ag-item.ativo {
+  background: rgba(236, 72, 153, 0.15);
+  border-color: rgba(236, 72, 153, 0.45);
+}
+
+.ag-avatar {
+  width: 34px; height: 34px;
+  border-radius: 0.6rem;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #ec4899;
+  text-transform: uppercase;
+}
+
+.ag-item-nome {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e4e4e7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ag-lateral-toggle { display: none; }
+@media (max-width: 1023px) {
+  .ag-lateral { display: none; }
+  .ag-lateral.aberta { display: block; max-height: 60vh; }
+  .ag-lateral-toggle { display: flex; }
+}
+
+
+/* ===== Grade da Semana ===== */
+#semana-wrap { display:none; }
+.ag-modo-semana #semana-wrap { display:block; }
+
+.semana-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.semana-tabela { width:100%; border-collapse:collapse; min-width:720px; }
+
+.semana-th-hora {
+  width:54px; padding:10px 8px; text-align:left;
+  font-size:10px; font-weight:800; text-transform:uppercase;
+  color:#a1a1aa; position:sticky; left:0; background:rgba(9,9,11,0.95); z-index:2;
+}
+.semana-th {
+  padding:8px 6px; text-align:center; border-left:1px solid rgba(255,255,255,0.06);
+  font-size:10px; font-weight:800; text-transform:uppercase; color:#a1a1aa;
+}
+.semana-th.hoje { color:#ec4899; }
+.semana-th-topo { display:flex; align-items:center; justify-content:center; gap:5px; }
+.semana-dia-nome { letter-spacing:0.03em; }
+.semana-menu-btn {
+  width:20px; height:20px; border-radius:6px; border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.04); color:#a1a1aa; font-size:9px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s;
+}
+.semana-menu-btn:hover { background:rgba(236,72,153,0.2); color:#ec4899; border-color:rgba(236,72,153,0.4); }
+
+.semana-linha { border-bottom:1px solid rgba(255,255,255,0.04); }
+.semana-hora {
+  padding:4px 8px; font-size:10px; font-weight:800; color:#ec4899;
+  position:sticky; left:0; background:rgba(9,9,11,0.95); z-index:1; vertical-align:top; width:54px;
+}
+.semana-cel {
+  border-left:1px solid rgba(255,255,255,0.05); padding:1px; vertical-align:top;
+  height:26px; position:relative;
+}
+
+.semana-livre {
+  width:100%; height:24px; border:0; background:transparent; cursor:pointer;
+  border-radius:5px; transition:background .15s;
+}
+.semana-livre:hover { background:rgba(236,72,153,0.12); }
+
+.semana-ag {
+  border-radius:6px; padding:2px 5px; overflow:hidden;
+  border:1px solid; display:flex; flex-direction:column; gap:0;
+  cursor:pointer; transition:filter .15s;
+}
+.semana-ag:hover { filter:brightness(1.25); }
+.semana-ag-cli { font-size:9.5px; font-weight:800; color:#fff; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.semana-ag-sv { font-size:8.5px; opacity:.9; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.semana-ag-hr { font-size:8px; opacity:.75; line-height:1.1; }
+
+.semana-ag-cont { border-radius:4px; height:24px; border:1px solid; opacity:.75; }
+
+/* Fechado na grade (bloqueio) */
+.semana-ag.fechado, .semana-ag-cont.fechado {
+  background: repeating-linear-gradient(45deg, rgba(120,120,130,.18), rgba(120,120,130,.18) 5px, rgba(120,120,130,.06) 5px, rgba(120,120,130,.06) 10px);
+  border-color: rgba(161,161,170,.35); color:#a1a1aa;
+}
+
+/* ===== Menu do dia (≡) ===== */
+#menu-dia-pop {
+  position:fixed; z-index:80; width:230px;
+  background:rgba(24,24,27,0.98); backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.12); border-radius:0.9rem;
+  padding:12px; box-shadow:0 16px 48px rgba(0,0,0,.6);
+}
+#menu-dia-pop .md-rot { font-size:10px; font-weight:800; text-transform:uppercase; color:#ec4899; margin-bottom:10px; }
+#menu-dia-pop label { display:block; font-size:9px; font-weight:700; text-transform:uppercase; color:#a1a1aa; margin:8px 0 3px; }
+#menu-dia-pop select, #menu-dia-pop input[type=time] {
+  width:100%; padding:6px 8px; border-radius:0.6rem; background:rgba(9,9,11,.7);
+  border:1px solid rgba(255,255,255,.1); color:#fff; font-size:11px;
+}
+#menu-dia-pop .md-linha { display:flex; gap:6px; }
+#menu-dia-pop .md-linha > div { flex:1; }
+.md-btn {
+  width:100%; padding:7px; border-radius:0.6rem; border:1px solid; cursor:pointer;
+  font-size:10px; font-weight:800; text-transform:uppercase; margin-top:9px; transition:all .15s;
+}
+.md-btn.principal { background:rgba(236,72,153,.15); border-color:rgba(236,72,153,.45); color:#ec4899; }
+.md-btn.principal:hover { background:rgba(236,72,153,.3); color:#fff; }
+.md-btn.neutro { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.14); color:#d4d4d8; }
+.md-btn.neutro:hover { background:rgba(255,255,255,.1); }
+.md-check { display:flex; align-items:center; gap:6px; margin-top:9px; font-size:10px; color:#d4d4d8; }
+
+/* ===== Botoes Dia / Semana ===== */
+.modo-btn {
+  padding:6px 12px; border-radius:0.7rem; border:1px solid rgba(255,255,255,0.1);
+  background:rgba(24,24,27,.8); color:#a1a1aa; font-size:10px; font-weight:800;
+  text-transform:uppercase; cursor:pointer; transition:all .15s;
+}
+.modo-btn.ativo { background:rgba(236,72,153,.15); border-color:rgba(236,72,153,.45); color:#ec4899; }
+
+/* Celular: a semana mostra um dia por vez */
+@media (max-width: 767px) {
+  .semana-tabela { min-width:0; width:100%; }
+  .semana-th, .semana-cel { display:none; }
+  .semana-th.mostrando, .semana-cel.mostrando { display:table-cell; }
+  .semana-th.mostrando { width:100%; }
+  .semana-th-hora, .semana-hora { width:48px; }
+}
+
+</style>
 <!-- FontAwesome CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="style.css">
@@ -865,64 +1056,7 @@ tailwind.config = {
         </div>
       </div>
 
-<div class="p-5 rounded-2xl bg-zinc-900/60 border border-brand-500/25 space-y-4">
-      <div>
-        <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-folder-open text-brand-500 mr-1.5"></i> Pasta Sanitária — o que a fiscalização pede</h3>
-        <p class="text-[11px] text-zinc-400 mt-1">A Vigilância Sanitária do município chega com uma lista e pede documento. Cada item abaixo abre a fonte oficial. Confirme sempre as exigências da sua cidade — o que vale nacionalmente pode ser mais rígido no seu município.</p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Sobre o salão em si</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Página oficial da Anvisa: como saber se o produto é autorizado, produtos irregulares e proibidos, e como relatar problemas.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica/produtos-alisantes-e-ondulantes-para-cabelo" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Alisantes e o formol</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Formol e glutaraldeído não podem ser usados como alisantes. Adicionar formol a um produto pronto é infração sanitária e crime hediondo.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/perguntas-e-respostas-servicos-de-embelezamento" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Dúvidas sobre o seu serviço</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Perguntas e respostas dos serviços de embelezamento. É onde a Anvisa explica se existe lei federal obrigando autoclave.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/rdc-222-de-marco-de-2018-comentada.pdf/view" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Descarte de resíduos</p>
-          <p class="text-[10px] text-zinc-400 mt-1">RDC 222/2018 comentada: a classificação dos resíduos e todas as etapas, da segregação ao destino final. Lâmina e agulha não vão no lixo comum.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://sebrae.com.br/sites/PortalSebrae/artigos/conheca-as-boas-praticas-para-saloes-de-beleza,1d978041d13b2510VgnVCM1000004c00210aRCRD" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Manual de Boas Práticas</p>
-          <p class="text-[10px] text-zinc-400 mt-1">O Sebrae explica as boas práticas do salão e indica o guia da ABNT específico do setor, com o roteiro de instalações e rotinas.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Sebrae →</span>
-        </a>
-
-        <a href="https://www.gov.br/saude/pt-br/vacinacao" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Vacinação do profissional</p>
-          <p class="text-[10px] text-zinc-400 mt-1">A fiscalização confere o calendário de vacinação, em especial Hepatite B e tétano. Veja como atualizar a caderneta.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Gov.br →</span>
-        </a>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/25">
-        <p class="text-[10px] text-amber-200/90"><strong class="text-amber-400">Alvará e licença sanitária:</strong> são emitidos pela prefeitura e pela Vigilância Sanitária do seu município — não existe link nacional para isso. Procure "Vigilância Sanitária" no site da sua prefeitura para ver como solicitar e renovar.</p>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-brand-500/5 border border-brand-500/25 flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <p class="text-[11px] font-bold text-white uppercase">Baixar o POP pronto</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Os cinco procedimentos essenciais e as fichas de registro do ciclo da autoclave, no nome do estabelecimento.</p>
-        </div>
-        <a href="pop-biosseguranca-salao.pdf" download class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-[10px] font-bold uppercase transition whitespace-nowrap"><i class="fa-solid fa-download mr-1"></i> Baixar PDF</a>
-      </div>
-    </div>
-
-    <p class="text-[10px] text-zinc-500 border-t border-white/10 pt-4">Os cursos gratuitos têm certificado válido como capacitação, mas não conferem habilitação técnica. Para o salão se proteger numa fiscalização, prefira os cursos do Senac.</p>
+<p class="text-[10px] text-zinc-500 border-t border-white/10 pt-4">Os cursos gratuitos têm certificado válido como capacitação, mas não conferem habilitação técnica. Para o salão se proteger numa fiscalização, prefira os cursos do Senac.</p>
   </div>
 </details>
 
@@ -971,6 +1105,9 @@ tailwind.config = {
       <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
       <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-right"></i></button>
       <button onclick="App.irParaHoje()" class="px-3 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-xs font-bold text-brand-400 hover:bg-brand-500/30 transition">Hoje</button>
+      <span class="hidden sm:inline-block w-px h-5 bg-white/10 mx-1"></span>
+      <button id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="modo-btn ativo">Dia</button>
+      <button id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="modo-btn">Semana</button>
     </div>
     <div class="flex items-center gap-3">
       <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
@@ -984,16 +1121,77 @@ tailwind.config = {
     </div>
   </div>
 
-  <!-- TABELA DA AGENDA -->
-  <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
-    <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
-      <thead>
-        <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
-          <th class="py-3 px-4 w-24">Horário</th>
-        </tr>
-      </thead>
-      <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
-    </table>
+  <!-- BARRA DE PROFISSIONAIS (mobile) -->
+  <button onclick="document.getElementById('ag-lateral').classList.toggle('aberta')" class="ag-lateral-toggle lg:hidden w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white uppercase items-center justify-between">
+    <span><i class="fa-solid fa-users text-brand-500 mr-2"></i> Profissionais</span>
+    <i class="fa-solid fa-chevron-down text-zinc-500"></i>
+  </button>
+
+  <!-- MENU DO DIA (≡) -->
+  <div id="menu-dia-pop" class="hidden">
+    <p id="menu-dia-rotulo" class="md-rot">Dia</p>
+
+    <label>Motivo</label>
+    <select id="menu-dia-motivo">
+      <option value="Fechado">Fechado</option>
+      <option value="Folga">Folga</option>
+      <option value="Feriado">Feriado</option>
+      <option value="Almoço">Almoço</option>
+      <option value="Manutenção">Manutenção</option>
+      <option value="Curso">Curso</option>
+    </select>
+
+    <div class="md-check">
+      <input type="checkbox" id="menu-dia-todos">
+      <label for="menu-dia-todos" style="margin:0;">Só o profissional selecionado</label>
+    </div>
+
+    <button type="button" class="md-btn principal" onclick="App.fecharAgendaDia()"><i class="fa-solid fa-lock mr-1"></i> Fechar o dia</button>
+
+    <label>Fechar um intervalo</label>
+    <div class="md-linha">
+      <div><input type="time" id="menu-dia-de" value="12:00"></div>
+      <div><input type="time" id="menu-dia-ate" value="13:00"></div>
+    </div>
+    <button type="button" class="md-btn neutro" onclick="App.fecharAgendaIntervalo()"><i class="fa-solid fa-clock mr-1"></i> Fechar intervalo</button>
+
+    <button type="button" class="md-btn neutro" onclick="App.trocarModoAgenda('dia')"><i class="fa-solid fa-list mr-1"></i> Ver este dia</button>
+  </div>
+
+  <!-- AGENDA: LATERAL + GRADE -->
+  <div class="ag-layout ag-modo-dia" id="agenda-modos">
+    <aside id="ag-lateral" class="ag-lateral">
+      <p class="ag-lateral-titulo">Profissionais</p>
+      <input type="text" id="ag-busca-prof" class="ag-busca" placeholder="Buscar..." oninput="App.filtrarLateralProfs(this.value)">
+      <div id="ag-lista-profs"></div>
+    </aside>
+
+    <div class="space-y-6">
+      <!-- MODO DIA: a agenda de sempre -->
+      <div id="agenda-modo-dia" class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
+        <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
+          <thead>
+            <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
+              <th class="py-3 px-4 w-24">Horário</th>
+            </tr>
+          </thead>
+          <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
+        </table>
+      </div>
+
+      <!-- MODO SEMANA: a visão nova -->
+      <div id="agenda-modo-semana" class="hidden">
+        <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 shadow-2xl">
+          <div class="semana-scroll">
+            <table class="semana-tabela">
+              <thead><tr id="semana-cabecalho" class="bg-zinc-950/90 border-b border-white/10"></tr></thead>
+              <tbody id="semana-corpo" class="semana-corpo"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="text-[10px] text-zinc-500 mt-3"><i class="fa-solid fa-circle-info mr-1"></i> Toque no <strong class="text-zinc-300">≡</strong> de cada dia para fechar o dia, fechar um intervalo ou abrir a agenda detalhada. No celular, a semana mostra um dia por vez.</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1379,6 +1577,70 @@ tailwind.config = {
     </div>
     <div id="lista-avisos" class="space-y-3"></div>
   </div>
+
+  <!-- ===== DOCUMENTOS DO SALÃO (dono) ===== -->
+  <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h2 class="text-lg font-bold uppercase text-white"><i class="fa-solid fa-shield-virus text-brand-500 mr-2"></i>Documentos do Salão</h2>
+        <p class="text-[11px] text-zinc-400">O que a fiscalização sanitária pede. Fica aqui, na área do estabelecimento — é documento do salão, não do profissional.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10">
+        <p class="text-[11px] font-bold text-white uppercase"><i class="fa-solid fa-file-lines text-brand-500 mr-1.5"></i> POP — Procedimento Operacional Padrão</p>
+        <p class="text-[10px] text-zinc-400 mt-1">Os cinco procedimentos essenciais e as fichas de registro do ciclo da autoclave.</p>
+        <a href="pop-biosseguranca-salao.pdf" download class="bio-btn mt-3"><i class="fa-solid fa-download mr-1"></i> Baixar PDF</a>
+      </div>
+      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10">
+        <p class="text-[11px] font-bold text-white uppercase"><i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1.5"></i> Alvará e Licença Sanitária</p>
+        <p class="text-[10px] text-zinc-400 mt-1">Emitidos pela prefeitura e pela Vigilância do seu município. Procure "Vigilância Sanitária" no site da sua prefeitura para solicitar e renovar.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
+          <p class="text-[11px] font-bold text-white uppercase">Sobre o salão em si</p>
+          <p class="text-[10px] text-zinc-400 mt-1">Página oficial da Anvisa: como saber se o produto é autorizado, produtos irregulares e proibidos, e como relatar problemas.</p>
+          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
+        </a>
+
+        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica/produtos-alisantes-e-ondulantes-para-cabelo" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
+          <p class="text-[11px] font-bold text-white uppercase">Alisantes e o formol</p>
+          <p class="text-[10px] text-zinc-400 mt-1">Formol e glutaraldeído não podem ser usados como alisantes. Adicionar formol a um produto pronto é infração sanitária e crime hediondo.</p>
+          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
+        </a>
+
+        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/perguntas-e-respostas-servicos-de-embelezamento" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
+          <p class="text-[11px] font-bold text-white uppercase">Dúvidas sobre o seu serviço</p>
+          <p class="text-[10px] text-zinc-400 mt-1">Perguntas e respostas dos serviços de embelezamento. É onde a Anvisa explica se existe lei federal obrigando autoclave.</p>
+          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
+        </a>
+
+        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/rdc-222-de-marco-de-2018-comentada.pdf/view" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
+          <p class="text-[11px] font-bold text-white uppercase">Descarte de resíduos</p>
+          <p class="text-[10px] text-zinc-400 mt-1">RDC 222/2018 comentada: a classificação dos resíduos e todas as etapas, da segregação ao destino final. Lâmina e agulha não vão no lixo comum.</p>
+          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
+        </a>
+
+        <a href="https://sebrae.com.br/sites/PortalSebrae/artigos/conheca-as-boas-praticas-para-saloes-de-beleza,1d978041d13b2510VgnVCM1000004c00210aRCRD" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
+          <p class="text-[11px] font-bold text-white uppercase">Manual de Boas Práticas</p>
+          <p class="text-[10px] text-zinc-400 mt-1">O Sebrae explica as boas práticas do salão e indica o guia da ABNT específico do setor, com o roteiro de instalações e rotinas.</p>
+          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Sebrae →</span>
+        </a>
+
+        <a href="https://www.gov.br/saude/pt-br/vacinacao" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
+          <p class="text-[11px] font-bold text-white uppercase">Vacinação do profissional</p>
+          <p class="text-[10px] text-zinc-400 mt-1">A fiscalização confere o calendário de vacinação, em especial Hepatite B e tétano. Veja como atualizar a caderneta.</p>
+          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Gov.br →</span>
+        </a>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/25">
+        <p class="text-[10px] text-amber-200/90"><strong class="text-amber-400">Alvará e licença sanitária:</strong> são emitidos pela prefeitura e pela Vigilância Sanitária do seu município — não existe link nacional para isso. Procure "Vigilância Sanitária" no site da sua prefeitura para ver como solicitar e renovar.</p>
+      </div>
+  </div>
 </section>
 
 <!-- CLIENTES CADASTRADOS -->
@@ -1476,6 +1738,44 @@ function handleParticles() {
     requestAnimationFrame(handleParticles);
 }
 handleParticles();
+</script>
+
+
+<script>
+// No celular, a grade da semana mostra UM dia por vez, e deslizar troca de dia.
+(function () {
+  var diaAtivo = 0;
+  function aplicarDia() {
+    var cels = document.querySelectorAll('#semana-corpo .semana-cel');
+    var cabs = document.querySelectorAll('#semana-cabecalho .semana-th');
+    if (!cabs.length) return;
+    var n = cabs.length;
+    if (diaAtivo < 0) diaAtivo = n - 1;
+    if (diaAtivo >= n) diaAtivo = 0;
+    cels.forEach(function (c, i) { c.classList.toggle('mostrando', (i % n) === diaAtivo); });
+    cabs.forEach(function (c, i) { c.classList.toggle('mostrando', i === diaAtivo); });
+  }
+  window.__aplicarDiaSemana = aplicarDia;
+
+  var x0 = null;
+  var alvo = document.getElementById('agenda-modo-semana');
+  if (alvo) {
+    alvo.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    alvo.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 45) { diaAtivo += (dx < 0 ? 1 : -1); aplicarDia(); }
+      x0 = null;
+    }, { passive: true });
+  }
+
+  // Reaplica sempre que a semana for redesenhada
+  var orig = window.renderAgendaSemanaHook;
+  var obs = new MutationObserver(function () { if (window.innerWidth < 768) aplicarDia(); });
+  var corpo = document.getElementById('semana-corpo');
+  if (corpo) obs.observe(corpo, { childList: true });
+  if (window.innerWidth < 768) setTimeout(aplicarDia, 400);
+})();
 </script>
 
 <!-- Script Principal -->
