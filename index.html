@@ -224,6 +224,19 @@ tailwind.config = {
   .semana-th-hora, .semana-hora { width:48px; }
 }
 
+
+/* ===== Certificados do profissional ===== */
+.cert-bloco { }
+.cert-preview-box {
+  width:100%; height:110px; border-radius:0.8rem; overflow:hidden;
+  background:rgba(9,9,11,.6); border:1px dashed rgba(255,255,255,.18);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:border-color .15s;
+}
+.cert-preview-box:hover { border-color:rgba(236,72,153,.5); }
+.cert-preview-box img { width:100%; height:100%; object-fit:contain; }
+.cert-selo { color:#fbbf24; }
+
 </style>
 <!-- FontAwesome CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -768,6 +781,46 @@ tailwind.config = {
           </div>
         </div>
       </div>
+      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4 cert-bloco md:col-span-3">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-graduation-cap text-amber-400 mr-1.5"></i> Meus Certificados</h3>
+          <span class="text-[9px] text-zinc-500 uppercase">Selo 🎓 aparece na sua agenda</span>
+        </div>
+
+        <form onsubmit="App.salvarCertificado(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Curso *</label>
+            <input id="cert-curso" type="text" required placeholder="Ex: Biossegurança em Salão" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Instituição</label>
+            <input id="cert-instituicao" type="text" placeholder="Ex: Senac" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Conclusão</label>
+            <input id="cert-data" type="date" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Foto do certificado</label>
+            <label class="cert-preview-box">
+              <img id="cert-preview" class="hidden" alt="Certificado">
+              <span id="cert-arquivo-nome" class="text-[10px] text-zinc-500">Foto do certificado (ou use o link ao lado)</span>
+              <input type="file" accept="image/*" onchange="App.handleFotoCertificado(event)" class="hidden">
+            </label>
+          </div>
+          <div class="sm:col-span-2 flex flex-col">
+            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Ou cole o link do certificado</label>
+            <input id="cert-link" type="url" placeholder="https://..." class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+            <button type="submit" class="w-full mt-3 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 font-bold text-[10px] uppercase tracking-wider transition">
+              <i class="fa-solid fa-plus mr-1"></i> Adicionar certificado
+            </button>
+          </div>
+        </form>
+
+        <div id="lista-certificados" class="space-y-2"></div>
+      </div>
+
       <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4 flex flex-col justify-between">
         <div>
           <h3 class="text-xs font-bold text-white uppercase mb-2"><i class="fa-solid fa-mug-hot text-amber-500 mr-1.5"></i> Intervalos & Pausas</h3>
@@ -780,7 +833,22 @@ tailwind.config = {
       </div>
     </div>
 
-    <!-- BIOSSEGURANÇA -->
+    <script>
+  // Carrega "Meus Certificados" quando a aba do profissional aparece
+  (function () {
+    var alvo = document.getElementById('lista-certificados');
+    if (!alvo) return;
+    var t = setInterval(function () {
+      if (window.App && App.user && App.user.role === 'profissional') {
+        App.carregarMeusCertificados();
+        clearInterval(t);
+      }
+    }, 800);
+    setTimeout(function () { clearInterval(t); }, 15000);
+  })();
+  </script>
+
+  <!-- BIOSSEGURANÇA -->
 <details id="painel-biosseguranca" class="p-5 rounded-2xl bg-zinc-950 border border-white/10 md:col-span-3">
   <summary class="cursor-pointer list-none flex items-center justify-between">
     <span class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-shield-virus text-brand-500 mr-1.5"></i> Biossegurança & Capacitação</span>
@@ -1782,4 +1850,3 @@ handleParticles();
 <script src="app.js"></script>
 </body>
 </html>
-
