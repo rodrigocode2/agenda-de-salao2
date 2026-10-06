@@ -3353,7 +3353,7 @@ const App = {
 
         const linksPagamento = {
             mensal: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=c6608384109b43c787b82d8f9646331f',
-            anual: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=SEU_PLANO_ANUAL_ID_AQUI' 
+            anual: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=ba575f230a314a8c8446da6d3832fe3d' 
         };
 
         const linkCheckout = linksPagamento[plano];
@@ -3609,4 +3609,5 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
 
