@@ -237,6 +237,21 @@ tailwind.config = {
 .cert-preview-box img { width:100%; height:100%; object-fit:contain; }
 .cert-selo { color:#fbbf24; }
 
+
+/* Botao de fechar do modal sempre visivel, mesmo com rolagem */
+.modal-caixa { position: relative; }
+.modal-caixa .modal-x-fixo {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  float: right;
+  margin: -4px -4px 0 0;
+  background: rgba(24, 24, 27, 0.95);
+  border-radius: 0.6rem;
+  padding: 4px 8px;
+}
+.modal-overlay { overflow-y: auto; }
+
 </style>
 <!-- FontAwesome CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1268,7 +1283,7 @@ tailwind.config = {
   <div class="modal-caixa">
     <div class="flex items-center justify-between mb-5">
       <h3 class="text-base font-bold uppercase text-white">Marcar Atendimento</h3>
-      <button type="button" onclick="Auth.fecharModal('modal-marcar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" onclick="Auth.fecharModal('modal-marcar')" class="modal-x-fixo text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
       <div>
@@ -1322,7 +1337,7 @@ tailwind.config = {
       </div>
     </div>
     <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
-      <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
+            <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
         <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center relative">
           <img id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
           <i id="icon-foto-prof" class="fa-solid fa-user text-zinc-600 text-2xl"></i>
@@ -1330,6 +1345,7 @@ tailwind.config = {
         <div class="flex-grow space-y-1">
           <label class="block text-xs uppercase font-bold text-zinc-400">Foto de Perfil</label>
           <input type="file" id="prof-foto-file" accept="image/*" onchange="App.handleFotoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800">
+          <p class="text-[10px] text-zinc-500">Se não colocar agora, o profissional pode enviar depois na aba dele.</p>
         </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
