@@ -12,7 +12,21 @@ function mensagemAmigavel(err) {
     const codigo = String((err && err.code) ? err.code : '');
     const txt = (bruto + ' ' + codigo).toLowerCase();
     console.warn('Erro tecnico:', bruto, codigo);
-    if (txt.indexOf('rate limit') >= 0) return 'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
+    if (codigo === '429' || codigo === 'over_email_send_rate_limit' || codigo === 'over_request_rate_limit') {
+        return 'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
+    }
+    if (txt.indexOf('rate limit') >= 0 || txt.indexOf('too many') >= 0 || txt.indexOf('429') >= 0) {
+        return 'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
+    }
+    if (txt.indexOf('email address') >= 0 && txt.indexOf('invalid') >= 0) {
+        return 'O e-mail interno nao foi aceito pelo servidor. Avise o suporte.';
+    }
+    if (txt.indexOf('signup') >= 0 && txt.indexOf('disabled') >= 0) {
+        return 'O cadastro de novos acessos esta desligado no servidor. Avise o suporte.';
+    }
+    if (txt.indexOf('database error') >= 0 || txt.indexOf('saving new user') >= 0) {
+        return 'O servidor recusou gravar este cadastro. Tente de novo em instantes.';
+    }
     if (codigo === '23505' || txt.indexOf('duplicate key') >= 0) return 'Este registro ja existe. Confira os dados e tente de novo.';
     if (codigo === '23503' || txt.indexOf('foreign key') >= 0) return 'Este item tem historico ligado a ele e nao pode ser apagado.';
     if (txt.indexOf('row-level security') >= 0) return 'Voce nao tem permissao para esta acao. Saia e entre de novo.';
@@ -50,6 +64,14 @@ document.addEventListener('click', function (ev) {
             if (!pop.contains(ev.target)) pop.classList.add('hidden');
         }
     }
+});
+
+// Fecha qualquer modal aberto com a tecla Esc
+document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    document.querySelectorAll('.modal-overlay').forEach(function (m) {
+        if (!m.classList.contains('hidden')) m.classList.add('hidden');
+    });
 });
 
 const Auth = {
@@ -509,6 +531,8 @@ const App = {
                         .from('estabelecimentos')
                         .select('id')
                         .eq('user_id', session.user.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
                         .maybeSingle();
                     if (erroEstab) console.error('Erro ao buscar o salão:', erroEstab);
                     if (estab) {
@@ -580,7 +604,7 @@ const App = {
                     password: senha
                 });
                 if (erroConta) {
-                    console.error('Conta interna nao criada:', erroConta.message);
+                    console.error('Conta interna nao criada:', erroConta.message, erroConta.status, erroConta.code);
                     UI.showToast('Nao consegui criar o acesso deste profissional. ' + mensagemAmigavel(erroConta), 'error');
                     return;
                 }
@@ -1751,6 +1775,8 @@ const App = {
                         .from('estabelecimentos')
                         .select('id')
                         .eq('user_id', session.user.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
                         .maybeSingle();
                     if (estab) {
                         estabId = estab.id;
@@ -1990,10 +2016,13 @@ const App = {
                     .maybeSingle();
                 if (confere && confere.id) return id;
             }
+            // Se o guardado nao serve, pega o salao MAIS RECENTE da conta
+            // (contas com varios estabelecimentos abriam o errado)
             const { data: estab } = await supabaseClient
                 .from('estabelecimentos')
                 .select('id')
                 .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
             if (estab && estab.id) {
@@ -3949,4 +3978,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
