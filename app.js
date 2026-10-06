@@ -42,6 +42,16 @@ function parseValor(valorStr) {
     return parseFloat(limpo) || 0;
 }
 
+// Fecha o menu do dia ao clicar fora
+document.addEventListener('click', function (ev) {
+    const pop = document.getElementById('menu-dia-pop');
+    if (pop && !pop.classList.contains('hidden')) {
+        if (!pop.contains(ev.target) && !ev.target.closest || !ev.target.closest('.semana-menu-btn')) {
+            if (!pop.contains(ev.target)) pop.classList.add('hidden');
+        }
+    }
+});
+
 const Auth = {
     logout() {
         localStorage.removeItem('hairconcept_estab_id');
@@ -307,6 +317,12 @@ const App = {
     },
     async finishLogin(msg) {
         if (msg) UI.showToast(msg);
+        // Restaura o modo de agenda salvo (dia ou semana)
+        try {
+            if (this.modoAgendaAtual && this.modoAgendaAtual() === 'semana') {
+                setTimeout(function () { App.trocarModoAgenda('semana'); }, 600);
+            }
+        } catch (e) { /* segue no modo dia */ }
         document.getElementById('aba-login')?.classList.add('hidden');
         document.getElementById('main-header')?.classList.remove('hidden');
         UI.switchTab('aba-agenda');
@@ -508,9 +524,17 @@ const App = {
                 .eq('estabelecimento_id', idSalao);
             if (countError) throw countError;
             
+            // O limite vem do BANCO (funcao meu_limite_profissionais). O navegador e so reserva.
             let limiteMaximo = 2;
-            if (planoAtual === 'mensal') limiteMaximo = 10;
-            if (planoAtual === 'anual') limiteMaximo = 50;
+            try {
+                const { data: lim } = await supabaseClient.rpc('meu_limite_profissionais');
+                if (lim && Number(lim) > 0) limiteMaximo = Number(lim);
+                else if (planoAtual === 'mensal') limiteMaximo = 10;
+                else if (planoAtual === 'anual') limiteMaximo = 30;
+            } catch (e) {
+                if (planoAtual === 'mensal') limiteMaximo = 10;
+                else if (planoAtual === 'anual') limiteMaximo = 30;
+            }
 
             if (count >= limiteMaximo) {
                 UI.showToast(`Limite atingido! O plano atual permite apenas ${limiteMaximo} profissionais.`, 'error');
@@ -2281,10 +2305,474 @@ const App = {
             UI.showToast('Nao consegui marcar o atendimento. ' + mensagemAmigavel(e), 'error');
         }
     },
+    // ===== BARRA LATERAL DE PROFISSIONAIS =====
+    // Monta a lista de profissionais na lateral da agenda.
+    // A foto vem da aba do profissional; sem foto, mostra as duas iniciais.
+    iniciaisDoNome(nome) {
+        const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
+        if (partes.length === 0) return '?';
+        if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+        return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+    },
+
+    async montarLateralProfs() {
+        const lista = document.getElementById('ag-lista-profs');
+        if (!lista) return;
+        try {
+            const estabId = await this.obterEstabId();
+            const { data } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome, cargo, foto_url, ativo')
+                .eq('estabelecimento_id', estabId);
+
+            let profs = (data || []).filter(function (p) { return p.ativo !== false; });
+            profs.sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'); });
+
+            this._profsLateral = profs;
+
+            // Se ninguem estiver selecionado, pega o primeiro
+            const selecionado = localStorage.getItem('hairconcept_prof_selecionado');
+            if (!selecionado || !profs.some(function (p) { return p.id === selecionado; })) {
+                if (profs.length > 0) localStorage.setItem('hairconcept_prof_selecionado', profs[0].id);
+            }
+
+            this.desenharLateralProfs(profs);
+        } catch (e) {
+            console.warn('Nao foi possivel montar a barra de profissionais:', e);
+        }
+    },
+
+    desenharLateralProfs(profs) {
+        const lista = document.getElementById('ag-lista-profs');
+        if (!lista) return;
+        const selecionado = localStorage.getItem('hairconcept_prof_selecionado');
+        const comNome = profs.length <= 15;
+
+        lista.innerHTML = '';
+        if (profs.length === 0) {
+            const p = document.createElement('p');
+            p.className = 'text-[10px] text-zinc-500 px-1';
+            p.textContent = 'Nenhum profissional ativo.';
+            lista.appendChild(p);
+            return;
+        }
+
+        profs.forEach(function (pf) {
+            const item = document.createElement('div');
+            item.className = 'ag-item' + (pf.id === selecionado ? ' ativo' : '');
+            item.title = (pf.nome || '') + (pf.cargo ? ' - ' + pf.cargo : '');
+            item.onclick = function () { App.selecionarProfAgenda(pf.id); };
+
+            const av = document.createElement('div');
+            av.className = 'ag-avatar';
+            if (pf.foto_url) {
+                const img = document.createElement('img');
+                img.src = pf.foto_url;
+                img.className = 'w-full h-full rounded-[inherit] object-cover';
+                av.appendChild(img);
+            } else {
+                av.textContent = App.iniciaisDoNome(pf.nome);
+            }
+            item.appendChild(av);
+
+            if (comNome) {
+                const nome = document.createElement('span');
+                nome.className = 'ag-item-nome';
+                nome.textContent = pf.nome || '';
+                item.appendChild(nome);
+            }
+
+            lista.appendChild(item);
+        });
+    },
+
+    filtrarLateralProfs(termo) {
+        const t = String(termo || '').toLowerCase();
+        const todos = this._profsLateral || [];
+        const filtrados = todos.filter(function (p) {
+            return String(p.nome || '').toLowerCase().indexOf(t) >= 0;
+        });
+        this.desenharLateralProfs(filtrados);
+    },
+
+    selecionarProfAgenda(id) {
+        localStorage.setItem('hairconcept_prof_selecionado', id);
+        const lateral = document.getElementById('ag-lateral');
+        if (lateral) lateral.classList.remove('aberta');
+        this.montarLateralProfs();
+        this.renderAgendaGrid();
+    },
+
+// ===== GRADE DA SEMANA =====
+    // Seg a Sab do profissional selecionado. No celular mostra um dia por vez.
+    diasDaSemana(baseISO) {
+        // baseISO = qualquer data da semana; retorna o domingo anterior (inicio da semana)
+        const d = new Date((baseISO || dataLocalISO()) + 'T00:00:00');
+        const dow = d.getDay(); // 0=dom
+        const inicio = new Date(d);
+        inicio.setDate(d.getDate() - dow);
+        const dias = [];
+        for (let i = 1; i <= 6; i++) { // 1=seg .. 6=sab
+            const x = new Date(inicio);
+            x.setDate(inicio.getDate() + i);
+            dias.push(dataLocalISO(x));
+        }
+        return dias;
+    },
+
+    nomeDiaCurto(iso) {
+        const d = new Date(iso + 'T00:00:00');
+        const nomes = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+        const num = String(d.getDate()).padStart(2, '0');
+        return nomes[d.getDay()] + ' ' + num;
+    },
+
+    // Desenha a grade da semana do profissional selecionado
+    async renderAgendaSemana() {
+        const wrap = document.getElementById('semana-wrap');
+        const cab = document.getElementById('semana-cabecalho');
+        const corpo = document.getElementById('semana-corpo');
+        if (!wrap || !cab || !corpo) return;
+
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+
+            const { data: profsTodos } = await supabaseClient
+                .from('profissionais').select('id, nome')
+                .eq('estabelecimento_id', estabId);
+            const ativos = (profsTodos || []).filter(function (p) { return true; });
+
+            // Profissional da semana: o selecionado na lateral, ou o proprio (se for profissional)
+            let profId = null;
+            if (this.user.role === 'profissional') {
+                profId = this.user.id;
+            } else {
+                profId = localStorage.getItem('hairconcept_prof_selecionado');
+            }
+            if (!profId || !ativos.some(function (p) { return p.id === profId; })) {
+                profId = ativos.length > 0 ? ativos[0].id : null;
+            }
+            this._profSemana = profId;
+
+            if (!profId) {
+                cab.innerHTML = '';
+                corpo.innerHTML = '<tr><td class="py-6 px-4 text-center text-zinc-500 text-xs">Cadastre um profissional para ver a semana.</td></tr>';
+                return;
+            }
+
+            // Data de referencia (o campo de data manda)
+            const campoData = document.getElementById('filtro-data-agenda');
+            const ref = (campoData && campoData.value) || dataLocalISO();
+            const dias = this.diasDaSemana(ref);
+
+            // Busca os agendamentos da semana inteira de uma vez
+            const { data: ags } = await supabaseClient
+                .from('agendamentos')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .eq('profissional_id', profId)
+                .gte('data', dias[0])
+                .lte('data', dias[5]);
+
+            const todos = ags || [];
+
+            // Bloqueios do periodo (fechado / folga / intervalo)
+            let bloqueios = [];
+            try {
+                const { data: bl } = await supabaseClient.rpc('bloqueios_do_periodo', { p_de: dias[0], p_ate: dias[5] });
+                bloqueios = bl || [];
+            } catch (e) {
+                // Se a funcao ainda nao existir, a grade simplesmente nao pinta bloqueio
+                console.warn('Bloqueios indisponiveis:', e);
+            }
+
+            // Descobre o bloqueio que cobre um dia (e horario, se houver)
+            const bloqueioEm = function (iso, hhmm, profIdSel) {
+                return (bloqueios || []).find(function (b) {
+                    if (b.data !== iso) return false;
+                    // prof_id nulo = salao inteiro; senao, so o profissional
+                    if (b.profissional_id && b.profissional_id !== profIdSel) return false;
+                    if (!b.hora_inicio) return true; // dia todo
+                    const hi = App.normalizarHora(b.hora_inicio);
+                    const hf = App.normalizarHora(b.hora_fim);
+                    const alvo = hhmm;
+                    return hhmm >= hi && hhmm < hf;
+                });
+            };
+            this._bloqueioEm = bloqueioEm;
+
+            // Cabecalho: dias + botao de menu por dia
+            const hoje = dataLocalISO();
+            cab.innerHTML = '';
+            const thHora = document.createElement('th');
+            thHora.className = 'semana-th-hora';
+            thHora.textContent = 'Horário';
+            cab.appendChild(thHora);
+
+            dias.forEach(function (iso, idx) {
+                const th = document.createElement('th');
+                th.className = 'semana-th' + (iso === hoje ? ' hoje' : '') + (idx === 0 ? ' primeiro' : '');
+                th.dataset.dia = iso;
+
+                const topo = document.createElement('div');
+                topo.className = 'semana-th-topo';
+                const nome = document.createElement('span');
+                nome.className = 'semana-dia-nome';
+                nome.textContent = App.nomeDiaCurto(iso);
+                topo.appendChild(nome);
+
+                const btnMenu = document.createElement('button');
+                btnMenu.type = 'button';
+                btnMenu.className = 'semana-menu-btn';
+                btnMenu.title = 'Opções do dia';
+                btnMenu.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                btnMenu.onclick = function (ev) { ev.stopPropagation(); App.abrirMenuDia(ev, iso); };
+                topo.appendChild(btnMenu);
+
+                th.appendChild(topo);
+                cab.appendChild(th);
+            });
+
+            // Corpo: horarios x dias
+            const horarios = [];
+            for (let m = 8 * 60; m < 19 * 60; m += 30) {
+                horarios.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+            }
+
+            corpo.innerHTML = '';
+            horarios.forEach(function (h, hi) {
+                const tr = document.createElement('tr');
+                tr.className = 'semana-linha';
+
+                const tdH = document.createElement('td');
+                tdH.className = 'semana-hora';
+                tdH.textContent = h;
+                tr.appendChild(tdH);
+
+                dias.forEach(function (iso, idx) {
+                    const td = document.createElement('td');
+                    td.className = 'semana-cel' + (idx === 0 ? ' primeiro' : '');
+                    td.dataset.dia = iso;
+                    td.dataset.hora = h;
+
+                    // 1) atendimento que comeca neste bloco
+                    const ag = todos.find(function (a) {
+                        return a.data === iso && App.normalizarHora(a.horario) === h;
+                    });
+                    if (ag) {
+                        const dur = App.duracaoMinutos(ag);
+                        const blocos = Math.max(1, Math.round(dur / 30));
+                        const caixa = document.createElement('div');
+                        caixa.className = 'semana-ag ' + App.classeEstado(ag.status);
+                        caixa.style.height = (blocos * 26 - 4) + 'px';
+                        const cli = document.createElement('strong');
+                        cli.className = 'semana-ag-cli';
+                        cli.textContent = ag.cliente || '';
+                        const sv = document.createElement('span');
+                        sv.className = 'semana-ag-sv';
+                        sv.textContent = ag.servico || '';
+                        const hr = document.createElement('span');
+                        hr.className = 'semana-ag-hr';
+                        hr.textContent = App.normalizarHora(ag.horario) + '-' + App.normalizarHora(ag.horario_fim || '');
+                        caixa.appendChild(cli); caixa.appendChild(sv); caixa.appendChild(hr);
+                        caixa.title = (ag.cliente || '') + ' • ' + (ag.servico || '') + ' • R$ ' + parseFloat(ag.valor || 0).toFixed(2);
+                        caixa.onclick = function (ev) { ev.stopPropagation(); App.abrirDiaDoAtendimento(iso, ag); };
+                        td.appendChild(caixa);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 2) bloco coberto por um atendimento longo (continuacao)
+                    const cobrindo = todos.find(function (a) {
+                        return a.data === iso && App.cobreHorario(a, h);
+                    });
+                    if (cobrindo) {
+                        const cont = document.createElement('div');
+                        cont.className = 'semana-ag-cont ' + App.classeEstado(cobrindo.status);
+                        cont.title = (cobrindo.cliente || '') + ' (continuação)';
+                        td.appendChild(cont);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 3) fechado pelo dono
+                    const blq = App._bloqueioEm ? App._bloqueioEm(iso, h, App._profSemana) : null;
+                    if (blq) {
+                        const f = document.createElement('div');
+                        f.className = 'semana-ag fechado';
+                        f.style.height = '24px';
+                        f.title = blq.motivo || 'Fechado';
+                        const t = document.createElement('span');
+                        t.className = 'semana-ag-cli';
+                        t.style.fontSize = '8.5px';
+                        t.textContent = blq.hora_inicio ? (App.normalizarHora(blq.hora_inicio) + ' ' + (blq.motivo || 'Fechado')) : (blq.motivo || 'Fechado');
+                        f.appendChild(t);
+                        td.appendChild(f);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 4) livre
+                    if (App.user.role === 'admin') {
+                        const b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'semana-livre';
+                        b.textContent = '';
+                        b.title = 'Marcar em ' + App.nomeDiaCurto(iso) + ' as ' + h;
+                        b.onclick = function () { App.marcarNoDia(iso, h); };
+                        td.appendChild(b);
+                    }
+                    tr.appendChild(td);
+                });
+
+                corpo.appendChild(tr);
+            });
+
+            wrap.classList.remove('hidden');
+        } catch (e) {
+            console.warn('Erro ao montar a semana:', e);
+        }
+    },
+
+    // Marca atendimento num dia/hora clicados na semana
+    marcarNoDia(iso, hora) {
+        const campoData = document.getElementById('filtro-data-agenda');
+        if (campoData) campoData.value = iso;
+        const sel = document.getElementById('agendamento-profissional');
+        if (sel && this._profSemana) sel.value = this._profSemana;
+        this.abrirMarcar(hora);
+    },
+
+    // Abre o dia do atendimento na agenda detalhada
+    abrirDiaDoAtendimento(iso, ag) {
+        const campoData = document.getElementById('filtro-data-agenda');
+        if (campoData) campoData.value = iso;
+        if (ag && ag.profissional_id) localStorage.setItem('hairconcept_prof_selecionado', ag.profissional_id);
+        this.trocarModoAgenda('dia');
+        this.renderAgendaGrid();
+    },
+
+    // ===== MENU DO DIA (≡) =====
+    abrirMenuDia(ev, iso) {
+        this._diaMenu = iso;
+        const pop = document.getElementById('menu-dia-pop');
+        if (!pop) return;
+        const rotulo = document.getElementById('menu-dia-rotulo');
+        if (rotulo) {
+            const d = new Date(iso + 'T00:00:00');
+            rotulo.textContent = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+        }
+        // periodo de horarios do intervalo
+        pop.classList.remove('hidden');
+        const r = ev.currentTarget.getBoundingClientRect();
+        const larg = 230;
+        let left = r.left - larg / 2;
+        if (left < 8) left = 8;
+        if (left + larg > window.innerWidth - 8) left = window.innerWidth - larg - 8;
+        pop.style.left = left + 'px';
+        pop.style.top = (r.bottom + 6) + 'px';
+    },
+
+    fecharMenuDia() {
+        const pop = document.getElementById('menu-dia-pop');
+        if (pop) pop.classList.add('hidden');
+    },
+
+    async fecharAgendaDia() {
+        const iso = this._diaMenu;
+        if (!iso) return;
+        const selProf = document.getElementById('menu-dia-todos');
+        const soProfissional = selProf && selProf.checked;
+        const profId = soProfissional ? (this._profSemana || null) : null;
+        const motivo = (document.getElementById('menu-dia-motivo') || {}).value || 'Fechado';
+        try {
+            const estabId = await this.obterEstabId();
+            const { error } = await supabaseClient.from('bloqueios').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                data: iso,
+                motivo: motivo
+            }]);
+            if (error) throw error;
+            this.fecharMenuDia();
+            UI.showToast('Dia fechado: ' + motivo + '.');
+            this.renderAgendaSemana();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async fecharAgendaIntervalo() {
+        const iso = this._diaMenu;
+        if (!iso) return;
+        const hi = (document.getElementById('menu-dia-de') || {}).value || '';
+        const hf = (document.getElementById('menu-dia-ate') || {}).value || '';
+        if (!hi || !hf || hf <= hi) {
+            UI.showToast('Escolha o horário de início e de fim.', 'error');
+            return;
+        }
+        const selProf = document.getElementById('menu-dia-todos');
+        const soProfissional = selProf && selProf.checked;
+        const profId = soProfissional ? (this._profSemana || null) : null;
+        const motivo = (document.getElementById('menu-dia-motivo') || {}).value || 'Fechado';
+        try {
+            const estabId = await this.obterEstabId();
+            const { error } = await supabaseClient.from('bloqueios').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                data: iso,
+                hora_inicio: hi,
+                hora_fim: hf,
+                motivo: motivo
+            }]);
+            if (error) throw error;
+            this.fecharMenuDia();
+            UI.showToast('Intervalo fechado das ' + hi + ' às ' + hf + '.');
+            this.renderAgendaSemana();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // ===== TROCA DE MODO (Dia / Semana) =====
+    trocarModoAgenda(modo) {
+        localStorage.setItem('hairconcept_modo_agenda', modo);
+        const d = document.getElementById('agenda-modo-dia');
+        const s = document.getElementById('agenda-modo-semana');
+        const bD = document.getElementById('btn-modo-dia');
+        const bS = document.getElementById('btn-modo-semana');
+        if (!d || !s) return;
+        // A classe do container controla o que aparece
+        const cont = document.getElementById('agenda-modos');
+        if (cont) cont.classList.toggle('ag-modo-semana', modo === 'semana');
+        if (modo === 'semana') {
+            d.classList.add('hidden');
+            s.classList.remove('hidden');
+            if (bD) bD.classList.remove('ativo');
+            if (bS) bS.classList.add('ativo');
+            this.renderAgendaSemana();
+        } else {
+            s.classList.add('hidden');
+            d.classList.remove('hidden');
+            if (bS) bS.classList.remove('ativo');
+            if (bD) bD.classList.add('ativo');
+            this.renderAgendaGrid();
+        }
+    },
+
+    modoAgendaAtual() {
+        return localStorage.getItem('hairconcept_modo_agenda') || 'dia';
+    },
+
     async renderAgendaGrid() {
         const tbody = document.getElementById('grid-horarios-body');
         const headerRow = document.getElementById('grid-header-row');
         if (!tbody || !headerRow) return;
+        // Garante que a barra lateral esta montada (so para o dono)
+        if (this.user && this.user.role !== 'profissional' && !this._profsLateral) {
+            this.montarLateralProfs();
+        }
         const estabId = localStorage.getItem('hairconcept_estab_id');
         const dataFiltro = document.getElementById('filtro-data-agenda').value;
         try {
@@ -2315,7 +2803,13 @@ const App = {
             }
             let profsExibicao = profs;
             if (this.user.role === 'profissional') {
+                // O profissional ve so a agenda dele
                 profsExibicao = profs.filter(p => p.id == this.user.id);
+            } else {
+                // O dono escolhe na barra lateral qual profissional ver
+                var sel = localStorage.getItem('hairconcept_prof_selecionado');
+                var escolhido = (profs || []).filter(function (p) { return p.id === sel && p.ativo !== false; });
+                if (escolhido.length > 0) profsExibicao = escolhido;
             }
             headerRow.innerHTML = '';
             const thHora = document.createElement('th');
@@ -3115,3 +3609,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
