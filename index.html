@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark scroll-smooth">
 <head>
@@ -388,16 +389,20 @@ tailwind.config = {
       </div>
       <form onsubmit="App.loginProfissional(event)" class="space-y-4 pt-2">
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Estabelecimento</label>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Salão</label>
           <input type="text" id="login-prof-estabelecimento" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF (Chave de Acesso)</label>
-          <input type="text" id="login-prof-id" required placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu nome</label>
+          <input type="text" id="login-prof-nome" required placeholder="Como o salão cadastrou você" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso *</label>
-          <input type="password" id="login-prof-senha" required placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Chave de acesso (11 números)</label>
+          <input type="text" id="login-prof-id" required inputmode="numeric" maxlength="11" placeholder="00000000000" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          <p class="text-[10px] text-zinc-500 mt-1">Os 11 números que você combinou com o salão (pode ser o seu CPF ou outro número).</p>
+        </div>
+        <div>
+          <input type="hidden" id="login-prof-senha">
         </div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Entrar na Agenda</button>
         <button type="button" onclick="Auth.abrirAjuda()" class="w-full text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Esqueci minha senha / Preciso de ajuda</button>
@@ -619,7 +624,7 @@ tailwind.config = {
       </div>
       <form onsubmit="Auth.enviarAjuda(event)" class="space-y-4">
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Estabelecimento</label>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Salão</label>
           <input type="text" id="ajuda-salao" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <div>
@@ -1358,12 +1363,12 @@ tailwind.config = {
           <input type="text" id="prof-cargo" placeholder="Ex: Master Colorista" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF (Chave de Acesso) *</label>
-          <input type="text" id="prof-cpf" placeholder="000.000.000-00" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Chave de acesso (11 números) *</label>
+          <input type="text" id="prof-cpf" inputmode="numeric" maxlength="11" placeholder="11 números que o profissional escolheu" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          <p class="text-[10px] text-zinc-500 mt-1">Informativo: são 11 números livres. Pode ser o CPF ou qualquer número que o profissional escolher. É com ele + o nome que o profissional entra no salão.</p>
         </div>
         <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha de Acesso *</label>
-          <input type="password" id="prof-senha" required placeholder="Senha individual" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+          <input type="hidden" id="prof-senha">
         </div>
       </div>
       <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Cadastrar Profissional</button>
