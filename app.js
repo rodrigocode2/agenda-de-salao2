@@ -451,8 +451,11 @@ const App = {
     async loginProfissional(event) {
         event.preventDefault();
         const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
-        const cpf = document.getElementById('login-prof-id').value.trim();
-        const senha = document.getElementById('login-prof-senha').value.trim();
+        const nomeDigitado = (document.getElementById('login-prof-nome')?.value || '').trim();
+        const cpf = (document.getElementById('login-prof-id').value || '').replace(/\D/g, '');
+        const senha = cpf; // a chave de 11 numeros e o acesso
+        const normaliza = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (cpf.length !== 11) { UI.showToast('A chave de acesso tem 11 números.', 'error'); return; }
         try {
             const { data: lista, error } = await supabaseClient.rpc('login_profissional', {
                 p_salao: nomeEstabelecimento,
@@ -460,9 +463,9 @@ const App = {
                 p_senha: senha
             });
             const data = Array.isArray(lista) ? lista[0] : lista;
-            if (error || !data || !data.id) {
+            if (error || !data || !data.id || normaliza(data.nome) !== normaliza(nomeDigitado)) {
                 if (error) console.error('Erro no login do profissional:', error);
-                UI.showToast('Estabelecimento, CPF ou senha incorretos.', 'error');
+                UI.showToast('Salão, nome ou chave incorretos.', 'error');
                 return;
             }
             if (data.estabelecimento_id) {
@@ -480,20 +483,6 @@ const App = {
                 nome_salao: data.nome_salao || nomeEstabelecimento
             };
             localStorage.setItem('hairconcept_prof_dados', JSON.stringify(dadosProf));
-
-            // Autentica a conta interna dele (invisível): assim o banco sabe quem é
-            const emailInterno = this.montarEmailInterno(cpf, dadosProf.estabelecimento_id);
-            if (emailInterno && supabaseClient && supabaseClient.auth) {
-                try {
-                    const { error: erroAuth } = await supabaseClient.auth.signInWithPassword({
-                        email: emailInterno,
-                        password: senha
-                    });
-                    if (erroAuth) console.warn('Conta interna não autenticada:', erroAuth.message);
-                } catch (e) {
-                    console.warn('Erro ao autenticar a conta interna:', e);
-                }
-            }
 
             this.user = { loggedIn: true, role: 'profissional', name: dadosProf.nome, id: dadosProf.id };
 
@@ -572,18 +561,17 @@ const App = {
             const elCargo = document.getElementById('prof-cargo');
             const elCpf = document.getElementById('prof-cpf');
             const elSenha = document.getElementById('prof-senha');
-            if (!elNome || !elCargo || !elCpf || !elSenha) {
+            if (!elNome || !elCargo || !elCpf) {
                 UI.showToast('Abra a aba Equipe e recarregue a pagina antes de cadastrar.', 'error');
                 return;
             }
             if (!elNome.value.trim()) { UI.showToast('Escreva o nome do profissional.', 'error'); elNome.focus(); return; }
             if (!elCargo.value.trim()) { UI.showToast('Escreva o cargo ou especialidade.', 'error'); elCargo.focus(); return; }
-            if (!elCpf.value.trim()) { UI.showToast('Escreva o CPF do profissional.', 'error'); elCpf.focus(); return; }
-            if (!elSenha.value || elSenha.value.length < 4) { UI.showToast('A senha precisa ter pelo menos 4 caracteres.', 'error'); elSenha.focus(); return; }
+            if ((elCpf.value || '').replace(/\D/g, '').length !== 11) { UI.showToast('A chave de acesso precisa ter 11 números.', 'error'); elCpf.focus(); return; }
             const nome = document.getElementById('prof-nome').value.trim();
             const cargo = document.getElementById('prof-cargo').value.trim();
             const cpf = (document.getElementById('prof-cpf').value || '').replace(/\D/g, '');
-            const senha = document.getElementById('prof-senha').value;
+            const senha = cpf; // a chave de 11 numeros tambem e gravada embaralhada
             const foto_url = this.fotoBase64Temp || null;
 
             if (senha.length < 4) {
@@ -591,25 +579,8 @@ const App = {
                 return;
             }
 
-            // 1) Cria a conta interna PRIMEIRO, para gravar o profissional já ligado a ela
-            const emailInterno = this.montarEmailInterno(cpf, idSalao);
-            let userIdInterno = null;
-            if (emailInterno) {
-                // Cliente separado: criar a conta do profissional NAO pode trocar a sessao do salao
-                const clienteIsolado = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'hc-cadastro-temp' }
-                });
-                const { data: conta, error: erroConta } = await clienteIsolado.auth.signUp({
-                    email: emailInterno,
-                    password: senha
-                });
-                if (erroConta) {
-                    console.error('Conta interna nao criada:', erroConta.message, erroConta.status, erroConta.code);
-                    UI.showToast('Nao consegui criar o acesso deste profissional. ' + mensagemAmigavel(erroConta), 'error');
-                    return;
-                }
-                userIdInterno = (conta && conta.user && conta.user.id) ? conta.user.id : null;
-            }
+            // Profissional NAO tem conta de login propria: e so uma ficha do salao.
+            const userIdInterno = null;
 
             // 2) O cadastro nunca morre: se o CPF ja existe no salao, reativamos a ficha
             const { data: jaExiste } = await supabaseClient
@@ -625,7 +596,7 @@ const App = {
 
             if (jaExiste && jaExiste.id) {
                 if (jaExiste.ativo !== false) {
-                    UI.showToast('Este CPF ja esta cadastrado e ativo na equipe: ' + (jaExiste.nome || '') + '.', 'error');
+                    UI.showToast('Esta chave ja esta em uso na equipe: ' + (jaExiste.nome || '') + '.', 'error');
                     return;
                 }
                 if (!confirm('Profissional ja cadastrado: ' + (jaExiste.nome || '') + '\n\nDeseja reativar ele na equipe?\n\nOs dados e o historico serao mantidos.')) {
@@ -633,7 +604,7 @@ const App = {
                     return;
                 }
                 const atualizar = { nome: nome, cargo: cargo, foto_url: foto_url, ativo: true, estabelecimento: nomeEstabelecimentoHeader };
-                if (userIdInterno) atualizar.user_id = userIdInterno;
+                
                 const res = await supabaseClient.from('profissionais').update(atualizar).eq('id', jaExiste.id).select();
                 error = res.error; novoProf = res.data;
                 if (!error) {
@@ -686,7 +657,7 @@ const App = {
             this.popularSelectProfissionais();
         } catch (err) {
             if (err && err.code === '23505') {
-                UI.showToast('Já existe um profissional com esse CPF. Apague o cadastro antigo ou use outro CPF.', 'error');
+                UI.showToast('Essa chave já está em uso neste salão. Escolha outros 11 números.', 'error');
             } else {
                 UI.showToast(mensagemAmigavel(err), 'error');
             }
@@ -3978,3 +3949,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
