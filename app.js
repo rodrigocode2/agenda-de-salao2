@@ -325,6 +325,7 @@ const App = {
             this.carregarAvisos();
             this.renderClientes();
             this.renderRanking();
+            this.renderAvaliacao();
         }
 
         // Mostra ou esconde as partes conforme o perfil
@@ -500,6 +501,7 @@ const App = {
             if (elCargo) elCargo.textContent = dadosProf.cargo;
             if (elFoto && dadosProf.foto_url) elFoto.src = dadosProf.foto_url;
 
+            this.carregarMinhaBarra();
             this.finishLogin(`Bem-vindo, ${dadosProf.nome}!`);
         } catch (e) {
             UI.showToast('Erro ao validar login do profissional.', 'error');
@@ -702,6 +704,9 @@ const App = {
             UI.showToast('Cadastro excluido. Os atendimentos antigos ficam com o nome dele.');
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
+            this.renderRankingGestao();
+            this.renderAgendaGrid();
+            this.renderAgendaSemana();
         } catch (e) {
             const msg = String(e && e.message ? e.message : e);
             if (msg.indexOf('23503') >= 0 || msg.toLowerCase().indexOf('foreign key') >= 0) {
@@ -948,13 +953,12 @@ const App = {
         if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
 
         try {
-            const { error } = await supabaseClient.from('avaliacoes_cliente').insert([{
-                estabelecimento_id: estabId,
-                cliente_id: clienteId,
-                profissional_id: profId,
-                tipo: tipo,
-                obs: obs
-            }]);
+            const { error } = await supabaseClient.rpc('registrar_ponto', {
+                p_profissional_id: profId || null,
+                p_cliente_id: clienteId,
+                p_tipo: tipo,
+                p_obs: obs
+            });
             if (error) {
                 console.error('Erro ao registrar voto:', error);
                 UI.showToast(mensagemAmigavel(error), 'error');
@@ -964,6 +968,7 @@ const App = {
             UI.showToast(tipo === 'mais' ? 'Ponto registrado!' : 'Alerta registrado.');
             this.renderClientes();
             this.renderRanking();
+            this.renderAvaliacao();
         } catch (e) {
             console.error('Erro inesperado ao votar:', e);
             UI.showToast('Erro inesperado ao registrar.', 'error');
@@ -973,91 +978,304 @@ const App = {
     // Estrelas do profissional: proporcional ao total de clientes do salao
     calcularEstrelaProf(pontos, totalClientes) {
         const base = totalClientes > 0 ? totalClientes : 1;
+        // Sem clientes na base, nao ha do que falar em progresso: barra zerada.
         const progresso = Math.min(pontos / base, 1);
         const cheias = Math.floor(progresso * 5);
         const resto = (progresso * 5) - cheias;
         return { pontos: pontos, total: base, progresso: progresso, cheias: cheias, meia: resto >= 0.5, vazias: 5 - cheias - (resto >= 0.5 ? 1 : 0) };
     },
 
-    async renderRankingGestao() {
-        const container = document.getElementById('ranking-gestao');
+
+    // =================================================================
+    // AVALIACAO - a barra tem o tamanho da base de clientes do salao.
+    // Um voto por cliente+profissional: votar de novo SUBSTITUI o anterior.
+    // =================================================================
+    _tipoAvaliacao: 'prof',
+
+    trocarTipoAvaliacao(tipo) {
+        this._tipoAvaliacao = (tipo === 'cli') ? 'cli' : 'prof';
+        const bp = document.getElementById('btn-aval-prof');
+        const bc = document.getElementById('btn-aval-cli');
+        const ativo = 'flex-1 px-4 py-3 rounded-2xl bg-brand-500/15 text-brand-500 text-xs font-bold uppercase transition flex items-center justify-center gap-2';
+        const inativo = 'flex-1 px-4 py-3 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2';
+        if (bp) bp.className = this._tipoAvaliacao === 'prof' ? ativo : inativo;
+        if (bc) bc.className = this._tipoAvaliacao === 'cli' ? ativo : inativo;
+        const busca = document.getElementById('aval-busca');
+        if (busca) busca.value = '';
+        this.renderAvaliacao();
+    },
+
+    estrelasHTML(pontos, total) {
+        const e = this.calcularEstrelaProf(pontos, total);
+        let html = '';
+        for (let i = 0; i < e.cheias; i++) html += '<i class="fa-solid fa-star"></i>';
+        if (e.meia) html += '<i class="fa-solid fa-star-half-stroke"></i>';
+        for (let i = 0; i < e.vazias; i++) html += '<i class="fa-regular fa-star text-zinc-600"></i>';
+        return html;
+    },
+
+    // Motivos prontos, para o salao registrar em um toque
+    MOTIVOS: {
+        prof: [
+            { v: 'mais', t: 'Elogio do cliente' },
+            { v: 'mais', t: 'Cliente voltou satisfeita' },
+            { v: 'mais', t: 'Atendimento rapido e caprichado' },
+            { v: 'menos', t: 'Reclamacao do cliente' },
+            { v: 'menos', t: 'Atrasou o atendimento' },
+            { v: 'menos', t: 'Faltou sem avisar' },
+            { v: 'menos', t: 'Desmarcou em cima da hora' }
+        ],
+        cli: [
+            { v: 'mais', t: 'Cliente facil de atender' },
+            { v: 'mais', t: 'Elogiou a equipe' },
+            { v: 'mais', t: 'Pontual e educada' },
+            { v: 'menos', t: 'Deu trabalho no atendimento' },
+            { v: 'menos', t: 'Atrasou ou faltou' },
+            { v: 'menos', t: 'Desmarcou em cima da hora' },
+            { v: 'menos', t: 'Reclamou sem motivo' }
+        ]
+    },
+
+    async renderAvaliacao() {
+        const container = document.getElementById('aval-lista');
         const totalEl = document.getElementById('aval-total-clientes');
         if (!container) return;
+        const tipo = this._tipoAvaliacao || 'prof';
+        const busca = (document.getElementById('aval-busca')?.value || '').trim().toLowerCase();
         const estabId = await this.obterEstabId();
         if (!estabId) return;
+
+        container.innerHTML = '<p class="text-xs text-zinc-500">Carregando...</p>';
         try {
-            const { data: profs } = await supabaseClient
-                .from('profissionais').select('id, nome, cargo')
-                .eq('estabelecimento_id', estabId);
-            const { data: votos } = await supabaseClient
-                .from('avaliacoes_cliente').select('profissional_id, tipo')
-                .eq('estabelecimento_id', estabId);
             const { count } = await supabaseClient
                 .from('clientes').select('*', { count: 'exact', head: true })
                 .eq('estabelecimento_id', estabId);
             const total = count || 0;
             if (totalEl) totalEl.textContent = total + ' cliente(s) na base';
 
-            const pontos = {};
-            (votos || []).forEach(function (v) {
-                if (!v.profissional_id || v.tipo !== 'mais') return;
-                pontos[v.profissional_id] = (pontos[v.profissional_id] || 0) + 1;
-            });
+            let lista = [];
+            if (tipo === 'prof') {
+                const { data } = await supabaseClient
+                    .from('profissionais').select('id, nome, cargo, foto_url, cpf')
+                    .eq('estabelecimento_id', estabId)
+                    .order('nome');
+                lista = (data || []).map(p => ({ id: p.id, nome: p.nome || '', sub: p.cargo || '', foto: p.foto_url, busca: (p.nome || '') + ' ' + (p.cargo || '') }));
+            } else {
+                const { data } = await supabaseClient
+                    .from('clientes').select('id, nome, telefone, cpf')
+                    .eq('estabelecimento_id', estabId)
+                    .order('nome');
+                lista = (data || []).map(c => ({ id: c.id, nome: c.nome || '', sub: 'final ' + String(c.telefone || c.cpf || '----').slice(-4), foto: null, busca: (c.nome || '') + ' ' + (c.telefone || '') + ' ' + (c.cpf || '') }));
+            }
 
-            const lista = (profs || []).map(function (p) {
-                return { p: p, pontos: pontos[p.id] || 0 };
-            }).sort(function (a, b) { return b.pontos - a.pontos; });
+            if (busca) lista = lista.filter(i => i.busca.toLowerCase().includes(busca));
+
+            // Pontos: vem do banco quando existe, senao calcula na hora
+            const pontosMap = {};
+            try {
+                const fn = tipo === 'prof' ? 'pontos_profissionais' : 'pontos_clientes';
+                const { data: pts } = await supabaseClient.rpc(fn);
+                (pts || []).forEach(x => {
+                    const chave = tipo === 'prof' ? x.profissional_id : x.cliente_id;
+                    if (chave) pontosMap[chave] = Number(x.pontos) || 0;
+                });
+            } catch (e) {
+                const { data: votos } = await supabaseClient
+                    .from('avaliacoes_cliente').select('profissional_id, cliente_id, tipo')
+                    .eq('estabelecimento_id', estabId);
+                (votos || []).forEach(v => {
+                    const chave = tipo === 'prof' ? v.profissional_id : v.cliente_id;
+                    if (!chave) return;
+                    pontosMap[chave] = (pontosMap[chave] || 0) + (v.tipo === 'mais' ? 1 : -1);
+                });
+            }
+
+            const ordenada = lista.slice().sort((a, b) => (pontosMap[b.id] || 0) - (pontosMap[a.id] || 0));
 
             container.innerHTML = '';
-            if (lista.length === 0) {
-                const m = document.createElement('p');
-                m.className = 'text-xs text-zinc-500';
-                m.textContent = 'Nenhum profissional cadastrado ainda.';
-                container.appendChild(m);
+            if (ordenada.length === 0) {
+                container.innerHTML = '<p class="text-xs text-zinc-500">Nada encontrado. Cadastre na aba ' + (tipo === 'prof' ? 'Equipe' : 'Clientes') + '.</p>';
+                this.renderRankingGestao(pontosMap, total, tipo);
                 return;
             }
 
-            lista.forEach(function (item) {
-                const est = App.calcularEstrelaProf(item.pontos, total);
+            ordenada.forEach(item => {
+                const pontos = pontosMap[item.id] || 0;
+                const est = this.calcularEstrelaProf(pontos, total);
+                const negativo = pontos < 0;
                 const card = document.createElement('div');
-                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
+                card.className = 'p-4 rounded-2xl bg-zinc-950 border ' + (negativo ? 'border-rose-500/40' : 'border-white/10') + ' space-y-3';
 
                 const topo = document.createElement('div');
-                topo.className = 'flex items-center justify-between gap-3';
+                topo.className = 'flex items-center justify-between gap-3 flex-wrap';
                 const info = document.createElement('div');
-                const nome = document.createElement('h4');
-                nome.className = 'text-xs font-bold text-white uppercase';
-                nome.textContent = item.p.nome || '';
-                const cargo = document.createElement('p');
-                cargo.className = 'text-[10px] text-brand-500';
-                cargo.textContent = item.p.cargo || '';
-                info.appendChild(nome); info.appendChild(cargo);
+                const h4 = document.createElement('h4');
+                h4.className = 'text-xs font-bold text-white uppercase';
+                h4.textContent = item.nome;
+                const sub = document.createElement('p');
+                sub.className = 'text-[10px] text-brand-500';
+                sub.textContent = item.sub;
+                info.appendChild(h4); info.appendChild(sub);
 
                 const dir = document.createElement('div');
                 dir.className = 'text-right';
                 const estrelas = document.createElement('div');
                 estrelas.className = 'prof-estrelas';
-                for (let i = 0; i < est.cheias; i++) estrelas.innerHTML += '<i class="fa-solid fa-star"></i>';
-                if (est.meia) estrelas.innerHTML += '<i class="fa-solid fa-star-half-stroke"></i>';
-                for (let i = 0; i < est.vazias; i++) estrelas.innerHTML += '<i class="fa-regular fa-star text-zinc-600"></i>';
+                estrelas.innerHTML = this.estrelasHTML(pontos, total);
                 const cont = document.createElement('span');
-                cont.className = 'block text-[9px] text-zinc-500 mt-0.5';
-                cont.textContent = item.pontos + ' de ' + total + ' cliente(s)';
+                cont.className = 'block text-[9px] ' + (negativo ? 'text-rose-400 font-bold' : 'text-zinc-500') + ' mt-0.5';
+                cont.textContent = pontos + ' / ' + total;
                 dir.appendChild(estrelas); dir.appendChild(cont);
+
                 topo.appendChild(info); topo.appendChild(dir);
 
                 const barra = document.createElement('div');
                 barra.className = 'prof-barra';
                 const cheia = document.createElement('div');
-                cheia.className = 'prof-barra-cheia';
+                cheia.className = 'prof-barra-cheia' + (negativo ? ' bg-rose-500' : '');
                 cheia.style.width = Math.round(est.progresso * 100) + '%';
                 barra.appendChild(cheia);
 
-                card.appendChild(topo); card.appendChild(barra);
+                const motivos = this.MOTIVOS[tipo];
+                const linha = document.createElement('div');
+                linha.className = 'flex items-center gap-2 flex-wrap';
+
+                const sel = document.createElement('select');
+                sel.className = 'flex-grow min-w-[180px] glass-input rounded-xl px-3 py-2 text-xs text-white';
+                motivos.forEach(m => {
+                    const o = document.createElement('option');
+                    o.value = m.v + '|' + m.t;
+                    o.textContent = (m.v === 'mais' ? '+1  ' : '−1  ') + m.t;
+                    sel.appendChild(o);
+                });
+
+                const btnMais = document.createElement('button');
+                btnMais.className = 'px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 text-xs font-bold uppercase transition cursor-pointer';
+                btnMais.textContent = '+1';
+                btnMais.onclick = () => this.registrarPontoProf(item.id, 'mais', sel.value.split('|')[1]);
+
+                const btnMenos = document.createElement('button');
+                btnMenos.className = 'px-3 py-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 text-xs font-bold uppercase transition cursor-pointer';
+                btnMenos.textContent = '−1';
+                btnMenos.onclick = () => this.registrarPontoProf(item.id, 'menos', sel.value.split('|')[1]);
+
+                linha.appendChild(sel); linha.appendChild(btnMais); linha.appendChild(btnMenos);
+
+                card.appendChild(topo); card.appendChild(barra); card.appendChild(linha);
                 container.appendChild(card);
             });
+
+            this.renderRankingGestao(pontosMap, total, tipo);
         } catch (e) {
-            console.warn('Erro ao montar a avaliacao:', e);
+            console.warn('Erro na avaliacao:', e);
+            container.innerHTML = '<p class="text-xs text-zinc-500">Nao foi possivel carregar agora.</p>';
+        }
+    },
+
+    async renderRankingGestao(pontosMap, total, tipo) {
+        const container = document.getElementById('ranking-gestao');
+        if (!container) return;
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            if (!pontosMap) {
+                const fn = (tipo === 'cli') ? 'pontos_clientes' : 'pontos_profissionais';
+                pontosMap = {};
+                try {
+                    const { data: pts } = await supabaseClient.rpc(fn);
+                    (pts || []).forEach(x => {
+                        const chave = (tipo === 'cli') ? x.cliente_id : x.profissional_id;
+                        if (chave) pontosMap[chave] = Number(x.pontos) || 0;
+                    });
+                } catch (e) { /* segue sem ranking */ }
+            }
+            if (typeof total !== 'number') {
+                const { count } = await supabaseClient.from('clientes').select('*', { count: 'exact', head: true }).eq('estabelecimento_id', estabId);
+                total = count || 0;
+            }
+            const tabela = (tipo === 'cli') ? 'clientes' : 'profissionais';
+            const { data } = await supabaseClient.from(tabela).select('id, nome').eq('estabelecimento_id', estabId);
+            const lista = (data || []).map(x => ({ nome: x.nome || '', pontos: pontosMap[x.id] || 0 }))
+                .sort((a, b) => b.pontos - a.pontos).slice(0, 5);
+
+            container.innerHTML = '';
+            if (lista.length === 0) {
+                container.innerHTML = '<p class="text-[10px] text-zinc-500">Sem dados ainda.</p>';
+                return;
+            }
+            lista.forEach((item, i) => {
+                const l = document.createElement('div');
+                l.className = 'flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-zinc-950 border border-white/5';
+                const esq = document.createElement('span');
+                esq.className = 'text-[11px] text-white font-bold';
+                esq.textContent = (i + 1) + '. ' + item.nome;
+                const dir = document.createElement('span');
+                dir.className = 'text-[10px] ' + (item.pontos < 0 ? 'text-rose-400 font-bold' : 'text-zinc-400');
+                dir.textContent = item.pontos + ' / ' + total;
+                l.appendChild(esq); l.appendChild(dir);
+                container.appendChild(l);
+            });
+        } catch (e) {
+            console.warn('Erro no ranking:', e);
+        }
+    },
+
+    // Registra o ponto do profissional. Votar de novo SUBSTITUI o voto
+    // anterior do mesmo cliente, para a barra nunca inflar.
+    async registrarPontoProf(profissionalId, tipo, motivo) {
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
+        try {
+            const { error } = await supabaseClient.rpc('registrar_ponto', {
+                p_profissional_id: profissionalId,
+                p_cliente_id: null,
+                p_tipo: tipo,
+                p_obs: motivo || null
+            });
+            if (error) throw error;
+            UI.showToast(tipo === 'mais' ? 'Ponto registrado: ' + (motivo || '') : 'Alerta registrado: ' + (motivo || ''));
+            this.renderAvaliacao();
+            this.renderListaProfissionais();
+        } catch (e) {
+            console.error('Erro ao registrar ponto:', e);
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+        // O profissional ve SO a propria barra, as estrelas e o 0 / clientes
+    async carregarMinhaBarra() {
+        const caixa = document.getElementById('minha-barra-prof');
+        if (!caixa) return;
+        const token = localStorage.getItem('hairconcept_prof_token');
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        try {
+            let pontos = 0, total = 0;
+            if (token) {
+                const { data } = await supabaseClient.rpc('meus_pontos', { p_token: token });
+                const linha = Array.isArray(data) ? data[0] : data;
+                if (linha) { pontos = Number(linha.pontos) || 0; total = Number(linha.total_clientes) || 0; }
+            }
+            if (!total && estabId) {
+                const { count } = await supabaseClient.from('clientes').select('*', { count: 'exact', head: true }).eq('estabelecimento_id', estabId);
+                total = count || 0;
+            }
+            const e = this.calcularEstrelaProf(pontos, total);
+            caixa.innerHTML = '';
+            const estrelas = document.createElement('div');
+            estrelas.className = 'prof-estrelas text-lg';
+            estrelas.innerHTML = this.estrelasHTML(pontos, total);
+            const barra = document.createElement('div');
+            barra.className = 'prof-barra mt-2';
+            const cheia = document.createElement('div');
+            cheia.className = 'prof-barra-cheia';
+            cheia.style.width = Math.round(e.progresso * 100) + '%';
+            barra.appendChild(cheia);
+            const cont = document.createElement('p');
+            cont.className = 'text-[10px] text-zinc-400 mt-2';
+            cont.textContent = pontos + ' / ' + total + ' cliente(s)';
+            caixa.appendChild(estrelas); caixa.appendChild(barra); caixa.appendChild(cont);
+        } catch (err) {
+            console.warn('Nao foi possivel carregar a barra do profissional:', err);
         }
     },
 
@@ -1518,7 +1736,36 @@ const App = {
         if (campoNome) campoNome.value = nome || '';
         if (campoCargo) campoCargo.value = cargo || '';
         if (campoCpf) campoCpf.value = cpf || '';
+        const campoRecado = document.getElementById('recado-prof-id');
+        if (campoRecado) campoRecado.value = id;
+        const campoRecadoTxt = document.getElementById('recado-prof-texto');
+        if (campoRecadoTxt) campoRecadoTxt.value = '';
         Auth.abrirModal('modal-editar-prof');
+    },
+
+    // Mensagem particular do salao para o profissional (tabela recados)
+    async enviarRecadoProfissional(event) {
+        event.preventDefault();
+        const id = document.getElementById('recado-prof-id')?.value;
+        const texto = (document.getElementById('recado-prof-texto')?.value || '').trim();
+        if (!id || !texto) { UI.showToast('Escreva a mensagem.', 'error'); return; }
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao.', 'error'); return; }
+        try {
+            const { error } = await supabaseClient.from('recados').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: id,
+                remetente: 'salao',
+                mensagem: texto
+            }]);
+            if (error) throw error;
+            const campo = document.getElementById('recado-prof-texto');
+            if (campo) campo.value = '';
+            UI.showToast('Mensagem enviada para a aba do profissional.');
+        } catch (e) {
+            console.error('Erro ao enviar mensagem:', e);
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
     },
 
     async salvarEdicaoProfissional(event) {
@@ -1565,6 +1812,7 @@ const App = {
             UI.showToast('Dados do profissional atualizados!');
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
+            this.renderRankingGestao();
         } catch (e) {
             console.error('Erro inesperado ao editar:', e);
             UI.showToast('Erro inesperado ao salvar os dados.', 'error');
@@ -3496,11 +3744,6 @@ const App = {
                 const acoes = document.createElement('div');
                 acoes.className = 'flex items-center gap-2 flex-wrap';
 
-                const btnSenha = document.createElement('button');
-                btnSenha.className = 'px-3 py-1.5 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-500 hover:bg-brand-500/20 text-xs font-bold uppercase transition cursor-pointer';
-                btnSenha.textContent = 'Trocar senha';
-                btnSenha.onclick = () => this.abrirTrocarSenhaProfissional(p.id, p.nome || '', p.cpf || '');
-
                 const btnEditar = document.createElement('button');
                 btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-xs font-bold uppercase transition cursor-pointer';
                 btnEditar.textContent = 'Editar';
@@ -3511,7 +3754,6 @@ const App = {
                 btnExcluir.textContent = 'Excluir';
                 btnExcluir.onclick = () => this.excluirProfissional(p.id);
 
-                acoes.appendChild(btnSenha);
                 acoes.appendChild(btnEditar);
                 acoes.appendChild(btnExcluir);
 
@@ -3863,7 +4105,7 @@ const UI = {
         // Recarrega a lista do painel aberto
         if (qual === 'servicos') App.renderServicos();
         if (qual === 'produtos') App.renderProdutos();
-        if (qual === 'avaliacoes-nova') App.renderRankingGestao();
+        if (qual === 'avaliacoes-nova') App.renderAvaliacao();
     },
     abrirGestao(qual) {
         this.switchTab('aba-gestao');
@@ -3960,4 +4202,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
