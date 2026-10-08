@@ -457,13 +457,13 @@ const App = {
         const normaliza = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
         if (cpf.length !== 11) { UI.showToast('A chave de acesso tem 11 números.', 'error'); return; }
         try {
-            const { data: lista, error } = await supabaseClient.rpc('login_profissional', {
-                p_salao: nomeEstabelecimento,
-                p_cpf: cpf,
-                p_senha: senha
+            const { data: lista, error } = await supabaseClient.rpc('login_profissional_v2', {
+                p_codigo: nomeEstabelecimento,
+                p_nome: nomeDigitado,
+                p_chave: cpf
             });
             const data = Array.isArray(lista) ? lista[0] : lista;
-            if (error || !data || !data.id || normaliza(data.nome) !== normaliza(nomeDigitado)) {
+            if (error || !data || !data.id) {
                 if (error) console.error('Erro no login do profissional:', error);
                 UI.showToast('Salão, nome ou chave incorretos.', 'error');
                 return;
@@ -472,6 +472,7 @@ const App = {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
             }
             localStorage.setItem('hairconcept_prof_id', data.id);
+            if (data.token) localStorage.setItem('hairconcept_prof_token', data.token);
 
             // Guarda só o necessário (o servidor não devolve CPF nem senha)
             const dadosProf = {
@@ -686,14 +687,19 @@ const App = {
     },
 
     async excluirProfissional(id) {
-        if (!confirm("Excluir DEFINITIVAMENTE este profissional? Use apenas para cadastros criados por engano.")) return;
+        if (!confirm("Excluir este profissional?\n\nOs atendimentos antigos continuam com o nome dele. Se ele voltar, e so cadastrar de novo.")) return;
         try {
-            const { error } = await supabaseClient
+            const { data: apagados, error } = await supabaseClient
                 .from('profissionais')
                 .delete()
-                .eq('id', id);
+                .eq('id', id)
+                .select('id');
             if (error) throw error;
-            UI.showToast('Cadastro excluido.');
+            if (!apagados || apagados.length === 0) {
+                UI.showToast('O servidor nao permitiu excluir. Saia e entre de novo com a conta dona do salao.', 'error');
+                return;
+            }
+            UI.showToast('Cadastro excluido. Os atendimentos antigos ficam com o nome dele.');
             this.renderListaProfissionais();
             this.popularSelectProfissionais();
         } catch (e) {
@@ -1549,6 +1555,11 @@ const App = {
             if (!data || data.length === 0) {
                 UI.showToast('Nenhum profissional foi atualizado. Confira se você está no salão certo.', 'error');
                 return;
+            }
+            const chaveNova = String(cpf || '').replace(/\D/g, '');
+            if (chaveNova.length === 11) {
+                const { error: erroChave } = await supabaseClient.rpc('definir_senha_profissional', { p_id: id, p_senha: chaveNova });
+                if (erroChave) console.warn('Chave nao regravada:', erroChave.message);
             }
             Auth.fecharModal('modal-editar-prof');
             UI.showToast('Dados do profissional atualizados!');
