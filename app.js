@@ -4320,6 +4320,68 @@ const UI = {
         this.trocarEspaco(qual || 'servicos');
     },
 
+    // Monta a aba de PLANOS: mostra o plano atual, o selo e os botoes de PIX.
+    // Fica no objeto App porque e chamada como App.carregarPlanos().
+    async carregarPlanos() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos').select('plano').eq('id', estabId).maybeSingle();
+            const plano = (data && data.plano) || 'gratis';
+            const limites = { gratis: 2, mensal: 10, anual: 30 };
+
+            // Selo SEU PLANO no cartao do plano atual
+            ['gratis','mensal','anual'].forEach(function (p) {
+                const bt = document.querySelector('[onclick="App.setPlan(\'' + p + '\')"]');
+                if (!bt) return;
+                const cartao = bt.closest('div.glass-water') || bt.parentNode;
+                const velho = cartao.querySelector('.hc-selo-plano');
+                if (velho) velho.remove();
+                if (p === plano) {
+                    const selo = document.createElement('span');
+                    selo.className = 'hc-selo-plano';
+                    selo.textContent = 'SEU PLANO';
+                    bt.parentNode.insertBefore(selo, bt);
+                }
+            });
+
+            // Botoes de PIX / QR Code embaixo de cada plano pago
+            ['mensal','anual'].forEach(function (p) {
+                const bt = document.querySelector('[onclick="App.setPlan(\'' + p + '\')"]');
+                if (!bt) return;
+                const cartao = bt.closest('div.glass-water') || bt.parentNode;
+                if (!cartao || cartao.querySelector('.hc-btn-pix')) return;
+
+                const nota = document.createElement('p');
+                nota.className = 'hc-btn-pix text-[10px] text-zinc-500 mt-3 leading-snug';
+                nota.textContent = 'Ou pague uma vez com PIX ou QR Code:';
+
+                const btn = document.createElement('button');
+                btn.className = 'hc-btn-pix w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase transition cursor-pointer';
+                btn.textContent = 'Pagar com PIX / QR Code';
+                btn.onclick = function () { App.pagarComPix(p); };
+
+                cartao.appendChild(nota);
+                cartao.appendChild(btn);
+            });
+
+            // Aviso de quantos profissionais o plano permite
+            let aviso = document.getElementById('hc-plano-limite');
+            if (!aviso) {
+                const alvo = document.querySelector('#aba-planos .glass-water');
+                if (alvo) {
+                    aviso = document.createElement('p');
+                    aviso.id = 'hc-plano-limite';
+                    aviso.className = 'text-center text-[11px] text-brand-500 font-bold uppercase mt-4';
+                    alvo.appendChild(aviso);
+                }
+            }
+            if (aviso) aviso.textContent = 'Seu plano permite ' + (limites[plano] || 2) + ' profissionais na equipe.';
+        } catch (e) {
+            console.warn('Nao foi possivel carregar os planos:', e);
+        }
+    },
     switchTab(tabId) {
         const alvo = document.getElementById(tabId);
         if (!alvo) return;
@@ -4339,67 +4401,6 @@ const UI = {
 
     // A aba PLANOS mostra qual plano o salao tem AGORA.
     // O plano vem do BANCO, nao do navegador: assim nunca diverge.
-    async carregarPlanos() {
-        const estabId = await this.obterEstabId();
-        if (!estabId) return;
-        try {
-            const { data } = await supabaseClient
-                .from('estabelecimentos').select('plano').eq('id', estabId).maybeSingle();
-            const plano = (data && data.plano) || 'gratis';
-            const limites = { gratis: 2, mensal: 10, anual: 30 };
-
-            ['gratis','mensal','anual'].forEach(function (p) {
-                document.querySelectorAll('[onclick="App.setPlan(\'' + p + '\')"]').forEach(function (bt) {
-                    const cartao = bt.closest('div');
-                    if (!cartao) return;
-                    const velho = cartao.querySelector('.hc-selo-plano');
-                    if (velho) velho.remove();
-                    if (p === plano) {
-                        const selo = document.createElement('span');
-                        selo.className = 'hc-selo-plano';
-                        selo.textContent = 'SEU PLANO';
-                        bt.parentNode.insertBefore(selo, bt);
-                    }
-                });
-            });
-
-            // Botoes de PIX / QR Code embaixo de cada cartao de plano pago.
-            // O cartao e o <div> que CONTEM o botao de assinar.
-            const pixPorPlano = { mensal: 'mensal', anual: 'anual' };
-            Object.keys(pixPorPlano).forEach(function (p) {
-                const botaoAssinar = document.querySelector('[onclick="App.setPlan(\'' + p + '\')"]');
-                if (!botaoAssinar) return;
-                const cartao = botaoAssinar.closest('div.glass-water') || botaoAssinar.parentNode;
-                if (!cartao || cartao.querySelector('.hc-btn-pix')) return;
-
-                const nota = document.createElement('p');
-                nota.className = 'hc-btn-pix text-[10px] text-zinc-500 mt-3 leading-snug';
-                nota.textContent = 'Ou pague uma vez com PIX ou QR Code:';
-
-                const btn = document.createElement('button');
-                btn.className = 'hc-btn-pix w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase transition cursor-pointer';
-                btn.innerHTML = 'Pagar com PIX / QR Code';
-                btn.onclick = function () { App.pagarComPix(p); };
-
-                cartao.appendChild(nota);
-                cartao.appendChild(btn);
-            });
-
-            let aviso = document.getElementById('hc-plano-limite');
-            if (!aviso) {
-                const alvo = document.querySelector('#aba-planos .glass-water');
-                if (alvo) {
-                    aviso = document.createElement('p');
-                    aviso.id = 'hc-plano-limite';
-                    aviso.className = 'text-center text-[11px] text-brand-500 font-bold uppercase mt-4';
-                    alvo.appendChild(aviso);
-                }
-            }
-            if (aviso) aviso.textContent = 'Seu plano permite ' + (limites[plano] || 2) + ' profissionais na equipe.';
-        } catch (e) {
-            console.warn('Nao foi possivel carregar os planos:', e);
-        }
-    },
     toggleMobileMenu(forceState) {
         const menu = document.getElementById('mobile-nav-menu');
         if (!menu) return;
