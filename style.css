@@ -599,3 +599,193 @@ html, body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+
+
+/* =====================================================================
+   ADICIONAL — HairConcept (Bloco 1: correções + agenda semanal)
+   Cole isto NO FIM do seu style.css. Não substitui nada.
+   Mesmo design system: glass, brand-500 (#ec4899), zinc.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1) AGENDA SEMANAL — as classes que estavam faltando.
+      O JavaScript já monta a tabela; sem isto ela fica torta.
+   --------------------------------------------------------------------- */
+#semana-wrap { overflow: hidden; }
+
+.semana-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.semana-tabela {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.semana-tabela thead th {
+  padding: 12px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a1a1aa;
+  font-weight: 700;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.semana-tabela thead th:first-child {
+  width: 78px;
+  text-align: left;
+  padding-left: 16px;
+}
+
+.semana-corpo td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 0;
+  vertical-align: top;
+  height: 48px;              /* cada linha = um bloco de 30 minutos */
+}
+
+.semana-hora {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: #71717a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.semana-celula {
+  position: relative;
+  height: 48px;
+  cursor: pointer;
+  transition: background 0.15s ease-in-out;
+}
+
+.semana-celula:hover { background: rgba(236, 72, 153, 0.06); }
+
+/* O atendimento cobre quantos blocos de 30 min ele durar.
+   A Carla (1 hora) cobre DOIS blocos: 08:30 e 09:00. */
+.semana-bloco {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 700;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(236, 72, 153, 0.18);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.semana-bloco .sb-cliente,
+.semana-bloco .sb-servico {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semana-bloco .sb-servico {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Cores por situação: a recepção entende antes de ler */
+.semana-bloco.st-espera   { background: rgba(236, 72, 153, 0.22); }
+.semana-bloco.st-atendido { background: rgba(16, 185, 129, 0.22); }
+.semana-bloco.st-faltou   { background: rgba(244, 63, 94, 0.24); }
+.semana-bloco.st-encaixe  { background: rgba(245, 158, 11, 0.22); }
+
+.semana-celula.bloqueada {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.03) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  cursor: not-allowed;
+}
+
+.semana-dia-fechado {
+  padding: 10px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #71717a;
+  text-align: center;
+}
+
+.semana-scroll::-webkit-scrollbar { height: 6px; }
+.semana-scroll::-webkit-scrollbar-track { background: rgba(9, 9, 11, 0.8); }
+.semana-scroll::-webkit-scrollbar-thumb {
+  background: rgba(236, 72, 153, 0.3);
+  border-radius: 9999px;
+}
+
+@media (max-width: 640px) {
+  .semana-tabela { min-width: 100%; }
+  .semana-tabela thead th { font-size: 10px; padding: 10px 4px; }
+  .semana-tabela thead th:first-child { width: 58px; padding-left: 8px; }
+  .semana-hora { padding: 6px 8px; font-size: 10px; }
+  .semana-bloco { font-size: 9px; padding: 4px 5px; }
+}
+
+/* ---------------------------------------------------------------------
+   2) ESQUELETO DE CARREGAMENTO (substitui o "Carregando...")
+   --------------------------------------------------------------------- */
+.hc-esqueleto {
+  border-radius: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: hc-brilho 1.4s ease-in-out infinite;
+  min-height: 44px;
+}
+
+@keyframes hc-brilho {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-esqueleto { animation: none; }
+  .prof-barra-cheia { transition: none; }
+}
+
+/* ---------------------------------------------------------------------
+   3) AVISO DE CONFLITO (horário já ocupado) e campo com erro
+   --------------------------------------------------------------------- */
+.hc-aviso-conflito {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fecdd3;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.hc-aviso-conflito i { color: #fb7185; margin-top: 2px; }
+
+.glass-input.hc-erro {
+  border-color: rgba(244, 63, 94, 0.65);
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.18);
+}
