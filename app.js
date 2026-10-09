@@ -1431,8 +1431,46 @@ const App = {
         }
     },
 
+    // ---------- Ponto da cliente ----------
+    // Um toque e o voto entra. Nao abre modal: quem tem pressa nao
+    // pode parar para escolher opcao no meio do movimento.
+    // Votar de novo SUBSTITUI o voto anterior (regra do voto unico).
+    async registrarPontoCliente(clienteId, tipo, nomeCliente) {
+        if (!clienteId) { UI.showToast('Cliente nao identificada.', 'error'); return; }
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
+        try {
+            const { error } = await supabaseClient.rpc('registrar_ponto', {
+                p_profissional_id: null,
+                p_cliente_id: clienteId,
+                p_tipo: tipo,
+                p_obs: tipo === 'mais' ? 'Cliente boa' : 'Cliente deu trabalho'
+            });
+            if (error) throw error;
+            UI.showToast(
+                tipo === 'mais'
+                    ? (nomeCliente || 'Cliente') + ': ponto positivo registrado.'
+                    : (nomeCliente || 'Cliente') + ': alerta registrado.'
+            );
+            this.renderClientes();
+            this.renderAvaliacao();
+        } catch (e) {
+            console.error('Erro ao registrar ponto da cliente:', e);
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
     async renderClientes() {
         this.ligarMascaraTelefone();
+        // O teclado do celular abre numerico e o campo se arruma sozinho
+        const campoTel = document.getElementById('cli-telefone');
+        if (campoTel && campoTel.dataset.maskLigada !== 'on') {
+            campoTel.dataset.maskLigada = 'on';
+            campoTel.addEventListener('input', function () {
+                campoTel.value = App.mascaraTelefone(campoTel.value);
+                App.guardarRascunho(['cli-nome','cli-telefone','cli-cpf','cli-email']);
+            });
+        }
         // Guarda o rascunho a cada digitacao no cadastro de cliente
         ['cli-nome','cli-telefone','cli-cpf','cli-email'].forEach(function (id) {
             const el = document.getElementById(id);
@@ -1584,13 +1622,13 @@ const App = {
                 const btnMais = document.createElement('button');
                 btnMais.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
                 btnMais.textContent = '+1';
-                btnMais.onclick = () => this.abrirVoto(c.id, c.nome);
+                btnMais.onclick = () => this.registrarPontoCliente(c.id, 'mais', c.nome);
                 acoes.appendChild(btnMais);
 
                 const btnMenos = document.createElement('button');
                 btnMenos.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
                 btnMenos.textContent = '-1';
-                btnMenos.onclick = () => this.abrirVoto(c.id, c.nome);
+                btnMenos.onclick = () => this.registrarPontoCliente(c.id, 'menos', c.nome);
                 acoes.appendChild(btnMenos);
 
                 const btnEditar = document.createElement('button');
@@ -3095,33 +3133,6 @@ const App = {
     },
 
     // ===== MODELO DE AGENDA DO SALAO =====
-    async salvarModeloAgenda(modelo) {
-        try {
-            const estabId = await this.obterEstabId();
-            if (!estabId) return;
-            const { error } = await supabaseClient
-                .from('estabelecimentos').update({ modelo_agenda: modelo }).eq('id', estabId);
-            if (error) throw error;
-            localStorage.setItem('hairconcept_modo_agenda', modelo);
-            UI.showToast('Modelo da agenda salvo! Ele abre assim para o salao inteiro.');
-        } catch (e) {
-            UI.showToast(mensagemAmigavel(e), 'error');
-        }
-    },
-
-    async carregarModeloAgenda() {
-        try {
-            const estabId = await this.obterEstabId();
-            if (!estabId) return;
-            const { data } = await supabaseClient
-                .from('estabelecimentos').select('modelo_agenda').eq('id', estabId).maybeSingle();
-            const modo = (data && data.modelo_agenda) || 'semana';
-            localStorage.setItem('hairconcept_modo_agenda', modo);
-            const sel = document.getElementById('config-modelo-agenda');
-            if (sel) sel.value = modo;
-        } catch (e) { /* segue no padrao */ }
-    },
-
     // Rotulo do modelo escolhido (mostrado no topo da agenda)
     rotuloModeloAgenda() {
         const m = this.modoAgendaAtual ? this.modoAgendaAtual() : 'semana';
@@ -4356,4 +4367,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
