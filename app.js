@@ -4110,6 +4110,23 @@ const App = {
         const aleatoria = frases[Math.floor(Math.random() * frases.length)];
         document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
     },
+    // Links de pagamento do Mercado Pago (PIX, QR Code, boleto e cartao).
+    // Sao pagamentos AVULSOS: PIX nao existe em assinatura recorrente,
+    // porque a assinatura precisa de um cartao para cobrar todo mes.
+    LINKS_PIX: {
+        mensal: 'https://mpago.la/2FwRxii',
+        anual:  'https://mpago.la/2BGEEVK'
+    },
+
+    // Abre o pagamento por PIX / QR Code / boleto
+    pagarComPix(plano) {
+        const link = this.LINKS_PIX[plano];
+        if (!link) { UI.showToast('Plano invalido.', 'error'); return; }
+        localStorage.setItem('hairconcept_plan_pendente', plano);
+        UI.showToast('Abrindo o pagamento por PIX / QR Code...');
+        setTimeout(function () { window.open(link, '_blank'); }, 600);
+    },
+
     async setPlan(plano) {
         const estabId = localStorage.getItem('hairconcept_estab_id');
         
@@ -4343,6 +4360,28 @@ const UI = {
                         selo.textContent = 'SEU PLANO';
                         bt.parentNode.insertBefore(selo, bt);
                     }
+                });
+            });
+
+            // Botoes de PIX / QR Code embaixo de cada cartao de plano pago.
+            // Ficam dentro do cartao, no mesmo padrao visual do resto.
+            const planoPorBotao = { mensal: 'mensal', anual: 'anual' };
+            Object.keys(planoPorBotao).forEach(function (p) {
+                document.querySelectorAll('[onclick="App.setPlan(\'' + p + '\')"]').forEach(function (bt) {
+                    const cartao = bt.closest('div');
+                    if (!cartao || cartao.querySelector('.hc-btn-pix')) return;
+
+                    const nota = document.createElement('p');
+                    nota.className = 'hc-btn-pix text-[10px] text-zinc-500 mt-3 leading-snug';
+                    nota.textContent = 'Ou pague uma vez com PIX ou QR Code:';
+
+                    const btn = document.createElement('button');
+                    btn.className = 'hc-btn-pix w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase transition cursor-pointer';
+                    btn.innerHTML = '<i class="fa-solid fa-qrcode mr-1"></i> Pagar com PIX / QR Code';
+                    btn.onclick = function () { App.pagarComPix(p); };
+
+                    cartao.appendChild(nota);
+                    cartao.appendChild(btn);
                 });
             });
 
