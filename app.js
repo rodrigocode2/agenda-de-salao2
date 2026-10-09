@@ -2758,7 +2758,9 @@ const App = {
                     .eq('data', data)
                     .eq('profissional_id', profissional_id);
                 if (this.horarioOcupado(doDia || [], profissional_id, horario)) {
-                    UI.showToast('Esse horario ja esta ocupado para ' + (nomeProfissional || 'este profissional') + '. Use "Adicionar dentro" se quiser encaixar.', 'error');
+                    const selP = document.getElementById('agendamento-profissional');
+                    const nomeDoProf = (selP && selP.selectedOptions && selP.selectedOptions[0]) ? selP.selectedOptions[0].textContent : 'este profissional';
+                    UI.showToast('Esse horario ja esta ocupado para ' + nomeDoProf + '. Use Adicionar dentro se quiser encaixar.', 'error');
                     return;
                 }
             } catch (e) {
@@ -2787,7 +2789,19 @@ const App = {
             document.getElementById('cliente-servico').value = '';
             document.getElementById('cliente-valor').value = '';
             Auth.fecharModal('modal-marcar');
+
+            // LEVA PARA A AGENDA, no dia que foi marcado.
+            // Sem isto o atendimento entrava mas a pessoa nao via nada.
+            const filtroData = document.getElementById('filtro-data-agenda');
+            if (filtroData && data) filtroData.value = data;
+            if (this.user && this.user.role === 'profissional' && this.user.id) {
+                localStorage.setItem('hairconcept_prof_selecionado', this.user.id);
+            } else if (profissional_id) {
+                localStorage.setItem('hairconcept_prof_selecionado', profissional_id);
+            }
+            UI.switchTab('aba-agenda');
             this.renderAgendaGrid();
+            this.renderAgendaSemana();
             this.renderRelatorios();
         } catch (e) {
             UI.showToast('Nao consegui marcar o atendimento. ' + mensagemAmigavel(e), 'error');
@@ -4346,25 +4360,8 @@ const UI = {
                 }
             });
 
-            // Botoes de PIX / QR Code embaixo de cada plano pago
-            ['mensal','anual'].forEach(function (p) {
-                const bt = document.querySelector('[onclick="App.setPlan(\'' + p + '\')"]');
-                if (!bt) return;
-                const cartao = bt.closest('div.glass-water') || bt.parentNode;
-                if (!cartao || cartao.querySelector('.hc-btn-pix')) return;
-
-                const nota = document.createElement('p');
-                nota.className = 'hc-btn-pix text-[10px] text-zinc-500 mt-3 leading-snug';
-                nota.textContent = 'Ou pague uma vez com PIX ou QR Code:';
-
-                const btn = document.createElement('button');
-                btn.className = 'hc-btn-pix w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase transition cursor-pointer';
-                btn.textContent = 'Pagar com PIX / QR Code';
-                btn.onclick = function () { App.pagarComPix(p); };
-
-                cartao.appendChild(nota);
-                cartao.appendChild(btn);
-            });
+            // Os botoes de PIX estao no proprio index.html (um por plano pago).
+            // Antes eram criados aqui tambem, e apareciam DUPLICADOS na tela.
 
             // Aviso de quantos profissionais o plano permite
             let aviso = document.getElementById('hc-plano-limite');
