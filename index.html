@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HairConcept — gestão completa para salão de beleza: agenda, equipe, clientes, comissões e avaliação. Sistema interno do salão.">
+  <meta name="theme-color" content="#ec4899">
+  <meta property="og:title" content="HairConcept Gestão Integrada">
+  <meta property="og:description" content="Agenda, equipe, clientes e comissões do seu salão em um só lugar.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <title>HairConcept Gestão Integrada</title>
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -719,7 +726,7 @@ tailwind.config = {
     <div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-zinc-950/80 border border-white/10">
       <div class="flex items-center gap-4">
         <div class="relative group">
-          <img id="prof-header-foto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E" class="w-20 h-20 rounded-2xl object-cover border border-white/10">
+          <img alt="Foto do profissional" id="prof-header-foto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E" class="w-20 h-20 rounded-2xl object-cover border border-white/10">
           <label class="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-[10px] text-white font-bold uppercase text-center p-1">
             Alterar Foto
             <input type="file" accept="image/*" onchange="App.handleAtualizarMinhaFoto(event)" class="hidden">
@@ -1360,7 +1367,7 @@ tailwind.config = {
     <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
             <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
         <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center relative">
-          <img id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
+          <img alt="Foto do profissional" id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
           <i id="icon-foto-prof" class="fa-solid fa-user text-zinc-600 text-2xl"></i>
         </div>
         <div class="flex-grow space-y-1">
@@ -1570,7 +1577,7 @@ tailwind.config = {
     <div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-zinc-950/80 border border-white/10">
       <div class="flex items-center gap-4">
         <div class="relative group">
-          <img id="prof-header-foto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E" class="w-20 h-20 rounded-2xl object-cover border border-white/10">
+          <img alt="Foto do profissional" id="prof-header-foto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E" class="w-20 h-20 rounded-2xl object-cover border border-white/10">
           <label class="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-[10px] text-white font-bold uppercase text-center p-1">
             Alterar Foto
             <input type="file" accept="image/*" onchange="App.handleAtualizarMinhaFoto(event)" class="hidden">
@@ -2211,7 +2218,7 @@ tailwind.config = {
     <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
             <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
         <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center relative">
-          <img id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
+          <img alt="Foto do profissional" id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
           <i id="icon-foto-prof" class="fa-solid fa-user text-zinc-600 text-2xl"></i>
         </div>
         <div class="flex-grow space-y-1">
@@ -2455,7 +2462,7 @@ tailwind.config = {
         <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Identidade Visual</h3>
         <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
           <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-            <img id="preview-logo-salao" src="" class="w-full h-full object-cover hidden">
+            <img alt="Foto do profissional" id="preview-logo-salao" src="" class="w-full h-full object-cover hidden">
             <i id="icon-logo-salao" class="fa-solid fa-store text-zinc-600 text-2xl"></i>
           </div>
           <div class="flex-grow space-y-1">
