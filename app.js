@@ -4308,8 +4308,58 @@ const UI = {
         if (!alvo) return;
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
         alvo.classList.remove('hidden');
+        // Cada aba carrega o que precisa ao abrir. Sem isto a aba abre VAZIA,
+        // que era o caso da aba PLANOS.
         if (tabId === 'aba-gestao') this.trocarEspaco('servicos');
         if (tabId === 'aba-clientes') App.renderClientes();
+        if (tabId === 'aba-equipe') App.renderListaProfissionais();
+        if (tabId === 'aba-relatorios') App.renderRelatorios();
+        if (tabId === 'aba-planos') App.carregarPlanos();
+        if (tabId === 'aba-configuracoes') App.carregarConfiguracoes();
+        if (tabId === 'aba-avisos') { App.carregarAvisos(); App.carregarRecadosEstabelecimento(); }
+        if (tabId === 'aba-agenda') { App.montarLateralProfs(); App.renderAgendaGrid(); }
+    },
+
+    // A aba PLANOS mostra qual plano o salao tem AGORA.
+    // O plano vem do BANCO, nao do navegador: assim nunca diverge.
+    async carregarPlanos() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos').select('plano').eq('id', estabId).maybeSingle();
+            const plano = (data && data.plano) || 'gratis';
+            const limites = { gratis: 2, mensal: 10, anual: 30 };
+
+            ['gratis','mensal','anual'].forEach(function (p) {
+                document.querySelectorAll('[onclick="App.setPlan(\'' + p + '\')"]').forEach(function (bt) {
+                    const cartao = bt.closest('div');
+                    if (!cartao) return;
+                    const velho = cartao.querySelector('.hc-selo-plano');
+                    if (velho) velho.remove();
+                    if (p === plano) {
+                        const selo = document.createElement('span');
+                        selo.className = 'hc-selo-plano';
+                        selo.textContent = 'SEU PLANO';
+                        bt.parentNode.insertBefore(selo, bt);
+                    }
+                });
+            });
+
+            let aviso = document.getElementById('hc-plano-limite');
+            if (!aviso) {
+                const alvo = document.querySelector('#aba-planos .glass-water');
+                if (alvo) {
+                    aviso = document.createElement('p');
+                    aviso.id = 'hc-plano-limite';
+                    aviso.className = 'text-center text-[11px] text-brand-500 font-bold uppercase mt-4';
+                    alvo.appendChild(aviso);
+                }
+            }
+            if (aviso) aviso.textContent = 'Seu plano permite ' + (limites[plano] || 2) + ' profissionais na equipe.';
+        } catch (e) {
+            console.warn('Nao foi possivel carregar os planos:', e);
+        }
     },
     toggleMobileMenu(forceState) {
         const menu = document.getElementById('mobile-nav-menu');
