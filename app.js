@@ -4364,25 +4364,25 @@ const UI = {
             });
 
             // Botoes de PIX / QR Code embaixo de cada cartao de plano pago.
-            // Ficam dentro do cartao, no mesmo padrao visual do resto.
-            const planoPorBotao = { mensal: 'mensal', anual: 'anual' };
-            Object.keys(planoPorBotao).forEach(function (p) {
-                document.querySelectorAll('[onclick="App.setPlan(\'' + p + '\')"]').forEach(function (bt) {
-                    const cartao = bt.closest('div');
-                    if (!cartao || cartao.querySelector('.hc-btn-pix')) return;
+            // O cartao e o <div> que CONTEM o botao de assinar.
+            const pixPorPlano = { mensal: 'mensal', anual: 'anual' };
+            Object.keys(pixPorPlano).forEach(function (p) {
+                const botaoAssinar = document.querySelector('[onclick="App.setPlan(\'' + p + '\')"]');
+                if (!botaoAssinar) return;
+                const cartao = botaoAssinar.closest('div.glass-water') || botaoAssinar.parentNode;
+                if (!cartao || cartao.querySelector('.hc-btn-pix')) return;
 
-                    const nota = document.createElement('p');
-                    nota.className = 'hc-btn-pix text-[10px] text-zinc-500 mt-3 leading-snug';
-                    nota.textContent = 'Ou pague uma vez com PIX ou QR Code:';
+                const nota = document.createElement('p');
+                nota.className = 'hc-btn-pix text-[10px] text-zinc-500 mt-3 leading-snug';
+                nota.textContent = 'Ou pague uma vez com PIX ou QR Code:';
 
-                    const btn = document.createElement('button');
-                    btn.className = 'hc-btn-pix w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase transition cursor-pointer';
-                    btn.innerHTML = '<i class="fa-solid fa-qrcode mr-1"></i> Pagar com PIX / QR Code';
-                    btn.onclick = function () { App.pagarComPix(p); };
+                const btn = document.createElement('button');
+                btn.className = 'hc-btn-pix w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase transition cursor-pointer';
+                btn.innerHTML = 'Pagar com PIX / QR Code';
+                btn.onclick = function () { App.pagarComPix(p); };
 
-                    cartao.appendChild(nota);
-                    cartao.appendChild(btn);
-                });
+                cartao.appendChild(nota);
+                cartao.appendChild(btn);
             });
 
             let aviso = document.getElementById('hc-plano-limite');
