@@ -789,3 +789,19 @@ html, body {
   border-color: rgba(244, 63, 94, 0.65);
   box-shadow: 0 0 12px rgba(244, 63, 94, 0.18);
 }
+
+
+/* Selo "SEU PLANO" na aba Planos — usa o rosa do design system */
+.hc-selo-plano {
+  display: inline-block;
+  margin: 0 auto 8px;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.45);
+  color: #ec4899;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
