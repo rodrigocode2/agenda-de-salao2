@@ -1,7 +1,27 @@
 const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
-const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+// O site manda o CODIGO DO SALAO em toda chamada, num cabecalho proprio.
+// Assim o banco encontra o salao mesmo que a conta de login mude.
+const CODIGO_SALAO_PADRAO = 'deconcept2';
+window.hcSalao = {
+    get codigo() {
+        try { return localStorage.getItem('hairconcept_codigo_salao') || CODIGO_SALAO_PADRAO; }
+        catch (e) { return CODIGO_SALAO_PADRAO; }
+    },
+    definir(codigo) {
+        try { localStorage.setItem('hairconcept_codigo_salao', String(codigo || '').trim().toLowerCase()); }
+        catch (e) { /* silencioso */ }
+    }
+};
+
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+        headers: {
+            get 'x-salao-codigo'() { return window.hcSalao.codigo; }
+        }
+    }
+}) : null;
 
 // Foto padrão (o site via.placeholder.com saiu do ar)
 const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
@@ -449,6 +469,15 @@ const App = {
             this.init();
         }
     },
+    // Gera o codigo do salao a partir do nome: "Salao X" -> "salaox"
+    gerarCodigoSalao(nome) {
+        return String(nome || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'salao';
+    },
+
     // ---------- Controle de tentativas do profissional ----------
     // Depois de 4 erros na mesma chave, trava por 15 minutos.
     async _salaoPorCodigo(codigo) {
@@ -531,6 +560,8 @@ const App = {
             }
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
+            if (data.codigo_acesso) window.hcSalao.definir(data.codigo_acesso);
+            else if (data.nome_salao) window.hcSalao.definir(App.gerarCodigoSalao ? App.gerarCodigoSalao(data.nome_salao) : 'deconcept2');
             this.limparTentativas(data.estabelecimento_id, cpf);
             }
             localStorage.setItem('hairconcept_prof_id', data.id);
@@ -1134,22 +1165,15 @@ const App = {
             // Pontos: vem do banco quando existe, senao calcula na hora
             const pontosMap = {};
             try {
-                const fn = tipo === 'prof' ? 'pontos_profissionais' : 'pontos_clientes';
-                const { data: pts } = await supabaseClient.rpc(fn);
-                (pts || []).forEach(x => {
-                    const chave = tipo === 'prof' ? x.profissional_id : x.cliente_id;
-                    if (chave) pontosMap[chave] = Number(x.pontos) || 0;
-                });
-            } catch (e) {
                 const { data: votos } = await supabaseClient
                     .from('avaliacoes_cliente').select('profissional_id, cliente_id, tipo')
                     .eq('estabelecimento_id', estabId);
                 (votos || []).forEach(v => {
-                    const chave = tipo === 'prof' ? v.profissional_id : v.cliente_id;
+                    const chave = (tipo === 'prof') ? v.profissional_id : v.cliente_id;
                     if (!chave) return;
                     pontosMap[chave] = (pontosMap[chave] || 0) + (v.tipo === 'mais' ? 1 : -1);
                 });
-            }
+            } catch (e) { console.warn('Erro ao somar os pontos:', e); }
 
             const ordenada = lista.slice().sort((a, b) => (pontosMap[b.id] || 0) - (pontosMap[a.id] || 0));
 
@@ -1240,13 +1264,15 @@ const App = {
         if (!estabId) return;
         try {
             if (!pontosMap) {
-                const fn = (tipo === 'cli') ? 'pontos_clientes' : 'pontos_profissionais';
                 pontosMap = {};
                 try {
-                    const { data: pts } = await supabaseClient.rpc(fn);
-                    (pts || []).forEach(x => {
-                        const chave = (tipo === 'cli') ? x.cliente_id : x.profissional_id;
-                        if (chave) pontosMap[chave] = Number(x.pontos) || 0;
+                    const { data: votos } = await supabaseClient
+                        .from('avaliacoes_cliente').select('profissional_id, cliente_id, tipo')
+                        .eq('estabelecimento_id', estabId);
+                    (votos || []).forEach(v => {
+                        const chave = (tipo === 'cli') ? v.cliente_id : v.profissional_id;
+                        if (!chave) return;
+                        pontosMap[chave] = (pontosMap[chave] || 0) + (v.tipo === 'mais' ? 1 : -1);
                     });
                 } catch (e) { /* segue sem ranking */ }
             }
