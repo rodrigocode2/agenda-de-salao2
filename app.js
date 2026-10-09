@@ -449,6 +449,54 @@ const App = {
             this.init();
         }
     },
+    // ---------- Controle de tentativas do profissional ----------
+    // Depois de 4 erros na mesma chave, trava por 15 minutos.
+    async _salaoPorCodigo(codigo) {
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos').select('id')
+                .eq('codigo_acesso', String(codigo || '').trim().toLowerCase())
+                .maybeSingle();
+            return data ? data.id : null;
+        } catch (e) { return null; }
+    },
+
+    async contarTentativas(codigo, chave) {
+        const salaId = await this._salaoPorCodigo(codigo);
+        if (!salaId) return 0;
+        try {
+            const desde = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+            const { data } = await supabaseClient
+                .from('tentativas_login').select('id')
+                .eq('estabelecimento_id', salaId)
+                .eq('chave_final', String(chave || '').slice(-2))
+                .gte('tentou_em', desde);
+            return (data || []).length;
+        } catch (e) { return 0; }
+    },
+
+    async registrarTentativaFalha(codigo, chave) {
+        const salaId = await this._salaoPorCodigo(codigo);
+        if (!salaId) return 0;
+        try {
+            await supabaseClient.from('tentativas_login').insert([{
+                estabelecimento_id: salaId,
+                nome_digitado: '(site)',
+                chave_final: String(chave || '').slice(-2)
+            }]);
+        } catch (e) { /* nao atrapalha o login */ }
+        return await this.contarTentativas(codigo, chave);
+    },
+
+    async limparTentativas(salaId, chave) {
+        if (!salaId) return;
+        try {
+            await supabaseClient.from('tentativas_login').delete()
+                .eq('estabelecimento_id', salaId)
+                .eq('chave_final', String(chave || '').slice(-2));
+        } catch (e) { /* silencioso */ }
+    },
+
     async loginProfissional(event) {
         event.preventDefault();
         const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
@@ -457,6 +505,11 @@ const App = {
         const senha = cpf; // a chave de 11 numeros e o acesso
         const normaliza = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
         if (cpf.length !== 11) { UI.showToast('A chave de acesso tem 11 números.', 'error'); return; }
+        const jaErrou = await this.contarTentativas(nomeEstabelecimento, cpf);
+        if (jaErrou >= 4) {
+            UI.showToast('Acesso travado por 15 minutos. Avise o salão para liberar.', 'error');
+            return;
+        }
         try {
             const { data: lista, error } = await supabaseClient.rpc('login_profissional_v2', {
                 p_codigo: nomeEstabelecimento,
@@ -466,11 +519,19 @@ const App = {
             const data = Array.isArray(lista) ? lista[0] : lista;
             if (error || !data || !data.id) {
                 if (error) console.error('Erro no login do profissional:', error);
+                const tent = await this.registrarTentativaFalha(nomeEstabelecimento, cpf);
+                if (tent >= 4) {
+                    UI.showToast('Acesso travado por 15 minutos. Avise o salão para liberar.', 'error');
+                } else {
+                    UI.showToast('Salão, nome ou chave incorretos. Tentativa ' + tent + ' de 4.', 'error');
+                }
+                return;
                 UI.showToast('Salão, nome ou chave incorretos.', 'error');
                 return;
             }
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
+            this.limparTentativas(data.estabelecimento_id, cpf);
             }
             localStorage.setItem('hairconcept_prof_id', data.id);
             if (data.token) localStorage.setItem('hairconcept_prof_token', data.token);
@@ -1371,6 +1432,16 @@ const App = {
     },
 
     async renderClientes() {
+        this.ligarMascaraTelefone();
+        // Guarda o rascunho a cada digitacao no cadastro de cliente
+        ['cli-nome','cli-telefone','cli-cpf','cli-email'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el && el.dataset.rascunho !== 'on') {
+                el.dataset.rascunho = 'on';
+                el.addEventListener('input', function () { App.guardarRascunho(['cli-nome','cli-telefone','cli-cpf','cli-email']); });
+            }
+        });
+        this.devolverRascunho();
         const lista = document.getElementById('lista-clientes');
         const total = document.getElementById('clientes-total');
         if (!lista) return;
@@ -1543,6 +1614,63 @@ const App = {
         }
     },
 
+    // ---------- Mascara de telefone ----------
+    // Deixa digitar do jeito que a pessoa quiser, mas grava sempre
+    // no padrao (11) 99999-9999. Evita "Amanda 1, Amanda 2" no cadastro.
+    mascaraTelefone(valor) {
+        const d = String(valor || '').replace(/\D/g, '').slice(0, 11);
+        if (d.length <= 2) return d;
+        if (d.length <= 6) return '(' + d.slice(0,2) + ') ' + d.slice(2);
+        if (d.length <= 10) return '(' + d.slice(0,2) + ') ' + d.slice(2,6) + '-' + d.slice(6);
+        return '(' + d.slice(0,2) + ') ' + d.slice(2,7) + '-' + d.slice(7);
+    },
+
+    ligarMascaraTelefone() {
+        const campo = document.getElementById('cli-telefone');
+        if (!campo || campo.dataset.mascara === 'on') return;
+        campo.dataset.mascara = 'on';
+        campo.setAttribute('inputmode', 'numeric');
+        campo.setAttribute('maxlength', '15');
+        campo.addEventListener('input', function () {
+            campo.value = App.mascaraTelefone(campo.value);
+        });
+    },
+
+    // ---------- Rascunho automatico do formulario ----------
+    // Se a internet cair ou a pessoa sair sem querer, o que foi digitado
+    // volta quando ela abrir a tela de novo. So no proprio aparelho.
+    guardarRascunho(campos) {
+        try {
+            const dados = {};
+            campos.forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el && el.value) dados[id] = el.value;
+            });
+            if (Object.keys(dados).length) {
+                localStorage.setItem('hairconcept_rascunho', JSON.stringify(dados));
+            }
+        } catch (e) { /* silencioso */ }
+    },
+
+    devolverRascunho() {
+        try {
+            const bruto = localStorage.getItem('hairconcept_rascunho');
+            if (!bruto) return false;
+            const dados = JSON.parse(bruto);
+            let recuperou = false;
+            Object.keys(dados).forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el && !el.value) { el.value = dados[id]; recuperou = true; }
+            });
+            if (recuperou) UI.showToast('Recuperei o que voce tinha digitado.');
+            return recuperou;
+        } catch (e) { return false; }
+    },
+
+    limparRascunho() {
+        try { localStorage.removeItem('hairconcept_rascunho'); } catch (e) {}
+    },
+
     async handleCreateCliente(event) {
         event.preventDefault();
         const nome = document.getElementById('cli-nome').value.trim();
@@ -1559,6 +1687,28 @@ const App = {
         if (!estabId) {
             UI.showToast('Não encontrei o seu salão. Recarregue a página.', 'error');
             return;
+        }
+
+        // Aviso claro quando o telefone ja existe, ANTES de gravar.
+        // Quem nao sabe mexer precisa saber que ja tem ficha.
+        if (telefone) {
+            try {
+                const soDigitos = String(telefone).replace(/\D/g, '');
+                const { data: iguais } = await supabaseClient
+                    .from('clientes').select('id, nome, telefone')
+                    .eq('estabelecimento_id', estabId)
+                    .ilike('telefone', '%' + soDigitos.slice(-8) + '%');
+                if (iguais && iguais.length) {
+                    const achado = iguais[0];
+                    const seguir = confirm(
+                        'Ja existe uma cliente com esse telefone:\n\n' +
+                        achado.nome + '\n\n' +
+                        'Deseja criar OUTRA ficha com o mesmo numero?\n' +
+                        'Se for a mesma pessoa, use a ficha que ja existe.'
+                    );
+                    if (!seguir) { UI.showToast('Cadastro cancelado. A ficha que ja existe continua valendo.'); return; }
+                }
+            } catch (e) { /* nao trava o cadastro */ }
         }
 
         try {
@@ -3701,6 +3851,10 @@ const App = {
         try {
             await this.carregarSeloCertificados();
             const estabId = await this.obterEstabId();
+            // Esqueleto enquanto carrega: parece instantaneo mesmo em 3G
+            if (!lista.querySelector('.hc-esqueleto')) {
+                lista.innerHTML = '<div class="hc-esqueleto mb-2"></div><div class="hc-esqueleto mb-2"></div><div class="hc-esqueleto"></div>';
+            }
             const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
             if (error) {
                 console.error('Erro ao buscar profissionais:', error);
@@ -4202,3 +4356,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
