@@ -119,8 +119,7 @@ const Auth = {
         if (el) el.classList.remove('hidden');
     },
     fecharModal(id) {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
+        document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.classList.add('hidden'); });
     },
     abrirCadastro() { this.abrirModal('modal-cadastro'); },
     abrirRecuperarSenha() { this.abrirModal('modal-recuperar'); },
@@ -421,15 +420,24 @@ const App = {
             if (!session || !session.user) return;
             const userId = session.user.id;
             
-            let { data: estab, error } = await supabaseClient
+            // Antes usava maybeSingle(): com 2 saloes na conta ele dava ERRO,
+            // e o erro fazia o site criar MAIS um salao vazio a cada login.
+            let { data: listaEstab, error } = await supabaseClient
                 .from('estabelecimentos')
                 .select('*')
                 .eq('user_id', userId)
-                .maybeSingle();
+                .order('created_at', { ascending: true })
+                .limit(1);
+            let estab = (listaEstab && listaEstab[0]) || null;
 
             const headerSub = document.getElementById('saloon-name-header');
 
-            if (error || !estab) {
+            if (error) {
+                // Falha de leitura NAO e motivo para criar salao novo
+                console.warn('Nao consegui ler o salao:', error);
+                return;
+            }
+            if (!estab) {
                 const nomePadrao = localStorage.getItem('hairconcept_nome_novo_salao') || '';
                 localStorage.removeItem('hairconcept_nome_novo_salao');
                 const { data: newEstab, error: createErr } = await supabaseClient
@@ -2451,6 +2459,20 @@ const App = {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return id || null;
+            // 1o: o salao pelo CODIGO (deconcept2). Assim trocar de conta
+            // Google nao abre um salao vazio e os clientes nao "somem".
+            const codigo = (localStorage.getItem('hairconcept_codigo_salao') || '').trim().toLowerCase();
+            if (codigo) {
+                const { data: porCodigo } = await supabaseClient
+                    .from('estabelecimentos')
+                    .select('id')
+                    .eq('codigo_acesso', codigo)
+                    .maybeSingle();
+                if (porCodigo && porCodigo.id) {
+                    localStorage.setItem('hairconcept_estab_id', porCodigo.id);
+                    return porCodigo.id;
+                }
+            }
             if (id) {
                 const { data: confere } = await supabaseClient
                     .from('estabelecimentos')
