@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark scroll-smooth">
 <head>
@@ -1529,50 +1530,7 @@ tailwind.config = {
 
 
 <!-- AGENDAR -->
-<div id="modal-marcar" class="modal-overlay hidden">
-  <div class="modal-caixa">
-    <div class="flex items-center justify-between mb-5">
-      <h3 class="text-base font-bold uppercase text-white">Marcar Atendimento</h3>
-      <button type="button" onclick="Auth.fecharModal('modal-marcar')" class="modal-x-fixo text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
-        <input id="agendamento-data" type="date" required onchange="App.aplicarHorariosLivres()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional *</label>
-        <select id="agendamento-profissional" required onchange="App.aplicarHorariosLivres()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
-        <input id="cliente-servico" type="text" required placeholder="Ex: Corte de Cabelo / Barba" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Início *</label>
-        <input type="time" id="agendamento-horario" required step="1800" min="06:00" max="23:30" value="08:00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fim *</label>
-        <input type="time" id="agendamento-horario-fim" required step="1800" min="06:00" max="23:30" value="08:30" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <p id="aviso-encaixe" class="hidden text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-2">Colocando um serviço DENTRO do atendimento. O horário não será bloqueado.</p>
-      <div class="flex items-center gap-2 p-3 rounded-xl bg-zinc-950 border border-white/10">
-        <input type="checkbox" id="agendamento-encaixe" class="w-4 h-4">
-        <label for="agendamento-encaixe" class="text-[11px] text-zinc-300">Aceita encaixe dentro deste atendimento (ex: escova durante o notavel)</label>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Cliente *</label>
-        <input id="cliente-nome" type="text" required placeholder="Nome completo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Valor Final (R$) *</label>
-        <input id="cliente-valor" type="number" step="0.01" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Confirmar Agendamento</button>
-    </form>
-  </div>
-</div>
+<!-- janela de agendamento duplicada removida -->
 
 <!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
 
