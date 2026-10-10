@@ -1,3 +1,4 @@
+
 const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
@@ -116,10 +117,26 @@ const Auth = {
     // ---------- Janelas (modais) ----------
     abrirModal(id) {
         const el = document.getElementById(id);
-        if (el) el.classList.remove('hidden');
+        if (!el) return;
+        // Garante a janela ACIMA do cabecalho, na marra: assim nao depende
+        // de qual CSS carrega primeiro nem de briga com o Tailwind.
+        el.classList.remove('hidden');
+        el.style.setProperty('position', 'fixed', 'important');
+        el.style.setProperty('top', '0', 'important');
+        el.style.setProperty('left', '0', 'important');
+        el.style.setProperty('width', '100vw', 'important');
+        el.style.setProperty('height', '100vh', 'important');
+        el.style.setProperty('z-index', '99999', 'important');
+        el.style.setProperty('display', 'flex', 'important');
+        el.style.setProperty('align-items', 'center', 'important');
+        el.style.setProperty('justify-content', 'center', 'important');
+        // trava a rolagem do fundo enquanto a janela estiver aberta
+        document.body.style.overflow = 'hidden';
     },
     fecharModal(id) {
         document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.classList.add('hidden'); });
+        const algumaAberta = document.querySelector('.modal-overlay:not(.hidden)');
+        if (!algumaAberta) document.body.style.overflow = '';
     },
     abrirCadastro() { this.abrirModal('modal-cadastro'); },
     abrirRecuperarSenha() { this.abrirModal('modal-recuperar'); },
