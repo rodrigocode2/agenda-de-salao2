@@ -91,15 +91,22 @@ table th, table td {
 
 
 /* ===== Modais (janelas sobre a tela) ===== */
+/* A janela precisa ficar ACIMA do cabecalho (que usa z-index 40) e cobrir
+   a tela toda, inclusive no celular. Antes ficava atras da barra do topo. */
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999 !important;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, 0.78);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -806,3 +813,19 @@ html, body {
   text-transform: uppercase;
 }
 
+/* Aviso quando o cliente chega a -1: a fileira de estrelas acaba e entra isto */
+.hc-cuidado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 0.6rem;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #fb7185;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.hc-cuidado i { font-size: 11px; }
