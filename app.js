@@ -343,6 +343,7 @@ const App = {
             this.renderAvaliacoes();
             this.carregarAvisos();
             this.renderClientes();
+            this.popularClientesAgenda();
             this.renderRanking();
             this.renderAvaliacao();
         }
@@ -1067,6 +1068,7 @@ const App = {
             Auth.fecharModal('modal-voto');
             UI.showToast(tipo === 'mais' ? 'Ponto registrado!' : 'Alerta registrado.');
             this.renderClientes();
+            this.popularClientesAgenda();
             this.renderRanking();
             this.renderAvaliacao();
         } catch (e) {
@@ -1076,13 +1078,24 @@ const App = {
     },
 
     // Estrelas do profissional: proporcional ao total de clientes do salao
+    // Quantas estrelas acender. Positivo enche a barra na proporcao dos clientes
+    // do salao; NEGATIVO nao gera estrela negativa (era o que quebrava o layout).
     calcularEstrelaProf(pontos, totalClientes) {
         const base = totalClientes > 0 ? totalClientes : 1;
-        // Sem clientes na base, nao ha do que falar em progresso: barra zerada.
-        const progresso = Math.min(pontos / base, 1);
-        const cheias = Math.floor(progresso * 5);
-        const resto = (progresso * 5) - cheias;
-        return { pontos: pontos, total: base, progresso: progresso, cheias: cheias, meia: resto >= 0.5, vazias: 5 - cheias - (resto >= 0.5 ? 1 : 0) };
+        const negativo = pontos < 0;
+        const progresso = negativo ? 0 : Math.min(pontos / base, 1);
+        const cheias = Math.max(0, Math.floor(progresso * 5));
+        const resto = negativo ? 0 : (progresso * 5) - cheias;
+        const meia = resto >= 0.5;
+        return {
+            pontos: pontos,
+            total: base,
+            progresso: progresso,
+            negativo: negativo,
+            cheias: cheias,
+            meia: meia,
+            vazias: Math.max(0, 5 - cheias - (meia ? 1 : 0))
+        };
     },
 
 
@@ -1105,7 +1118,26 @@ const App = {
         this.renderAvaliacao();
     },
 
+    // Cliente: 0 a 5 estrelas. Cada reclamacao tira uma. Ao chegar em -1,
+    // a fileira some e entra o aviso CUIDADO (o cliente deu trabalho).
+    estrelasClienteHTML(pontos, total) {
+        // -1 ou menos: a fileira ACABA e entra o aviso CUIDADO
+        if (pontos < 0) {
+            return '<span class="hc-cuidado"><i class="fa-solid fa-triangle-exclamation"></i> CUIDADO</span>';
+        }
+        // 0 a 5 estrelas. Comeca cheio em 5 e cada reclamacao tira uma.
+        const cheias = Math.max(0, Math.min(5, Math.round(pontos)));
+        let html = '';
+        for (let i = 0; i < cheias; i++) html += '<i class="fa-solid fa-star text-amber-400"></i>';
+        for (let i = 0; i < 5 - cheias; i++) html += '<i class="fa-regular fa-star text-zinc-600"></i>';
+        return html;
+    },
+
     estrelasHTML(pontos, total) {
+        // Nota negativa: UMA estrela VERMELHA. Simples assim.
+        if (pontos < 0) {
+            return '<i class="fa-solid fa-star text-rose-500"></i>';
+        }
         const e = this.calcularEstrelaProf(pontos, total);
         let html = '';
         for (let i = 0; i < e.cheias; i++) html += '<i class="fa-solid fa-star"></i>';
@@ -1355,18 +1387,20 @@ const App = {
                 total = count || 0;
             }
             const e = this.calcularEstrelaProf(pontos, total);
+            // Negativo = vermelho, igual ao profissional
+            const negativo = pontos < 0;
             caixa.innerHTML = '';
             const estrelas = document.createElement('div');
             estrelas.className = 'prof-estrelas text-lg';
-            estrelas.innerHTML = this.estrelasHTML(pontos, total);
+            estrelas.innerHTML = this.estrelasClienteHTML(pontos, total);
             const barra = document.createElement('div');
             barra.className = 'prof-barra mt-2';
             const cheia = document.createElement('div');
-            cheia.className = 'prof-barra-cheia';
+            cheia.className = 'prof-barra-cheia' + (negativo ? ' bg-rose-500' : '');
             cheia.style.width = Math.round(e.progresso * 100) + '%';
             barra.appendChild(cheia);
             const cont = document.createElement('p');
-            cont.className = 'text-[10px] text-zinc-400 mt-2';
+            cont.className = 'text-[10px] mt-2 ' + (negativo ? 'text-rose-400 font-bold' : 'text-zinc-400');
             cont.textContent = pontos + ' / ' + total + ' cliente(s)';
             caixa.appendChild(estrelas); caixa.appendChild(barra); caixa.appendChild(cont);
         } catch (err) {
@@ -1487,6 +1521,7 @@ const App = {
                     : (nomeCliente || 'Cliente') + ': alerta registrado.'
             );
             this.renderClientes();
+            this.popularClientesAgenda();
             this.renderAvaliacao();
         } catch (e) {
             console.error('Erro ao registrar ponto da cliente:', e);
@@ -1823,6 +1858,7 @@ const App = {
             document.getElementById('cli-cpf').value = '';
             document.getElementById('cli-email').value = '';
             this.renderClientes();
+            this.popularClientesAgenda();
         } catch (e) {
             console.error('Erro inesperado ao criar cliente:', e);
             UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
@@ -1851,7 +1887,34 @@ const App = {
         const cpf = document.getElementById('editar-cli-cpf').value.trim();
         const email = document.getElementById('editar-cli-email').value.trim();
 
-        if (!id) { UI.showToast('Cliente não identificado. Feche e tente de novo.', 'error'); return; }
+        // Sem id = cliente NOVO. Com id = edicao da ficha que ja existe.
+        if (!id && !nome) { UI.showToast('Escreva o nome do cliente.', 'error'); return; }
+
+        if (!id) {
+            try {
+                const estabId = await this.obterEstabId();
+                if (!estabId) { UI.showToast('Não encontrei o seu salão. Recarregue a página.', 'error'); return; }
+                const { error: erroNovo } = await supabaseClient.from('clientes').insert([{
+                    estabelecimento_id: estabId,
+                    nome: nome,
+                    telefone: telefone || null,
+                    cpf: cpf || null,
+                    email: email || null
+                }]);
+                if (erroNovo) { console.error('Erro ao criar cliente:', erroNovo); UI.showToast(mensagemAmigavel(erroNovo), 'error'); return; }
+                Auth.fecharModal('modal-editar-cliente');
+                // Leva o nome novo para o campo da agenda, sem digitar de novo
+                const campoNome = document.getElementById('cliente-nome');
+                if (campoNome) campoNome.value = nome;
+                UI.showToast('Cliente cadastrado!');
+                this.renderClientes();
+                this.popularClientesAgenda();
+            } catch (e) {
+                console.error('Erro inesperado ao criar cliente:', e);
+                UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
+            }
+            return;
+        }
 
         try {
             const { data, error } = await supabaseClient
@@ -1871,6 +1934,7 @@ const App = {
             Auth.fecharModal('modal-editar-cliente');
             UI.showToast('Cliente atualizado!');
             this.renderClientes();
+            this.popularClientesAgenda();
         } catch (e) {
             console.error('Erro inesperado ao editar cliente:', e);
             UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
@@ -1888,6 +1952,7 @@ const App = {
             }
             UI.showToast('Cliente excluído.');
             this.renderClientes();
+            this.popularClientesAgenda();
         } catch (e) {
             console.error('Erro inesperado ao excluir cliente:', e);
             UI.showToast('Erro inesperado ao excluir.', 'error');
@@ -2212,6 +2277,64 @@ const App = {
             console.error('Erro ao excluir aviso:', e);
             UI.showToast('Erro inesperado ao excluir o aviso.', 'error');
         }
+    },
+
+    // Lista os clientes do salao no campo de nome da agenda (sugestao ao digitar)
+    // O clique em "+ Cadastrar cliente" na agenda: abre a janela de cliente
+    // em branco, ja com a data e o profissional escolhidos.
+    async novoClienteDaAgenda() {
+        const d = document.getElementById('agendamento-data');
+        const p = document.getElementById('agendamento-profissional');
+        this._clienteEdicaoId = null;
+        ['editar-cli-nome', 'editar-cli-telefone', 'editar-cli-cpf', 'editar-cli-email'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const tit = document.getElementById('titulo-cliente');
+        if (tit) tit.textContent = 'Novo Cliente';
+        const dCli = document.getElementById('editar-cli-data');
+        if (dCli && d) dCli.value = d.value;
+        const pCli = document.getElementById('editar-cli-profissional');
+        if (pCli && p && p.options) {
+            pCli.innerHTML = '';
+            for (let i = 0; i < p.options.length; i++) {
+                const op = document.createElement('option');
+                op.value = p.options[i].value; op.textContent = p.options[i].textContent;
+                if (p.options[i].value === p.value) op.selected = true;
+                pCli.appendChild(op);
+            }
+        }
+        UI.abrirModal('modal-editar-cliente');
+    },
+
+    async popularClientesAgenda() {
+        const dl = document.getElementById('lista-clientes-agenda');
+        if (!dl) return;
+        try {
+            let estabId = localStorage.getItem('hairconcept_estab_id');
+            if (!estabId) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    const { data: lista } = await supabaseClient
+                        .from('estabelecimentos').select('id')
+                        .eq('user_id', session.user.id)
+                        .order('created_at', { ascending: true }).limit(1);
+                    estabId = lista && lista[0] ? lista[0].id : null;
+                }
+            }
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('clientes').select('nome')
+                .eq('estabelecimento_id', estabId)
+                .order('nome', { ascending: true });
+            dl.innerHTML = '';
+            (data || []).forEach(function (c) {
+                if (!c.nome) return;
+                const op = document.createElement('option');
+                op.value = c.nome;
+                dl.appendChild(op);
+            });
+        } catch (e) { console.warn('Nao carreguei a lista de clientes:', e); }
     },
 
     async popularSelectProfissionais() {
@@ -2821,10 +2944,11 @@ const App = {
             } else if (profissional_id) {
                 localStorage.setItem('hairconcept_prof_selecionado', profissional_id);
             }
+            // Só a troca de aba aqui: se algo acima falhar, a agenda abre do mesmo jeito
             UI.switchTab('aba-agenda');
-            this.renderAgendaGrid();
-            this.renderAgendaSemana();
-            this.renderRelatorios();
+            try { this.renderAgendaGrid(); } catch (e) { console.warn(e); }
+            try { this.renderAgendaSemana(); } catch (e) { console.warn(e); }
+            try { this.renderRelatorios(); } catch (e) { console.warn(e); }
         } catch (e) {
             UI.showToast('Nao consegui marcar o atendimento. ' + mensagemAmigavel(e), 'error');
         }
@@ -4415,7 +4539,7 @@ const UI = {
         if (tabId === 'aba-planos') App.carregarPlanos();
         if (tabId === 'aba-configuracoes') App.carregarConfiguracoes();
         if (tabId === 'aba-avisos') { App.carregarAvisos(); App.carregarRecadosEstabelecimento(); }
-        if (tabId === 'aba-agenda') { App.montarLateralProfs(); App.renderAgendaGrid(); }
+        if (tabId === 'aba-agenda') { App.popularClientesAgenda(); App.montarLateralProfs(); App.renderAgendaGrid(); }
     },
 
     // A aba PLANOS mostra qual plano o salao tem AGORA.
@@ -4501,5 +4625,4 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-});
 });
