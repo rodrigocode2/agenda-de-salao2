@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark scroll-smooth">
 <head>
@@ -1454,6 +1455,8 @@ tailwind.config = {
     <button id="btn-espaco-servicos" onclick="UI.trocarEspaco('servicos')" class="flex-1 min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2.5 rounded-2xl bg-brand-500/15 text-brand-500 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-scissors"></i> Serviços</button>
     <button id="btn-espaco-produtos" onclick="UI.trocarEspaco('produtos')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-boxes-stacked"></i> Estoque</button>
     <button id="btn-espaco-avaliacoes" onclick="UI.trocarEspaco('avaliacoes-nova')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-star"></i> Avaliação de Profissional</button>
+    <button id="btn-espaco-config-salao" onclick="UI.trocarEspaco('config-salao')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-store"></i> Configuração do Salão</button>
+    <button id="btn-espaco-notas" onclick="UI.trocarEspaco('notas')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-file-invoice-dollar"></i> Notas e Comissões</button>
   </div>
 
 <section id="aba-servicos" class="espaco-painel hidden">
@@ -1581,6 +1584,99 @@ v>
 
 
 <!-- PLANOS & MERCADO PAGO -->
+
+<section id="aba-config-salao" class="espaco-painel hidden">
+  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+    <div class="border-b border-white/10 pb-4">
+      <h2 class="text-xl font-bold uppercase text-white">Configuração do Salão</h2>
+      <p class="text-xs text-zinc-400">Nome, contato, endereço e horários de funcionamento</p>
+    </div>
+    <p class="text-xs text-zinc-400">Esta aba reúne o que o salão precisa para operar. Preencha e clique em Salvar.</p>
+    <form onsubmit="App.handleSalvarConfiguracoes(event)" class="space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
+          <input type="text" id="cfg-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CNPJ</label>
+          <input type="text" id="cfg-cnpj" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="00.000.000/0001-00">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
+          <input type="email" id="cfg-email" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">WhatsApp</label>
+          <input type="tel" id="cfg-whatsapp" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Endereço</label>
+          <input type="text" id="cfg-endereco" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cidade</label>
+          <input type="text" id="cfg-cidade" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">UF</label>
+          <input type="text" id="cfg-uf" maxlength="2" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="SP">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CEP</label>
+          <input type="text" id="cfg-cep" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Instagram</label>
+          <input type="text" id="cfg-instagram" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Abre às</label>
+          <input type="time" id="cfg-abertura" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Fecha às</label>
+          <input type="time" id="cfg-fechamento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
+      </div>
+      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar configuração</button>
+    </form>
+  </div>
+</section>
+
+<section id="aba-notas" class="espaco-painel hidden space-y-6">
+  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
+    <div class="border-b border-white/10 pb-4">
+      <h2 class="text-xl font-bold uppercase text-white">Dados Fiscais</h2>
+      <p class="text-xs text-zinc-400">Aparecem no cabeçalho do recibo e identificam o prestador</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Inscrição Municipal</label>
+        <input type="text" id="cfg-inscricao-municipal" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Código do serviço (prefeitura)</label>
+        <input type="text" id="cfg-codigo-servico" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Alíquota do ISS (%)</label>
+        <input type="number" id="cfg-aliquota" step="0.01" min="0" max="100" value="0" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+    </div>
+    <button onclick="App.salvarDadosFiscais()" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-200 font-bold text-xs uppercase tracking-wider hover:text-white transition">Salvar dados fiscais</button>
+  </div>
+
+  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-5 shadow-2xl">
+    <div class="border-b border-white/10 pb-4">
+      <h2 class="text-xl font-bold uppercase text-white">Comissão por Tipo de Profissional</h2>
+      <p class="text-xs text-zinc-400">Percentual que o salão paga a cada tipo. De 0 a 100%.</p>
+    </div>
+    <div id="lista-comissoes-tipo" class="space-y-2"></div>
+    <button onclick="App.salvarComissoesTipo()" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar comissões</button>
+  </div>
+</section>
+
 <section id="aba-planos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
   <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
     <div class="text-center space-y-2 mb-6">
