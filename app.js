@@ -142,6 +142,121 @@ const Auth = {
         }
     },
 
+
+    // ============ NOTAS E COMISSOES ============
+    // Tipos de profissional do mercado de beleza (referencia CBO).
+    TIPOS_PROFISSIONAL: [
+        { t: 'Cabeleireiro', p: 50 },
+        { t: 'Barbeiro', p: 50 },
+        { t: 'Colorista', p: 30 },
+        { t: 'Escovista', p: 50 },
+        { t: 'Manicure', p: 50 },
+        { t: 'Pedicure', p: 50 },
+        { t: 'Depiladora', p: 45 },
+        { t: 'Esteticista', p: 45 },
+        { t: 'Maquiador', p: 50 },
+        { t: 'Design de sobrancelha', p: 50 },
+        { t: 'Massoterapeuta', p: 45 },
+        { t: 'Auxiliar', p: 10 }
+    ],
+
+    // Monta a lista de comissoes por tipo, lendo o que o salao ja salvou
+    async carregarComissoesTipo() {
+        const caixa = document.getElementById('lista-comissoes-tipo');
+        if (!caixa) return;
+        const estabId = await this.obterEstabId();
+        const salvos = {};
+        if (estabId) {
+            try {
+                const { data } = await supabaseClient
+                    .from('comissoes_tipo').select('tipo, percentual')
+                    .eq('estabelecimento_id', estabId);
+                (data || []).forEach(function (r) { salvos[r.tipo] = Number(r.percentual); });
+            } catch (e) { console.warn('Nao carreguei as comissoes:', e); }
+        }
+        caixa.innerHTML = '';
+        this.TIPOS_PROFISSIONAL.forEach(function (tp) {
+            const valor = (salvos[tp.t] !== undefined) ? salvos[tp.t] : tp.p;
+            const linha = document.createElement('div');
+            linha.className = 'flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-950 border border-white/10';
+            linha.innerHTML = '<span class="text-xs text-zinc-200 font-bold uppercase">' + tp.t + '</span>' +
+                '<input type="number" min="0" max="100" step="1" value="' + valor + '" ' +
+                'data-tipo="' + tp.t + '" class="cfg-comissao w-24 glass-input rounded-xl px-3 py-2 text-xs text-white text-right">';
+            caixa.appendChild(linha);
+        });
+    },
+
+    async salvarComissoesTipo() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
+        const campos = document.querySelectorAll('.cfg-comissao');
+        const linhas = [];
+        campos.forEach(function (c) {
+            let v = Number(c.value);
+            if (isNaN(v)) v = 0;
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            linhas.push({ estabelecimento_id: estabId, tipo: c.getAttribute('data-tipo'), percentual: v });
+        });
+        if (!linhas.length) return;
+        try {
+            const { error } = await supabaseClient
+                .from('comissoes_tipo')
+                .upsert(linhas, { onConflict: 'estabelecimento_id,tipo' });
+            if (error) throw error;
+            UI.showToast('Comissões salvas!');
+        } catch (e) {
+            console.error('Erro ao salvar comissoes:', e);
+            UI.showToast('Não consegui salvar as comissões. Tente de novo.', 'error');
+        }
+    },
+
+    async salvarDadosFiscais() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
+        const val = function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        try {
+            const { error } = await supabaseClient.from('estabelecimentos').update({
+                inscricao_municipal: val('cfg-inscricao-municipal') || null,
+                codigo_servico: val('cfg-codigo-servico') || null,
+                aliquota_iss: Number(val('cfg-aliquota')) || 0
+            }).eq('id', estabId).select('id');
+            if (error) throw error;
+            UI.showToast('Dados fiscais salvos!');
+        } catch (e) {
+            console.error('Erro ao salvar dados fiscais:', e);
+            UI.showToast('Não consegui salvar os dados fiscais.', 'error');
+        }
+    },
+
+    // Carrega a aba CONFIGURACAO DO SALAO (a antiga config, agora dentro da gestao)
+    async carregarConfigSalao() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos')
+                .select('nome_salao, cnpj, email, whatsapp, endereco, cidade, uf, cep, instagram, horario_abertura, horario_fechamento, inscricao_municipal, codigo_servico, aliquota_iss')
+                .eq('id', estabId).maybeSingle();
+            if (!data) return;
+            const por = function (id, v) { const el = document.getElementById(id); if (el && v !== null && v !== undefined) el.value = v; };
+            por('cfg-nome-salao', data.nome_salao);
+            por('cfg-cnpj', data.cnpj);
+            por('cfg-email', data.email);
+            por('cfg-whatsapp', data.whatsapp);
+            por('cfg-endereco', data.endereco);
+            por('cfg-cidade', data.cidade);
+            por('cfg-uf', data.uf);
+            por('cfg-cep', data.cep);
+            por('cfg-instagram', data.instagram);
+            por('cfg-abertura', (data.horario_abertura || '').slice(0, 5));
+            por('cfg-fechamento', (data.horario_fechamento || '').slice(0, 5));
+            por('cfg-inscricao-municipal', data.inscricao_municipal);
+            por('cfg-codigo-servico', data.codigo_servico);
+            por('cfg-aliquota', data.aliquota_iss);
+        } catch (e) { console.warn('Erro ao carregar a configuração:', e); }
+    },
+
     abrirModal(id) {
         const el = document.getElementById(id);
         if (!el) return;
@@ -4506,7 +4621,7 @@ const UI = {
         }, 3000);
     },
     trocarEspaco(qual) {
-        const paineis = ['servicos', 'produtos', 'avaliacoes-nova'];
+        const paineis = ['servicos', 'produtos', 'avaliacoes-nova', 'config-salao', 'notas'];
         if (paineis.indexOf(qual) < 0) return;
         paineis.forEach(function (p) {
             const painel = document.getElementById('aba-' + p);
@@ -4526,6 +4641,8 @@ const UI = {
         if (qual === 'servicos') App.renderServicos();
         if (qual === 'produtos') App.renderProdutos();
         if (qual === 'avaliacoes-nova') App.renderAvaliacao();
+        if (qual === 'config-salao') App.carregarConfigSalao();
+        if (qual === 'notas') { App.carregarConfigSalao(); App.carregarComissoesTipo(); }
     },
     abrirGestao(qual) {
         this.switchTab('aba-gestao');
@@ -4683,3 +4800,4 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
