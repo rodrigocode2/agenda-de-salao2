@@ -829,3 +829,90 @@ html, body {
   text-transform: uppercase;
 }
 .hc-cuidado i { font-size: 11px; }
+
+/* O botao de confirmar estava passando da borda da janela. */
+.modal-caixa, .modal-caixa form { max-width: 100%; box-sizing: border-box; }
+.modal-caixa button[type="submit"],
+.modal-caixa .hc-btn-largo {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  text-align: center;
+}
+.modal-caixa input, .modal-caixa select, .modal-caixa textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* O X da janela ficava fora da area visivel quando a caixa era mais alta
+   que a tela. Agora ele fica FIXO no canto superior direito, sempre clicavel. */
+.modal-x-fixo, .modal-x {
+  position: fixed !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  z-index: 100000 !important;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: rgba(24, 24, 27, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e4e4e7;
+}
+.modal-x-fixo:hover, .modal-x:hover { color: #fff; background: rgba(244, 63, 94, 0.25); }
+
+/* A janela inteira entra da esquerda para a direita: aparece deslizando. */
+.modal-overlay { transition: opacity 0.25s ease; }
+@keyframes hcJanelaEntra {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.modal-caixa { animation: hcJanelaEntra 0.3s ease-out both; }
+
+/* ===================== TELA DE ABERTURA =====================
+   Fundo quase preto, brilho rosa difuso e o nome aparecendo por etapas.
+   Cada etapa entra depois da anterior (0.4s de atraso entre elas). */
+#tela-abertura { transition: opacity .7s ease, visibility .7s ease; }
+#tela-abertura.hc-sai { opacity: 0; visibility: hidden; }
+.hc-brilho {
+  position: absolute; width: 130vw; height: 130vw; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(236,72,153,.20) 0%, rgba(236,72,153,.07) 35%, transparent 68%);
+  animation: hcPulsa 9s ease-in-out infinite;
+}
+@keyframes hcPulsa {
+  0%,100% { transform: translate(-50%,-50%) scale(1); opacity: .85; }
+  50%     { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
+}
+.hc-grao {
+  position: absolute; inset: 0; opacity: .05; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.hc-marca, .hc-frase, .hc-nome, .hc-sub, .hc-botao { opacity: 0; }
+.hc-marca { animation: hcSobe .8s ease-out .1s both; }
+.hc-f1    { animation: hcSobe .8s ease-out .55s both; }
+.hc-f2    { animation: hcSobe .9s ease-out 1s both; }
+.hc-f3    { animation: hcSobe .8s ease-out 1.5s both; }
+.hc-f4    { animation: hcSobe .8s ease-out 2s both; }
+@keyframes hcSobe {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hc-frase { margin-top: 1.5rem; font-size: 11px; letter-spacing: .38em; text-transform: uppercase; color: #a1a1aa; }
+.hc-nome  { font-size: clamp(2.6rem, 9vw, 6rem); font-weight: 900; letter-spacing: -.03em; text-transform: uppercase;
+            color: #fff; line-height: 1; text-shadow: 0 0 60px rgba(236,72,153,.35); }
+.hc-sub   { margin-top: .6rem; font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #ec4899; }
+.hc-botao {
+  margin-top: 2.75rem; padding: .95rem 3.2rem; border-radius: 999px;
+  background: #ec4899; color: #fff; font-weight: 800; font-size: 12px;
+  letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(236,72,153,.55); transition: transform .2s ease, background .2s ease;
+}
+.hc-botao:hover { background: #db2777; transform: translateY(-2px); }
+@media (prefers-reduced-motion: reduce) {
+  .hc-marca, .hc-frase, .hc-nome, .hc-sub, .hc-botao { animation-duration: .01s; animation-delay: 0s; }
+}
