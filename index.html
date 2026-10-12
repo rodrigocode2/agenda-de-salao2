@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark scroll-smooth">
 <head>
@@ -274,7 +273,7 @@ tailwind.config = {
 <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
 <!-- HEADER -->
-<header id="main-header" class="hidden sticky top-0 z-40 glass-water border-b border-white/10">
+<header id="main-header" class="hidden sticky top-0 hc-z-header glass-water border-b border-white/10" style="z-index:97">
 <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-2">
   <div class="flex items-center gap-3 overflow-hidden">
     <div id="header-logo-box" class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0 overflow-hidden">
@@ -336,7 +335,7 @@ tailwind.config = {
 
 <!-- TELA DE LOGIN -->
 <!-- ============ TELA DE ABERTURA ============ -->
-<div id="tela-abertura" class="fixed inset-0 z-[99998] flex items-center justify-center overflow-hidden bg-[#07070a]">
+<div id="tela-abertura" style="z-index:99" class="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#07070a]">
   <div class="hc-brilho"></div>
   <div class="hc-grao"></div>
   <div class="relative z-10 text-center px-6">
