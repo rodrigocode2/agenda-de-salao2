@@ -272,14 +272,15 @@ const Auth = {
         // de qual CSS carrega primeiro nem de briga com o Tailwind.
         el.classList.remove('hidden');
         el.style.setProperty('position', 'fixed', 'important');
-        el.style.setProperty('top', '0', 'important');
-        el.style.setProperty('left', '0', 'important');
-        el.style.setProperty('width', '100vw', 'important');
-        el.style.setProperty('height', '100vh', 'important');
+        el.style.setProperty('inset', '0', 'important');
         el.style.setProperty('z-index', '99999', 'important');
         el.style.setProperty('display', 'flex', 'important');
         el.style.setProperty('align-items', 'center', 'important');
         el.style.setProperty('justify-content', 'center', 'important');
+        // NAO forca largura/altura no fundo: quem esticava a janela era isso.
+        // A caixa de dentro mantem a largura dela (definida no style.css).
+        el.style.removeProperty('width');
+        el.style.removeProperty('height');
         // trava a rolagem do fundo enquanto a janela estiver aberta
         document.body.style.overflow = 'hidden';
     },
@@ -4800,4 +4801,3 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
