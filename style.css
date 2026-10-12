@@ -927,3 +927,10 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .hc-marca, .hc-frase, .hc-nome, .hc-sub, .hc-botao { animation-duration: .01s; animation-delay: 0s; }
 }
+
+/* Enquanto a tela de abertura estiver no ar, o sistema fica escondido.
+   Antes ele carregava por baixo e a janela de agendar travava a tela. */
+body.hc-abertura-ativa #main-header,
+body.hc-abertura-ativa .tab-content,
+body.hc-abertura-ativa .modal-overlay { display: none !important; }
+body.hc-abertura-ativa { overflow: hidden; }
