@@ -93,22 +93,33 @@ table th, table td {
 /* ===== Modais (janelas sobre a tela) ===== */
 /* A janela precisa ficar ACIMA do cabecalho (que usa z-index 40) e cobrir
    a tela toda, inclusive no celular. Antes ficava atras da barra do topo. */
+/* O FUNDO ocupa a tela toda; a CAIXA do formulario fica centralizada e
+   com largura limitada. Antes o width/height ia para tudo e a janela
+   esticava de ponta a ponta. */
 .modal-overlay {
   position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw;
-  height: 100vh;
+  inset: 0 !important;
   z-index: 99999 !important;
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.78);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  overflow-y: auto;
+}
+.modal-overlay > .modal-caixa {
+  width: 100% !important;
+  max-width: 26rem !important;
+  height: auto !important;
+  flex: 0 1 auto !important;
+  margin: auto;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+@media (min-width: 768px) {
+  .modal-overlay > .modal-caixa { max-width: 30rem !important; }
 }
 
 .modal-caixa {
