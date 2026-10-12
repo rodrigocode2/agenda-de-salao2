@@ -1325,7 +1325,7 @@ tailwind.config = {
     <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
-        <input id="agendamento-data" type="date" required onchange="App.aplicarHorariosLivres()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        <input id="agendamento-data" type="date" required onchange="App.aplicarHorariosLivres()" data-preencher-hoje class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
       </div>
       <div>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional *</label>
@@ -1348,7 +1348,8 @@ tailwind.config = {
         <input type="checkbox" id="agendamento-encaixe" class="w-4 h-4">
         <label for="agendamento-encaixe" class="text-[11px] text-zinc-300">Aceita encaixe dentro deste atendimento (ex: escova durante o notavel)</label>
       </div>
-      <div class="flex items-center justify-between mb-1">
+      <div>
+        <div class="flex items-center justify-between mb-1">
           <label class="block text-xs uppercase font-bold text-zinc-400">Cliente *</label>
           <button type="button" onclick="App.novoClienteDaAgenda()" class="text-[10px] font-bold uppercase text-brand-500 hover:text-white">+ Cadastrar cliente</button>
         </div>
