@@ -116,6 +116,29 @@ const Auth = {
     // ---------- Janelas (modais) ----------
     // Tela de abertura: sai suave e leva ao login.
     // Aparece UMA vez; quem ja entrou nao passa por ela de novo.
+    // Fecha a tela de abertura e libera o sistema. Chamada pelo botao ENTRAR.
+    // Nao depende de tempo: fecha na hora e ainda insiste uma vez depois.
+    entrarDoSistema() {
+        try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
+        const tela = document.getElementById('tela-abertura');
+        if (tela) {
+            tela.classList.add('hc-sai');
+            tela.style.display = 'none';
+        }
+        document.body.classList.remove('hc-abertura-ativa');
+        document.body.style.overflow = '';
+        try {
+            document.querySelectorAll('.modal-overlay').forEach(function (m) { m.classList.add('hidden'); });
+        } catch (e) {}
+        try { UI.switchTab('aba-login'); } catch (e) {}
+        // Segunda passada, caso algo tenha reaberto a tela
+        setTimeout(function () {
+            const t2 = document.getElementById('tela-abertura');
+            if (t2) t2.style.display = 'none';
+            document.body.classList.remove('hc-abertura-ativa');
+        }, 400);
+    },
+
     abrirLogin() {
         const tela = document.getElementById('tela-abertura');
         try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
@@ -4748,9 +4771,6 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
-    // TELA DE ABERTURA: some para quem ja entrou uma vez, fica para quem chegou agora
-    try { App.prepararAbertura(); } catch (e) {}
-
     // Profissional: restaura o login salvo no navegador
     const profSalvo = localStorage.getItem('hairconcept_prof_dados');
     if (profSalvo) {
@@ -4767,8 +4787,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (cargoEl) cargoEl.textContent = data.cargo || '';
             if (fotoEl && data.foto_url) fotoEl.src = data.foto_url;
             App.finishLogin();
-            const telaAb = document.getElementById('tela-abertura');
-            if (telaAb) telaAb.style.display = 'none';
             return;
         } catch (e) {
             localStorage.removeItem('hairconcept_prof_dados');
@@ -4821,5 +4839,26 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // DECISAO DA ABERTURA, agora no fim: so aqui o sistema ja sabe se ha sessao.
+    // Quem ja esta logado entra direto, sem passar pela tela de boas-vindas.
+    try {
+        const temProf = !!localStorage.getItem('hairconcept_prof_dados');
+        let temAdmin = false;
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            temAdmin = !!(session && session.user);
+        } catch (e) {}
+        const logado = temProf || temAdmin || (App.user && App.user.loggedIn);
+        if (logado) {
+            localStorage.setItem('hairconcept_viu_abertura', 'sim');
+            App.liberarAbertura();
+        } else {
+            let jaViu = false;
+            try { jaViu = localStorage.getItem('hairconcept_viu_abertura') === 'sim'; } catch (e) {}
+            if (jaViu) App.liberarAbertura();
+            else document.body.classList.add('hc-abertura-ativa');
+        }
+    } catch (e) { console.warn('Abertura:', e); }
 });
 
