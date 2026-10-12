@@ -114,6 +114,34 @@ const Auth = {
         }
     },
     // ---------- Janelas (modais) ----------
+    // Tela de abertura: sai suave e leva ao login.
+    // Aparece UMA vez; quem ja entrou nao passa por ela de novo.
+    abrirLogin() {
+        const tela = document.getElementById('tela-abertura');
+        try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
+        if (tela) {
+            tela.classList.add('hc-sai');
+            setTimeout(function () { tela.style.display = 'none'; }, 750);
+        }
+        try { UI.switchTab('aba-login'); } catch (e) {}
+    },
+
+    // Chamada no inicio: mostra ou pula a abertura
+    prepararAbertura() {
+        const tela = document.getElementById('tela-abertura');
+        if (!tela) return;
+        let jaViu = false;
+        try { jaViu = localStorage.getItem('hairconcept_viu_abertura') === 'sim'; } catch (e) {}
+        if (jaViu) {
+            tela.style.display = 'none';
+            return;
+        }
+        // Quem ja tem sessao entra direto: a abertura nao vira pedagio
+        if (this.user && this.user.loggedIn) {
+            tela.style.display = 'none';
+        }
+    },
+
     abrirModal(id) {
         const el = document.getElementById(id);
         if (!el) return;
@@ -4581,6 +4609,9 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
+    // TELA DE ABERTURA: some para quem ja entrou uma vez, fica para quem chegou agora
+    try { App.prepararAbertura(); } catch (e) {}
+
     // Profissional: restaura o login salvo no navegador
     const profSalvo = localStorage.getItem('hairconcept_prof_dados');
     if (profSalvo) {
@@ -4597,6 +4628,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (cargoEl) cargoEl.textContent = data.cargo || '';
             if (fotoEl && data.foto_url) fotoEl.src = data.foto_url;
             App.finishLogin();
+            const telaAb = document.getElementById('tela-abertura');
+            if (telaAb) telaAb.style.display = 'none';
             return;
         } catch (e) {
             localStorage.removeItem('hairconcept_prof_dados');
