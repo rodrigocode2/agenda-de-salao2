@@ -144,7 +144,7 @@ const Auth = {
         try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
         if (tela) tela.classList.add('hc-sai');
         // libera o sistema e fecha janelas abertas por baixo
-        const soltar = function () { try { App.liberarAbertura(); } catch (e) {} };
+        const soltar = function () { try { Auth.liberarAbertura(); } catch (e) {} };
         setTimeout(soltar, 700);
         setTimeout(soltar, 1500); // rede de seguranca
         try { UI.switchTab('aba-login'); } catch (e) {}
@@ -4852,13 +4852,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         const logado = temProf || temAdmin || (App.user && App.user.loggedIn);
         if (logado) {
             localStorage.setItem('hairconcept_viu_abertura', 'sim');
-            App.liberarAbertura();
+            Auth.liberarAbertura();
         } else {
             let jaViu = false;
             try { jaViu = localStorage.getItem('hairconcept_viu_abertura') === 'sim'; } catch (e) {}
-            if (jaViu) App.liberarAbertura();
+            if (jaViu) Auth.liberarAbertura();
             else document.body.classList.add('hc-abertura-ativa');
         }
     } catch (e) { console.warn('Abertura:', e); }
 });
-
