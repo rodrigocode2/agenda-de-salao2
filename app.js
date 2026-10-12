@@ -1,4 +1,3 @@
-
 const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
@@ -118,6 +117,14 @@ const Auth = {
     abrirModal(id) {
         const el = document.getElementById(id);
         if (!el) return;
+        // A janela de agendamento ja abre com o DIA DE HOJE escolhido
+        const dHoje = el.querySelector('[data-preencher-hoje]');
+        if (dHoje && !dHoje.value) {
+            const hj = new Date();
+            const iso = hj.getFullYear() + '-' + String(hj.getMonth() + 1).padStart(2, '0') + '-' + String(hj.getDate()).padStart(2, '0');
+            dHoje.value = iso;
+            try { if (App.aplicarHorariosLivres) App.aplicarHorariosLivres(); } catch (e) {}
+        }
         // Garante a janela ACIMA do cabecalho, na marra: assim nao depende
         // de qual CSS carrega primeiro nem de briga com o Tailwind.
         el.classList.remove('hidden');
@@ -2321,7 +2328,7 @@ const App = {
                 pCli.appendChild(op);
             }
         }
-        UI.abrirModal('modal-editar-cliente');
+        Auth.abrirModal('modal-editar-cliente');
     },
 
     async popularClientesAgenda() {
