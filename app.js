@@ -119,10 +119,11 @@ const Auth = {
     abrirLogin() {
         const tela = document.getElementById('tela-abertura');
         try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
-        if (tela) {
-            tela.classList.add('hc-sai');
-            setTimeout(function () { tela.style.display = 'none'; }, 750);
-        }
+        if (tela) tela.classList.add('hc-sai');
+        // libera o sistema e fecha janelas abertas por baixo
+        const soltar = function () { try { App.liberarAbertura(); } catch (e) {} };
+        setTimeout(soltar, 700);
+        setTimeout(soltar, 1500); // rede de seguranca
         try { UI.switchTab('aba-login'); } catch (e) {}
     },
 
@@ -132,14 +133,26 @@ const Auth = {
         if (!tela) return;
         let jaViu = false;
         try { jaViu = localStorage.getItem('hairconcept_viu_abertura') === 'sim'; } catch (e) {}
-        if (jaViu) {
-            tela.style.display = 'none';
+        // Quem ja entrou (ou ja viu a abertura) nao passa por ela
+        if (jaViu || (this.user && this.user.loggedIn)) {
+            this.liberarAbertura();
             return;
         }
-        // Quem ja tem sessao entra direto: a abertura nao vira pedagio
-        if (this.user && this.user.loggedIn) {
-            tela.style.display = 'none';
-        }
+        // ABERTURA VISIVEL: o sistema fica bloqueado atras dela.
+        // Sem isto o site carregava por baixo e a janela de agendar travava a tela.
+        document.body.classList.add('hc-abertura-ativa');
+    },
+
+    // Tira a abertura e libera o sistema. Pode ser chamada mais de uma vez.
+    liberarAbertura() {
+        const tela = document.getElementById('tela-abertura');
+        if (tela) tela.style.display = 'none';
+        document.body.classList.remove('hc-abertura-ativa');
+        // Fecha qualquer janela que tenha aberto por baixo (a de agendar, por ex.)
+        document.querySelectorAll('.modal-overlay').forEach(function (m) {
+            m.classList.add('hidden');
+        });
+        document.body.style.overflow = '';
     },
 
 
@@ -283,6 +296,14 @@ const Auth = {
         el.style.removeProperty('height');
         // trava a rolagem do fundo enquanto a janela estiver aberta
         document.body.style.overflow = 'hidden';
+
+        // Janela de agendamento: garante a lista de profissionais preenchida.
+        // Sem isto o campo abria VAZIO e nao dava para marcar.
+        if (id === 'modal-marcar') {
+            const sel = document.getElementById('agendamento-profissional');
+            const vazio = !sel || !sel.options || sel.options.length === 0;
+            if (vazio) { try { App.popularSelectProfissionais(); } catch (e) { console.warn(e); } }
+        }
     },
     fecharModal(id) {
         document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.classList.add('hidden'); });
