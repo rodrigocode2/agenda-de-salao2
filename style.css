@@ -96,10 +96,8 @@ table th, table td {
 /* O FUNDO ocupa a tela toda; a CAIXA do formulario fica centralizada e
    com largura limitada. Antes o width/height ia para tudo e a janela
    esticava de ponta a ponta. */
-.modal-overlay {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 99999 !important;
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -863,7 +861,6 @@ html, body {
   position: fixed !important;
   top: 0.75rem !important;
   right: 0.75rem !important;
-  z-index: 100000 !important;
   width: 2.25rem;
   height: 2.25rem;
   display: flex;
@@ -876,18 +873,14 @@ html, body {
 }
 .modal-x-fixo:hover, .modal-x:hover { color: #fff; background: rgba(244, 63, 94, 0.25); }
 
-/* A janela inteira entra da esquerda para a direita: aparece deslizando. */
-.modal-overlay { transition: opacity 0.25s ease; }
 @keyframes hcJanelaEntra {
   from { transform: translateX(-100%); opacity: 0; }
   to   { transform: translateX(0);     opacity: 1; }
 }
-.modal-caixa { animation: hcJanelaEntra 0.3s ease-out both; }
 
 /* ===================== TELA DE ABERTURA =====================
    Fundo quase preto, brilho rosa difuso e o nome aparecendo por etapas.
    Cada etapa entra depois da anterior (0.4s de atraso entre elas). */
-#tela-abertura { transition: opacity .7s ease, visibility .7s ease; }
 #tela-abertura.hc-sai { opacity: 0; visibility: hidden; }
 .hc-brilho {
   position: absolute; width: 130vw; height: 130vw; left: 50%; top: 50%;
@@ -930,6 +923,29 @@ html, body {
 
 /* Enquanto a tela de abertura estiver no ar, o sistema fica escondido.
    Antes ele carregava por baixo e a janela de agendar travava a tela. */
+body.hc-abertura-ativa #main-header,
+body.hc-abertura-ativa .tab-content,
+body.hc-abertura-ativa .modal-overlay { display: none !important; }
+body.hc-abertura-ativa { overflow: hidden; }
+
+/* ===== CAMADAS DO SITE (ordem clara) =====
+   96 = conteudo do site      97 = cabecalho
+   98 = janelas (modais)      99 = tela de abertura  */
+.modal-x-fixo, .modal-x { z-index: 98 !important; }
+body.hc-abertura-ativa #main-header,
+body.hc-abertura-ativa .tab-content,
+body.hc-abertura-ativa .modal-overlay { display: none !important; }
+
+/* janelas ficam na camada 98 */
+
+
+/* ===================== CAMADAS DO SITE =====================
+   96 = conteudo   97 = cabecalho   98 = janelas   99 = abertura
+   Um bloco so, para nao brigar com regras antigas. */
+.hc-z-header { z-index: 97 !important; }
+.modal-overlay { z-index: 98 !important; }
+.modal-x-fixo, .modal-x { z-index: 98 !important; }
+#tela-abertura { z-index: 99 !important; }
 body.hc-abertura-ativa #main-header,
 body.hc-abertura-ativa .tab-content,
 body.hc-abertura-ativa .modal-overlay { display: none !important; }
