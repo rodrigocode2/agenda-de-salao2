@@ -80,7 +80,7 @@ function parseValor(valorStr) {
 document.addEventListener('click', function (ev) {
     const pop = document.getElementById('menu-dia-pop');
     if (pop && !pop.classList.contains('hidden')) {
-        if (!pop.contains(ev.target) && (!ev.target.closest || !ev.target.closest('.semana-menu-btn'))) {
+        if (!pop.contains(ev.target) && !ev.target.closest || !ev.target.closest('.semana-menu-btn')) {
             if (!pop.contains(ev.target)) pop.classList.add('hidden');
         }
     }
@@ -101,6 +101,7 @@ const Auth = {
         localStorage.removeItem('hairconcept_plan');
         localStorage.removeItem('hairconcept_prof_dados');
         localStorage.removeItem('hairconcept_plan_pendente');
+        // Não apaga hairconcept_boasvindas_* : é para nunca mais aparecer
         if (supabaseClient && supabaseClient.auth) {
             supabaseClient.auth.signOut();
         }
@@ -112,6 +113,11 @@ const Auth = {
             supabaseClient.auth.signInWithOAuth({ provider: provider });
         }
     },
+    // ---------- Janelas (modais) ----------
+    // Tela de abertura: sai suave e leva ao login.
+    // Aparece UMA vez; quem ja entrou nao passa por ela de novo.
+    // Fecha a tela de abertura e libera o sistema. Chamada pelo botao ENTRAR.
+    // Nao depende de tempo: fecha na hora e ainda insiste uma vez depois.
     entrarDoSistema() {
         try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
         const tela = document.getElementById('tela-abertura');
@@ -125,6 +131,7 @@ const Auth = {
             document.querySelectorAll('.modal-overlay').forEach(function (m) { m.classList.add('hidden'); });
         } catch (e) {}
         try { UI.switchTab('aba-login'); } catch (e) {}
+        // Segunda passada, caso algo tenha reaberto a tela
         setTimeout(function () {
             const t2 = document.getElementById('tela-abertura');
             if (t2) t2.style.display = 'none';
@@ -136,34 +143,44 @@ const Auth = {
         const tela = document.getElementById('tela-abertura');
         try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
         if (tela) tela.classList.add('hc-sai');
+        // libera o sistema e fecha janelas abertas por baixo
         const soltar = function () { try { Auth.liberarAbertura(); } catch (e) {} };
         setTimeout(soltar, 700);
-        setTimeout(soltar, 1500);
+        setTimeout(soltar, 1500); // rede de seguranca
         try { UI.switchTab('aba-login'); } catch (e) {}
     },
 
+    // Chamada no inicio: mostra ou pula a abertura
     prepararAbertura() {
         const tela = document.getElementById('tela-abertura');
         if (!tela) return;
         let jaViu = false;
         try { jaViu = localStorage.getItem('hairconcept_viu_abertura') === 'sim'; } catch (e) {}
+        // Quem ja entrou (ou ja viu a abertura) nao passa por ela
         if (jaViu || (this.user && this.user.loggedIn)) {
             this.liberarAbertura();
             return;
         }
+        // ABERTURA VISIVEL: o sistema fica bloqueado atras dela.
+        // Sem isto o site carregava por baixo e a janela de agendar travava a tela.
         document.body.classList.add('hc-abertura-ativa');
     },
 
+    // Tira a abertura e libera o sistema. Pode ser chamada mais de uma vez.
     liberarAbertura() {
         const tela = document.getElementById('tela-abertura');
         if (tela) tela.style.display = 'none';
         document.body.classList.remove('hc-abertura-ativa');
+        // Fecha qualquer janela que tenha aberto por baixo (a de agendar, por ex.)
         document.querySelectorAll('.modal-overlay').forEach(function (m) {
             m.classList.add('hidden');
         });
         document.body.style.overflow = '';
     },
 
+
+    // ============ NOTAS E COMISSOES ============
+    // Tipos de profissional do mercado de beleza (referencia CBO).
     TIPOS_PROFISSIONAL: [
         { t: 'Cabeleireiro', p: 50 },
         { t: 'Barbeiro', p: 50 },
@@ -179,6 +196,7 @@ const Auth = {
         { t: 'Auxiliar', p: 10 }
     ],
 
+    // Monta a lista de comissoes por tipo, lendo o que o salao ja salvou
     async carregarComissoesTipo() {
         const caixa = document.getElementById('lista-comissoes-tipo');
         if (!caixa) return;
@@ -247,6 +265,7 @@ const Auth = {
         }
     },
 
+    // Carrega a aba CONFIGURACAO DO SALAO (a antiga config, agora dentro da gestao)
     async carregarConfigSalao() {
         const estabId = await this.obterEstabId();
         if (!estabId) return;
@@ -277,6 +296,7 @@ const Auth = {
     abrirModal(id) {
         const el = document.getElementById(id);
         if (!el) return;
+        // A janela de agendamento ja abre com o DIA DE HOJE escolhido
         const dHoje = el.querySelector('[data-preencher-hoje]');
         if (dHoje && !dHoje.value) {
             const hj = new Date();
@@ -284,6 +304,8 @@ const Auth = {
             dHoje.value = iso;
             try { if (App.aplicarHorariosLivres) App.aplicarHorariosLivres(); } catch (e) {}
         }
+        // Garante a janela ACIMA do cabecalho, na marra: assim nao depende
+        // de qual CSS carrega primeiro nem de briga com o Tailwind.
         el.classList.remove('hidden');
         el.style.setProperty('position', 'fixed', 'important');
         el.style.setProperty('inset', '0', 'important');
@@ -291,10 +313,15 @@ const Auth = {
         el.style.setProperty('display', 'flex', 'important');
         el.style.setProperty('align-items', 'center', 'important');
         el.style.setProperty('justify-content', 'center', 'important');
+        // NAO forca largura/altura no fundo: quem esticava a janela era isso.
+        // A caixa de dentro mantem a largura dela (definida no style.css).
         el.style.removeProperty('width');
         el.style.removeProperty('height');
+        // trava a rolagem do fundo enquanto a janela estiver aberta
         document.body.style.overflow = 'hidden';
 
+        // Janela de agendamento: garante a lista de profissionais preenchida.
+        // Sem isto o campo abria VAZIO e nao dava para marcar.
         if (id === 'modal-marcar') {
             const sel = document.getElementById('agendamento-profissional');
             const vazio = !sel || !sel.options || sel.options.length === 0;
@@ -310,6 +337,7 @@ const Auth = {
     abrirRecuperarSenha() { this.abrirModal('modal-recuperar'); },
     abrirAjuda() { this.abrirModal('modal-ajuda'); },
 
+    // ---------- Criar conta ----------
     async criarConta(event) {
         event.preventDefault();
         const nomeSalao = document.getElementById('cad-nome-salao').value.trim();
@@ -337,6 +365,7 @@ const Auth = {
                 return;
             }
 
+            // Cria o salão já com o nome escolhido (se a sessão existir na hora)
             if (data.session) {
                 const { error: erroEstab } = await supabaseClient
                     .from('estabelecimentos')
@@ -360,6 +389,7 @@ const Auth = {
         }
     },
 
+    // ---------- Esqueci minha senha ----------
     async enviarRecuperacao(event) {
         event.preventDefault();
         const email = document.getElementById('rec-email').value.trim();
@@ -383,6 +413,7 @@ const Auth = {
         }
     },
 
+    // ---------- Salvar a senha nova (abre pelo link do e-mail) ----------
     async salvarNovaSenha(event) {
         event.preventDefault();
         const senha = document.getElementById('nova-senha').value;
@@ -402,6 +433,7 @@ const Auth = {
                 return;
             }
             this.fecharModal('modal-nova-senha');
+            // Limpa o link de recuperação da barra de endereços
             window.history.replaceState({}, document.title, window.location.pathname);
             UI.showToast('Senha alterada com sucesso!');
             await App.verificarOuCriarEstabelecimento();
@@ -411,6 +443,7 @@ const Auth = {
         }
     },
 
+    // ---------- Pedido de ajuda do profissional ----------
     async enviarAjuda(event) {
         event.preventDefault();
         const nomeEstab = document.getElementById('ajuda-salao').value.trim();
@@ -424,6 +457,7 @@ const Auth = {
             return;
         }
         try {
+            // Localiza o salão pelo nome para gravar o aviso junto dele
             let estabId = null;
             const { data: saloes, error: erroSalao } = await supabaseClient
                 .from('estabelecimentos')
@@ -477,11 +511,12 @@ const App = {
     fotoBase64Temp: '',
     logoBase64Temp: '',
     async init() {
-        console.log('HairConcept inicializado.');
+        console.log("HairConcept inicializado.");
 
+        // DETECTAR RETORNO DO MERCADO PAGO
         const urlParams = new URLSearchParams(window.location.search);
         const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
-
+        
         if (statusPagamento === 'approved') {
             const estabId = localStorage.getItem('hairconcept_estab_id');
             const planoPago = localStorage.getItem('hairconcept_plan_pendente') || 'mensal';
@@ -503,12 +538,14 @@ const App = {
         }
         const ehProfissional = this.user.role === 'profissional';
 
+        // Todo mundo precisa da agenda e das notas
         this.renderAgendaGrid();
         this.carregarPostIts();
         this.carregarRecadosEstabelecimento();
         this.proximaFrase();
 
         if (!ehProfissional) {
+            // Só o salão carrega o resto (deixa o login do profissional leve)
             this.renderListaProfissionais();
             this.renderProdutos();
             this.renderServicos();
@@ -523,6 +560,7 @@ const App = {
             this.renderAvaliacao();
         }
 
+        // Mostra ou esconde as partes conforme o perfil
         if (ehProfissional) {
             document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
             this.carregarFechamento();
@@ -536,15 +574,22 @@ const App = {
         if (msg) UI.showToast(msg);
         try { if (this.carregarModeloAgenda) await this.carregarModeloAgenda(); } catch (e) {}
         try { if (this.verificarExclusaoPendente) await this.verificarExclusaoPendente(); } catch (e) {}
+        try { if (this.carregarModeloAgenda) await this.carregarModeloAgenda(); } catch (e) {}
+        // Restaura o modo de agenda salvo (dia ou semana)
+        try {
+            if (this.modoAgendaAtual && this.modoAgendaAtual() === 'semana') {
+                setTimeout(function () { App.trocarModoAgenda('semana'); }, 600);
+            }
+        } catch (e) { /* segue no modo dia */ }
         document.getElementById('aba-login')?.classList.add('hidden');
         document.getElementById('main-header')?.classList.remove('hidden');
         UI.switchTab('aba-agenda');
-
+        
         const nameDisplay = document.getElementById('user-name-display');
         const roleDisplay = document.getElementById('user-role-display');
         if (nameDisplay) nameDisplay.textContent = this.user.name;
         if (roleDisplay) roleDisplay.textContent = this.user.role.toUpperCase();
-
+        
         if (this.user.role === 'admin') {
             await this.verificarOuCriarEstabelecimento();
         } else {
@@ -587,7 +632,9 @@ const App = {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return;
             const userId = session.user.id;
-
+            
+            // Antes usava maybeSingle(): com 2 saloes na conta ele dava ERRO,
+            // e o erro fazia o site criar MAIS um salao vazio a cada login.
             let { data: listaEstab, error } = await supabaseClient
                 .from('estabelecimentos')
                 .select('*')
@@ -599,6 +646,7 @@ const App = {
             const headerSub = document.getElementById('saloon-name-header');
 
             if (error) {
+                // Falha de leitura NAO e motivo para criar salao novo
                 console.warn('Nao consegui ler o salao:', error);
                 return;
             }
@@ -628,18 +676,21 @@ const App = {
                 }
                 if (headerSub) headerSub.textContent = estab.nome_salao;
             }
+            // Primeiro login: mostra o guia antes da agenda
             const jaViu = localStorage.getItem('hairconcept_boasvindas_' + userId);
             if (!jaViu) {
                 this.mostrarBoasVindas(estab || null);
+                // Só marca como visto depois que ele clicar em "Começar agora"
                 this._userIdBoasVindas = userId;
             } else {
                 this.init();
             }
         } catch (e) {
-            console.error('Erro ao verificar estabelecimento:', e);
+            console.error("Erro ao verificar estabelecimento:", e);
             this.init();
         }
     },
+    // Gera o codigo do salao a partir do nome: "Salao X" -> "salaox"
     gerarCodigoSalao(nome) {
         return String(nome || '')
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -648,6 +699,8 @@ const App = {
             .replace(/^-+|-+$/g, '') || 'salao';
     },
 
+    // ---------- Controle de tentativas do profissional ----------
+    // Depois de 4 erros na mesma chave, trava por 15 minutos.
     async _salaoPorCodigo(codigo) {
         try {
             const { data } = await supabaseClient
@@ -699,7 +752,7 @@ const App = {
         const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
         const nomeDigitado = (document.getElementById('login-prof-nome')?.value || '').trim();
         const cpf = (document.getElementById('login-prof-id').value || '').replace(/\D/g, '');
-        const senha = cpf;
+        const senha = cpf; // a chave de 11 numeros e o acesso
         const normaliza = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
         if (cpf.length !== 11) { UI.showToast('A chave de acesso tem 11 números.', 'error'); return; }
         const jaErrou = await this.contarTentativas(nomeEstabelecimento, cpf);
@@ -723,16 +776,19 @@ const App = {
                     UI.showToast('Salão, nome ou chave incorretos. Tentativa ' + tent + ' de 4.', 'error');
                 }
                 return;
+                UI.showToast('Salão, nome ou chave incorretos.', 'error');
+                return;
             }
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
-                if (data.codigo_acesso) window.hcSalao.definir(data.codigo_acesso);
-                else if (data.nome_salao) window.hcSalao.definir(App.gerarCodigoSalao ? App.gerarCodigoSalao(data.nome_salao) : 'deconcept2');
-                this.limparTentativas(data.estabelecimento_id, cpf);
+            if (data.codigo_acesso) window.hcSalao.definir(data.codigo_acesso);
+            else if (data.nome_salao) window.hcSalao.definir(App.gerarCodigoSalao ? App.gerarCodigoSalao(data.nome_salao) : 'deconcept2');
+            this.limparTentativas(data.estabelecimento_id, cpf);
             }
             localStorage.setItem('hairconcept_prof_id', data.id);
             if (data.token) localStorage.setItem('hairconcept_prof_token', data.token);
 
+            // Guarda só o necessário (o servidor não devolve CPF nem senha)
             const dadosProf = {
                 id: data.id,
                 nome: data.nome || '',
@@ -744,6 +800,8 @@ const App = {
             localStorage.setItem('hairconcept_prof_dados', JSON.stringify(dadosProf));
 
             this.user = { loggedIn: true, role: 'profissional', name: dadosProf.nome, id: dadosProf.id };
+
+            // O profissional também vê o nome e a logo do salão onde trabalha
             this.aplicarIdentidadeNoHeader(dadosProf.nome_salao, dadosProf.logo_url || null);
             if (dadosProf.estabelecimento_id) {
                 this.carregarIdentidadeDoSalao(dadosProf.estabelecimento_id);
@@ -762,7 +820,6 @@ const App = {
             UI.showToast('Erro ao validar login do profissional.', 'error');
         }
     },
-
     async handleCreateProfissional(e) {
         e.preventDefault();
         const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
@@ -770,6 +827,7 @@ const App = {
         const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
 
         try {
+            // Garante o ID do salão: se o navegador ainda não tem, busca no banco agora.
             let idSalao = estabelecimentoId;
             if (!idSalao) {
                 const { data: { session } } = await supabaseClient.auth.getSession();
@@ -797,7 +855,8 @@ const App = {
                 .select('*', { count: 'exact', head: true })
                 .eq('estabelecimento_id', idSalao);
             if (countError) throw countError;
-
+            
+            // O limite vem do BANCO (funcao meu_limite_profissionais). O navegador e so reserva.
             let limiteMaximo = 2;
             try {
                 const { data: lim } = await supabaseClient.rpc('meu_limite_profissionais');
@@ -813,7 +872,7 @@ const App = {
                 UI.showToast(`Limite atingido! O plano atual permite apenas ${limiteMaximo} profissionais.`, 'error');
                 return;
             }
-
+            
             const elNome = document.getElementById('prof-nome');
             const elCargo = document.getElementById('prof-cargo');
             const elCpf = document.getElementById('prof-cpf');
@@ -828,7 +887,7 @@ const App = {
             const nome = document.getElementById('prof-nome').value.trim();
             const cargo = document.getElementById('prof-cargo').value.trim();
             const cpf = (document.getElementById('prof-cpf').value || '').replace(/\D/g, '');
-            const senha = cpf;
+            const senha = cpf; // a chave de 11 numeros tambem e gravada embaralhada
             const foto_url = this.fotoBase64Temp || null;
 
             if (senha.length < 4) {
@@ -836,7 +895,10 @@ const App = {
                 return;
             }
 
+            // Profissional NAO tem conta de login propria: e so uma ficha do salao.
             const userIdInterno = null;
+
+            // 2) O cadastro nunca morre: se o CPF ja existe no salao, reativamos a ficha
             const { data: jaExiste } = await supabaseClient
                 .from('profissionais')
                 .select('id, nome, ativo, user_id')
@@ -858,6 +920,7 @@ const App = {
                     return;
                 }
                 const atualizar = { nome: nome, cargo: cargo, foto_url: foto_url, ativo: true, estabelecimento: nomeEstabelecimentoHeader };
+                
                 const res = await supabaseClient.from('profissionais').update(atualizar).eq('id', jaExiste.id).select();
                 error = res.error; novoProf = res.data;
                 if (!error) {
@@ -892,6 +955,7 @@ const App = {
                 return;
             }
 
+            // Grava a senha embaralhada pelo banco
             const { error: erroSenha } = await supabaseClient.rpc('definir_senha_profissional', {
                 p_id: novoProf[0].id,
                 p_senha: senha
@@ -915,7 +979,7 @@ const App = {
             }
         }
     },
-
+    // Desativar / reativar: o cadastro do profissional NAO e apagado.
     async alternarAtivoProfissional(id, ativoAtual) {
         const vaiAtivar = !ativoAtual;
         const pergunta = vaiAtivar
@@ -938,7 +1002,7 @@ const App = {
     },
 
     async excluirProfissional(id) {
-        if (!confirm('Excluir este profissional?\n\nOs atendimentos antigos continuam com o nome dele. Se ele voltar, e so cadastrar de novo.')) return;
+        if (!confirm("Excluir este profissional?\n\nOs atendimentos antigos continuam com o nome dele. Se ele voltar, e so cadastrar de novo.")) return;
         try {
             const { data: apagados, error } = await supabaseClient
                 .from('profissionais')
@@ -965,7 +1029,6 @@ const App = {
             }
         }
     },
-
     async handleAtualizarMinhaFoto(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -989,7 +1052,6 @@ const App = {
         };
         reader.readAsDataURL(file);
     },
-
     handleLogoUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -1003,11 +1065,11 @@ const App = {
                 preview.classList.remove('hidden');
             }
             if (icon) icon.classList.add('hidden');
+            // Mostra no cabeçalho já, antes mesmo de salvar
             this.aplicarLogoNoHeader(this.logoBase64Temp);
         };
         reader.readAsDataURL(file);
     },
-
     async enviarRecadoEstabelecimento() {
         const input = document.getElementById('prof-recado-input');
         const mensagem = input.value.trim();
@@ -1017,7 +1079,7 @@ const App = {
         }
         const remetente = this.user.name || 'Profissional';
         const estabId = localStorage.getItem('hairconcept_estab_id');
-
+        
         try {
             const { error } = await supabaseClient.from('recados').insert([{
                 estabelecimento_id: estabId,
@@ -1031,19 +1093,18 @@ const App = {
             UI.showToast(mensagemAmigavel(e), 'error');
         }
     },
-
     async carregarRecadosEstabelecimento() {
         const containerAdmin = document.getElementById('lista-recados-estab');
         const containerProf = document.getElementById('chat-historico-prof');
         const estabId = localStorage.getItem('hairconcept_estab_id');
-
+        
         try {
             const { data, error } = await supabaseClient
                 .from('recados')
                 .select('*')
                 .eq('estabelecimento_id', estabId)
                 .order('created_at', { ascending: true });
-
+                
             if (error) throw error;
             const mensagens = data || [];
 
@@ -1082,27 +1143,25 @@ const App = {
             console.error(e);
         }
     },
-
     async apagarRecado(id) {
         try {
             const { error } = await supabaseClient.from('recados').delete().eq('id', id);
             if (error) throw error;
-            UI.showToast('Mensagem apagada.', 'success');
+            UI.showToast("Mensagem apagada.", "success");
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast(mensagemAmigavel(e), 'error');
+            UI.showToast(mensagemAmigavel(e), "error");
         }
     },
-
     async enviarRespostaAdmin() {
         const input = document.getElementById('admin-resposta-input');
         const mensagem = input.value.trim();
         if (!mensagem) {
-            UI.showToast('Escreva uma resposta antes de enviar.', 'error');
+            UI.showToast("Escreva uma resposta antes de enviar.", "error");
             return;
         }
         const estabId = localStorage.getItem('hairconcept_estab_id');
-
+        
         try {
             const { error } = await supabaseClient.from('recados').insert([{
                 estabelecimento_id: estabId,
@@ -1110,15 +1169,14 @@ const App = {
                 mensagem: mensagem
             }]);
             if (error) throw error;
-            UI.showToast('Resposta enviada!', 'success');
+            UI.showToast("Resposta enviada!", "success");
             input.value = '';
             this.carregarRecadosEstabelecimento();
         } catch (e) {
-            UI.showToast(mensagemAmigavel(e), 'error');
+            UI.showToast(mensagemAmigavel(e), "error");
         }
     },
-
-    async excluirAgendamento(id, cliente) {
+       async excluirAgendamento(id, cliente) {
         if (!confirm('Desmarcar o atendimento de ' + (cliente || '') + '?')) return;
         try {
             const { error } = await supabaseClient.from('agendamentos').delete().eq('id', id);
@@ -1154,6 +1212,8 @@ const App = {
         }
     },
 
+    // ========== CLIENTES ==========
+    // ===== Votos e estrelas =====
     abrirVoto(clienteId, clienteNome) {
         const cId = document.getElementById('voto-cliente-id');
         const cNome = document.getElementById('voto-cliente-nome');
@@ -1229,6 +1289,9 @@ const App = {
         }
     },
 
+    // Estrelas do profissional: proporcional ao total de clientes do salao
+    // Quantas estrelas acender. Positivo enche a barra na proporcao dos clientes
+    // do salao; NEGATIVO nao gera estrela negativa (era o que quebrava o layout).
     calcularEstrelaProf(pontos, totalClientes) {
         const base = totalClientes > 0 ? totalClientes : 1;
         const negativo = pontos < 0;
@@ -1247,6 +1310,11 @@ const App = {
         };
     },
 
+
+    // =================================================================
+    // AVALIACAO - a barra tem o tamanho da base de clientes do salao.
+    // Um voto por cliente+profissional: votar de novo SUBSTITUI o anterior.
+    // =================================================================
     _tipoAvaliacao: 'prof',
 
     trocarTipoAvaliacao(tipo) {
@@ -1262,10 +1330,14 @@ const App = {
         this.renderAvaliacao();
     },
 
+    // Cliente: 0 a 5 estrelas. Cada reclamacao tira uma. Ao chegar em -1,
+    // a fileira some e entra o aviso CUIDADO (o cliente deu trabalho).
     estrelasClienteHTML(pontos, total) {
+        // -1 ou menos: a fileira ACABA e entra o aviso CUIDADO
         if (pontos < 0) {
             return '<span class="hc-cuidado"><i class="fa-solid fa-triangle-exclamation"></i> CUIDADO</span>';
         }
+        // 0 a 5 estrelas. Comeca cheio em 5 e cada reclamacao tira uma.
         const cheias = Math.max(0, Math.min(5, Math.round(pontos)));
         let html = '';
         for (let i = 0; i < cheias; i++) html += '<i class="fa-solid fa-star text-amber-400"></i>';
@@ -1274,6 +1346,7 @@ const App = {
     },
 
     estrelasHTML(pontos, total) {
+        // Nota negativa: UMA estrela VERMELHA. Simples assim.
         if (pontos < 0) {
             return '<i class="fa-solid fa-star text-rose-500"></i>';
         }
@@ -1285,6 +1358,7 @@ const App = {
         return html;
     },
 
+    // Motivos prontos, para o salao registrar em um toque
     MOTIVOS: {
         prof: [
             { v: 'mais', t: 'Elogio do cliente' },
@@ -1340,6 +1414,7 @@ const App = {
 
             if (busca) lista = lista.filter(i => i.busca.toLowerCase().includes(busca));
 
+            // Pontos: vem do banco quando existe, senao calcula na hora
             const pontosMap = {};
             try {
                 const { data: votos } = await supabaseClient
@@ -1484,6 +1559,8 @@ const App = {
         }
     },
 
+    // Registra o ponto do profissional. Votar de novo SUBSTITUI o voto
+    // anterior do mesmo cliente, para a barra nunca inflar.
     async registrarPontoProf(profissionalId, tipo, motivo) {
         const estabId = await this.obterEstabId();
         if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
@@ -1504,6 +1581,7 @@ const App = {
         }
     },
 
+        // O profissional ve SO a propria barra, as estrelas e o 0 / clientes
     async carregarMinhaBarra() {
         const caixa = document.getElementById('minha-barra-prof');
         if (!caixa) return;
@@ -1521,6 +1599,7 @@ const App = {
                 total = count || 0;
             }
             const e = this.calcularEstrelaProf(pontos, total);
+            // Negativo = vermelho, igual ao profissional
             const negativo = pontos < 0;
             caixa.innerHTML = '';
             const estrelas = document.createElement('div');
@@ -1586,6 +1665,7 @@ const App = {
 
             lista.forEach(function (item) {
                 const est = App.calcularEstrelaProf(item.pontos, total);
+
                 const card = document.createElement('div');
                 card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
 
@@ -1631,6 +1711,10 @@ const App = {
         }
     },
 
+    // ---------- Ponto da cliente ----------
+    // Um toque e o voto entra. Nao abre modal: quem tem pressa nao
+    // pode parar para escolher opcao no meio do movimento.
+    // Votar de novo SUBSTITUI o voto anterior (regra do voto unico).
     async registrarPontoCliente(clienteId, tipo, nomeCliente) {
         if (!clienteId) { UI.showToast('Cliente nao identificada.', 'error'); return; }
         const estabId = await this.obterEstabId();
@@ -1659,6 +1743,7 @@ const App = {
 
     async renderClientes() {
         this.ligarMascaraTelefone();
+        // O teclado do celular abre numerico e o campo se arruma sozinho
         const campoTel = document.getElementById('cli-telefone');
         if (campoTel && campoTel.dataset.maskLigada !== 'on') {
             campoTel.dataset.maskLigada = 'on';
@@ -1667,6 +1752,7 @@ const App = {
                 App.guardarRascunho(['cli-nome','cli-telefone','cli-cpf','cli-email']);
             });
         }
+        // Guarda o rascunho a cada digitacao no cadastro de cliente
         ['cli-nome','cli-telefone','cli-cpf','cli-email'].forEach(function (id) {
             const el = document.getElementById(id);
             if (el && el.dataset.rascunho !== 'on') {
@@ -1696,6 +1782,7 @@ const App = {
                 return;
             }
 
+            // Votos de cada cliente (uso interno do salao)
             let votos = [];
             try {
                 const { data: v } = await supabaseClient
@@ -1761,6 +1848,7 @@ const App = {
                 contato.textContent = [c.telefone, c.cpf, c.email].filter(Boolean).join(' • ');
                 info.appendChild(nome); info.appendChild(contato);
 
+                // Votos: estrela amarela para cliente boa, vermelha para alerta
                 const linhaVotos = document.createElement('div');
                 linhaVotos.className = 'cli-votos mt-1';
                 const icone = document.createElement('i');
@@ -1845,6 +1933,9 @@ const App = {
         }
     },
 
+    // ---------- Mascara de telefone ----------
+    // Deixa digitar do jeito que a pessoa quiser, mas grava sempre
+    // no padrao (11) 99999-9999. Evita "Amanda 1, Amanda 2" no cadastro.
     mascaraTelefone(valor) {
         const d = String(valor || '').replace(/\D/g, '').slice(0, 11);
         if (d.length <= 2) return d;
@@ -1864,6 +1955,9 @@ const App = {
         });
     },
 
+    // ---------- Rascunho automatico do formulario ----------
+    // Se a internet cair ou a pessoa sair sem querer, o que foi digitado
+    // volta quando ela abrir a tela de novo. So no proprio aparelho.
     guardarRascunho(campos) {
         try {
             const dados = {};
@@ -1914,6 +2008,8 @@ const App = {
             return;
         }
 
+        // Aviso claro quando o telefone ja existe, ANTES de gravar.
+        // Quem nao sabe mexer precisa saber que ja tem ficha.
         if (telefone) {
             try {
                 const soDigitos = String(telefone).replace(/\D/g, '');
@@ -1935,6 +2031,7 @@ const App = {
         }
 
         try {
+            // Evita duplicar: procura pelo telefone ou CPF antes de gravar
             const { data: existentes, error: erroBusca } = await supabaseClient
                 .from('clientes')
                 .select('id, nome, telefone, cpf')
@@ -2002,6 +2099,7 @@ const App = {
         const cpf = document.getElementById('editar-cli-cpf').value.trim();
         const email = document.getElementById('editar-cli-email').value.trim();
 
+        // Sem id = cliente NOVO. Com id = edicao da ficha que ja existe.
         if (!id && !nome) { UI.showToast('Escreva o nome do cliente.', 'error'); return; }
 
         if (!id) {
@@ -2017,6 +2115,7 @@ const App = {
                 }]);
                 if (erroNovo) { console.error('Erro ao criar cliente:', erroNovo); UI.showToast(mensagemAmigavel(erroNovo), 'error'); return; }
                 Auth.fecharModal('modal-editar-cliente');
+                // Leva o nome novo para o campo da agenda, sem digitar de novo
                 const campoNome = document.getElementById('cliente-nome');
                 if (campoNome) campoNome.value = nome;
                 UI.showToast('Cliente cadastrado!');
@@ -2072,6 +2171,7 @@ const App = {
         }
     },
 
+    // ---------- Trocar senha do profissional ----------
     abrirTrocarSenhaProfissional(id, nome, cpf) {
         const campoId = document.getElementById('trocasenha-prof-id');
         const campoNome = document.getElementById('trocasenha-prof-nome');
@@ -2116,14 +2216,16 @@ const App = {
                 return;
             }
 
+            // (a conta interna é atualizada pelo banco; não mexe na sessão do salão)
             Auth.fecharModal('modal-trocar-senha');
             UI.showToast('Senha alterada! Passe a senha nova para o profissional.');
         } catch (e) {
-            console.error('Erro inesperado ao editar:', e);
+            console.error('Erro inesperado ao trocar senha:', e);
             UI.showToast('Erro inesperado ao salvar a senha.', 'error');
         }
     },
 
+    // ---------- Editar profissional ----------
     abrirEditarProfissional(id, nome, cargo, cpf) {
         const campoId = document.getElementById('editar-prof-id');
         if (campoId) campoId.value = id;
@@ -2140,6 +2242,7 @@ const App = {
         Auth.abrirModal('modal-editar-prof');
     },
 
+    // Mensagem particular do salao para o profissional (tabela recados)
     async enviarRecadoProfissional(event) {
         event.preventDefault();
         const id = document.getElementById('recado-prof-id')?.value;
@@ -2215,6 +2318,7 @@ const App = {
         }
     },
 
+    // ---------- Avisos e pedidos dos clientes ----------
     async carregarAvisos() {
         const container = document.getElementById('lista-avisos');
         if (!container) return;
@@ -2293,6 +2397,7 @@ const App = {
 
                 acoes.appendChild(btnResolver);
 
+                // Se for pedido de senha, oferece o atalho para trocar direto
                 if (a.tipo === 'esqueci_senha') {
                     const btnTrocar = document.createElement('button');
                     btnTrocar.className = 'px-3 py-1.5 rounded-lg bg-brand-500/10 text-brand-500 border border-brand-500/20 text-[10px] font-bold uppercase hover:bg-brand-500/20 transition';
@@ -2386,6 +2491,9 @@ const App = {
         }
     },
 
+    // Lista os clientes do salao no campo de nome da agenda (sugestao ao digitar)
+    // O clique em "+ Cadastrar cliente" na agenda: abre a janela de cliente
+    // em branco, ja com a data e o profissional escolhidos.
     async novoClienteDaAgenda() {
         const d = document.getElementById('agendamento-data');
         const p = document.getElementById('agendamento-profissional');
@@ -2494,6 +2602,7 @@ const App = {
     },
 
     async carregarIdentidadeDoSalao(estabId) {
+        // O profissional não carrega as configurações, então busca só a identidade
         if (!estabId || !supabaseClient) return;
         try {
             const { data, error } = await supabaseClient
@@ -2514,8 +2623,10 @@ const App = {
         }
     },
 
+    // ===== Estados do atendimento =====
     normalizarHora(v) { return String(v || '').slice(0, 5); },
 
+    // Fim real de um atendimento (se nao tiver, assume 30 minutos)
     fimDoAtendimento(ag) {
         const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
         const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
@@ -2523,6 +2634,7 @@ const App = {
         return fim > inicio ? fim : inicio + 30;
     },
 
+    // Um horario esta ocupado se cai dentro de algum atendimento do profissional
     horarioOcupado(agendamentos, profId, hhmm) {
         const alvo = this.minutosDoDia(hhmm);
         if (alvo < 0) return false;
@@ -2534,6 +2646,7 @@ const App = {
         });
     },
 
+    // Devolve a lista de horarios livres do profissional naquele dia
     horariosLivres(agendamentos, profId) {
         const todos = [];
         for (let m = 480; m <= 1080; m += 30) {
@@ -2543,6 +2656,7 @@ const App = {
         return todos.filter(h => !this.horarioOcupado(agendamentos, profId, h));
     },
 
+    // Aplica o bloqueio nos campos de hora da janela de marcar
     async aplicarHorariosLivres() {
         const selProf = document.getElementById('agendamento-profissional');
         const campoHora = document.getElementById('agendamento-horario');
@@ -2550,6 +2664,7 @@ const App = {
         const campoData = document.getElementById('agendamento-data');
         if (!selProf || !campoHora) return;
 
+        // Modo encaixe: nao bloqueia nada (a decisao e do salao)
         if (this._modoEncaixe) {
             campoHora.removeAttribute('disabled');
             if (campoFim) campoFim.removeAttribute('disabled');
@@ -2576,6 +2691,7 @@ const App = {
                 return;
             }
 
+            // Se a hora atual esta ocupada, pula para o primeiro horario livre
             const atual = this.normalizarHora(campoHora.value);
             if (livres.indexOf(atual) < 0) {
                 campoHora.value = livres[0];
@@ -2598,6 +2714,7 @@ const App = {
         return (h * 60) + m;
     },
 
+    // O atendimento cobre todos os blocos entre o inicio e o fim
     cobreHorario(ag, hhmm) {
         const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
         const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
@@ -2638,7 +2755,9 @@ const App = {
         const assinatura = document.getElementById('header-assinatura');
         const temNome = !!(nomeSalao && nomeSalao.trim()) && nomeSalao.trim().toLowerCase() !== 'meu salão';
 
+        // Nome: o do salão, ou um neutro até ele cadastrar
         if (elNome) elNome.textContent = temNome ? nomeSalao.trim() : 'Bem-vindo';
+        // A assinatura HairConcept some quando o salão tem nome próprio
         if (assinatura) assinatura.classList.toggle('hidden', temNome);
 
         this.aplicarLogoNoHeader(logoUrl);
@@ -2660,6 +2779,7 @@ const App = {
     },
 
     montarEmailInterno(cpf, idSalao) {
+        // E-mail invisível: o profissional continua entrando só com CPF e senha.
         const cpfLimpo = String(cpf || '').replace(/\D/g, '');
         const salaoCurto = String(idSalao || '').replace(/-/g, '').slice(0, 8);
         if (!cpfLimpo || !salaoCurto) return null;
@@ -2667,11 +2787,15 @@ const App = {
     },
 
     async obterEstabId() {
+        // Devolve o ID do salao VALIDANDO contra o banco. Se o valor guardado estiver
+        // velho (de outro salao ou de um teste), busca o correto e regenera.
         let id = localStorage.getItem('hairconcept_estab_id');
         if (!supabaseClient || !supabaseClient.auth) return id || null;
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return id || null;
+            // 1o: o salao pelo CODIGO (deconcept2). Assim trocar de conta
+            // Google nao abre um salao vazio e os clientes nao "somem".
             const codigo = (localStorage.getItem('hairconcept_codigo_salao') || '').trim().toLowerCase();
             if (codigo) {
                 const { data: porCodigo } = await supabaseClient
@@ -2693,6 +2817,8 @@ const App = {
                     .maybeSingle();
                 if (confere && confere.id) return id;
             }
+            // Se o guardado nao serve, pega o salao MAIS RECENTE da conta
+            // (contas com varios estabelecimentos abriam o errado)
             const { data: estab } = await supabaseClient
                 .from('estabelecimentos')
                 .select('id')
@@ -2710,12 +2836,14 @@ const App = {
         return id || null;
     },
 
+    // Abre a janela para colocar um serviço DENTRO de um atendimento
     abrirEncaixe(pai) {
         if (!pai) return;
         this._modoEncaixe = true;
         const campoData = document.getElementById('agendamento-data');
         if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
 
+        // Sugere: começa no início do atendimento e dura 30 minutos
         const inicio = this.normalizarHora(pai.horario) || '08:00';
         const mi = this.minutosDoDia(inicio);
         const mf = mi + 30;
@@ -2740,8 +2868,10 @@ const App = {
         UI.showToast('Preenchendo dentro do atendimento de ' + (pai.cliente || '') + '.');
     },
 
+    // ===== FECHAMENTO DO PROFISSIONAL =====
     hojeISO() { return dataLocalISO(); },
 
+    // Carrega o ciclo atual e o historico de fechamentos
     async carregarFechamento() {
         const painel = document.getElementById('painel-fechamento');
         if (!painel) return;
@@ -2755,6 +2885,7 @@ const App = {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return;
 
+            // Descobre o id do profissional desta sessao
             let profId = this.user.id;
             if (!profId) {
                 const { data: p } = await supabaseClient
@@ -2764,6 +2895,7 @@ const App = {
             if (!profId) return;
             this._profIdFech = profId;
 
+            // Inicio do ciclo: dia seguinte ao ultimo fechamento
             const { data: fechs } = await supabaseClient
                 .from('fechamentos').select('*')
                 .eq('profissional_id', profId)
@@ -2777,6 +2909,7 @@ const App = {
             }
             this._inicioCiclo = inicio;
 
+            // Atendimentos do ciclo (do inicio ate hoje)
             const hoje = dataLocalISO();
             const { data: ags, error } = await supabaseClient
                 .from('agendamentos').select('*')
@@ -2794,29 +2927,1937 @@ const App = {
             this._totalCiclo = { qtd: atendimentos.length, valor: totalValor };
 
             if (elPeriodo) {
-                const de = inicio === '0001-01-01' ? 'o comeco' : inicio;
-                elPeriodo.textContent = 'Período: ' + de + ' até hoje';
+                const de = inicio === '0001-01-01' ? 'o comeco' : inicio.split('-').reverse().join('/');
+                elPeriodo.textContent = 'Ciclo atual: de ' + de + ' ate hoje (' + hoje.split('-').reverse().join('/') + ')';
             }
             if (elQtd) elQtd.textContent = String(atendimentos.length);
-            if (elValor) elValor.textContent = 'R$ ' + totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (elValor) elValor.textContent = 'R$ ' + totalValor.toFixed(2);
+            this.calcularFechamento();
 
-            if (lista) lista.innerHTML = '';
-            if (hist) hist.innerHTML = '';
+            // Lista dos atendimentos do ciclo
+            if (lista) {
+                lista.innerHTML = '';
+                if (atendimentos.length === 0) {
+                    const p = document.createElement('p');
+                    p.className = 'text-xs text-zinc-500';
+                    p.textContent = 'Nenhum atendimento neste ciclo ainda.';
+                    lista.appendChild(p);
+                }
+                atendimentos.slice().reverse().forEach(function (a) {
+                    const linha = document.createElement('div');
+                    linha.className = 'fech-linha';
+                    const esq = document.createElement('div');
+                    const dia = document.createElement('span');
+                    dia.className = 'dia';
+                    dia.textContent = (a.data || '').split('-').reverse().slice(0, 2).join('/') + ' ' + this.normalizarHora(a.horario);
+                    const cli = document.createElement('span');
+                    cli.className = 'cli ml-2';
+                    cli.textContent = a.cliente || '';
+                    const sv = document.createElement('span');
+                    sv.className = 'text-zinc-400 ml-2';
+                    sv.textContent = a.servico || '';
+                    esq.appendChild(dia); esq.appendChild(cli); esq.appendChild(sv);
+                    const val = document.createElement('span');
+                    val.className = 'val';
+                    val.textContent = 'R$ ' + (parseFloat(a.valor) || 0).toFixed(2);
+                    linha.appendChild(esq); linha.appendChild(val);
+                    lista.appendChild(linha);
+                }.bind(this));
+            }
+
+            // Historico de ciclos fechados
+            if (hist) {
+                hist.innerHTML = '';
+                if (!fechs || fechs.length === 0) {
+                    const p = document.createElement('p');
+                    p.className = 'text-xs text-zinc-500';
+                    p.textContent = 'Nenhum ciclo fechado ainda.';
+                    hist.appendChild(p);
+                }
+                (fechs || []).forEach(function (f) {
+                    const linha = document.createElement('div');
+                    linha.className = 'fech-linha';
+                    const esq = document.createElement('div');
+                    const per = document.createElement('span');
+                    per.className = 'dia';
+                    per.textContent = (f.inicio || '').split('-').reverse().join('/') + ' a ' + (f.fim || '').split('-').reverse().join('/');
+                    const rec = document.createElement('span');
+                    rec.className = 'text-zinc-400 ml-2';
+                    rec.textContent = f.recebido_em ? 'recebido em ' + f.recebido_em.split('-').reverse().join('/') : '';
+                    esq.appendChild(per); esq.appendChild(rec);
+                    const val = document.createElement('span');
+                    val.className = 'val';
+                    val.textContent = 'R$ ' + (parseFloat(f.total_comissao) || 0).toFixed(2) + ' de comissao';
+                    linha.appendChild(esq); linha.appendChild(val);
+                    hist.appendChild(linha);
+                });
+            }
         } catch (e) {
-            console.warn('Erro ao carregar fechamento do profissional:', e);
+            console.warn('Erro ao carregar o fechamento:', e);
+        }
+    },
+
+    calcularFechamento() {
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const total = this._totalCiclo ? this._totalCiclo.valor : 0;
+        const com = isNaN(pct) ? 0 : (total * pct) / 100;
+        const el = document.getElementById('fech-comissao');
+        if (el) el.textContent = 'R$ ' + com.toFixed(2);
+    },
+
+    abrirFecharCiclo() {
+        const total = this._totalCiclo || { qtd: 0, valor: 0 };
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const com = isNaN(pct) ? 0 : (total.valor * pct) / 100;
+
+        const elPer = document.getElementById('fechar-periodo');
+        const elQtd = document.getElementById('fechar-atend');
+        const elVal = document.getElementById('fechar-valor');
+        const elCom = document.getElementById('fechar-comissao');
+        const elData = document.getElementById('fechar-recebido');
+
+        const inicio = this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : null;
+        if (elPer) elPer.textContent = 'Periodo: ' + (inicio ? inicio.split('-').reverse().join('/') : 'inicio') + ' ate ' + dataLocalISO().split('-').reverse().join('/');
+        if (elQtd) elQtd.textContent = String(total.qtd);
+        if (elVal) elVal.textContent = 'R$ ' + total.valor.toFixed(2);
+        if (elCom) elCom.textContent = 'R$ ' + com.toFixed(2);
+        if (elData) elData.value = dataLocalISO();
+        Auth.abrirModal('modal-fechar');
+    },
+
+    async confirmarFechamento() {
+        const profId = this._profIdFech;
+        const total = this._totalCiclo || { qtd: 0, valor: 0 };
+        if (!profId) { UI.showToast('Nao encontrei o seu cadastro. Recarregue a pagina.', 'error'); return; }
+        if (total.qtd === 0) { UI.showToast('Nao ha atendimentos neste ciclo para fechar.', 'error'); return; }
+
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const comissaoPct = isNaN(pct) ? 0 : pct;
+        const comissaoVal = (total.valor * comissaoPct) / 100;
+        const recebido = document.getElementById('fechar-recebido')?.value || dataLocalISO();
+
+        try {
+            const { error } = await supabaseClient.from('fechamentos').insert([{
+                estabelecimento_id: localStorage.getItem('hairconcept_estab_id'),
+                profissional_id: profId,
+                inicio: this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : dataLocalISO(),
+                fim: dataLocalISO(),
+                total_atendimentos: total.qtd,
+                total_valor: total.valor,
+                comissao_pct: comissaoPct,
+                total_comissao: comissaoVal,
+                recebido_em: recebido
+            }]);
+            if (error) {
+                console.error('Erro ao fechar o ciclo:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            Auth.fecharModal('modal-fechar');
+            const campoPct = document.getElementById('fech-pct');
+            if (campoPct) campoPct.value = '';
+            UI.showToast('Ciclo fechado! O proximo comeca amanha.');
+            this.carregarFechamento();
+        } catch (e) {
+            console.error('Erro inesperado ao fechar:', e);
+            UI.showToast('Erro inesperado ao fechar o ciclo.', 'error');
+        }
+    },
+
+    abrirMarcar(horario) {
+        this._modoEncaixe = false;
+        const campoData = document.getElementById('agendamento-data');
+        const campoHora = document.getElementById('agendamento-horario');
+        if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
+        if (campoHora) campoHora.value = horario || '08:00';
+        const campoFim = document.getElementById('agendamento-horario-fim');
+        if (campoFim) {
+            const m = this.minutosDoDia(campoHora ? campoHora.value : '08:00');
+            const fim = m >= 0 ? m + 30 : 510;
+            const hh = String(Math.floor(fim / 60)).padStart(2, '0');
+            const mm = String(fim % 60).padStart(2, '0');
+            campoFim.value = hh + ':' + mm;
+        }
+        const cxEncaixe = document.getElementById('agendamento-encaixe');
+        if (cxEncaixe) cxEncaixe.checked = false;
+        const avisoEnc = document.getElementById('aviso-encaixe');
+        if (avisoEnc) avisoEnc.classList.add('hidden');
+        this.aplicarHorariosLivres();
+        Auth.abrirModal('modal-marcar');
+    },
+
+    async handleCreateAgendamento(event) {
+        event.preventDefault();
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
+        const data = document.getElementById('agendamento-data').value;
+        const profissional_id = document.getElementById('agendamento-profissional').value;
+        // Envia só HH:MM para o banco, sem os segundos
+        const horario = String(document.getElementById('agendamento-horario')?.value || '').slice(0, 5);
+        const horarioFim = String(document.getElementById('agendamento-horario-fim')?.value || '').slice(0, 5);
+        const aceitaEncaixe = !!document.getElementById('agendamento-encaixe')?.checked;
+
+        if (!horarioFim || horarioFim <= horario) {
+            UI.showToast('O horário de fim precisa ser depois do horário de início.', 'error');
+            return;
+        }
+
+        // Fora do modo encaixe, nao deixa marcar em cima de outro atendimento
+        if (!this._modoEncaixe) {
+            try {
+                const { data: doDia } = await supabaseClient
+                    .from('agendamentos')
+                    .select('horario, horario_fim, profissional_id, cliente')
+                    .eq('estabelecimento_id', estabId)
+                    .eq('data', data)
+                    .eq('profissional_id', profissional_id);
+                if (this.horarioOcupado(doDia || [], profissional_id, horario)) {
+                    const selP = document.getElementById('agendamento-profissional');
+                    const nomeDoProf = (selP && selP.selectedOptions && selP.selectedOptions[0]) ? selP.selectedOptions[0].textContent : 'este profissional';
+                    UI.showToast('Esse horario ja esta ocupado para ' + nomeDoProf + '. Use Adicionar dentro se quiser encaixar.', 'error');
+                    return;
+                }
+            } catch (e) {
+                console.warn('Nao foi possivel conferir a agenda:', e);
+            }
+        }
+        const cliente = document.getElementById('cliente-nome').value;
+        const servico = document.getElementById('cliente-servico').value;
+        const valor = parseValor(document.getElementById('cliente-valor').value);
+        try {
+            const { error } = await supabaseClient.from('agendamentos').insert([{
+                estabelecimento_id: estabId,
+                data,
+                profissional_id,
+                horario: horario,
+                horario_fim: horarioFim,
+                status: 'espera',
+                aceita_encaixe: aceitaEncaixe,
+                cliente,
+                servico,
+                valor
+            }]);
+            if (error) throw error;
+            UI.showToast('Agendamento efetuado com sucesso!');
+            document.getElementById('cliente-nome').value = '';
+            document.getElementById('cliente-servico').value = '';
+            document.getElementById('cliente-valor').value = '';
+            Auth.fecharModal('modal-marcar');
+
+            // LEVA PARA A AGENDA, no dia que foi marcado.
+            // Sem isto o atendimento entrava mas a pessoa nao via nada.
+            const filtroData = document.getElementById('filtro-data-agenda');
+            if (filtroData && data) filtroData.value = data;
+            if (this.user && this.user.role === 'profissional' && this.user.id) {
+                localStorage.setItem('hairconcept_prof_selecionado', this.user.id);
+            } else if (profissional_id) {
+                localStorage.setItem('hairconcept_prof_selecionado', profissional_id);
+            }
+            // Só a troca de aba aqui: se algo acima falhar, a agenda abre do mesmo jeito
+            UI.switchTab('aba-agenda');
+            try { this.renderAgendaGrid(); } catch (e) { console.warn(e); }
+            try { this.renderAgendaSemana(); } catch (e) { console.warn(e); }
+            try { this.renderRelatorios(); } catch (e) { console.warn(e); }
+        } catch (e) {
+            UI.showToast('Nao consegui marcar o atendimento. ' + mensagemAmigavel(e), 'error');
+        }
+    },
+    // ===== BARRA LATERAL DE PROFISSIONAIS =====
+    // Monta a lista de profissionais na lateral da agenda.
+    // A foto vem da aba do profissional; sem foto, mostra as duas iniciais.
+    iniciaisDoNome(nome) {
+        const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
+        if (partes.length === 0) return '?';
+        if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+        return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+    },
+
+    async montarLateralProfs() {
+        const lista = document.getElementById('ag-lista-profs');
+        if (!lista) return;
+        try {
+            const estabId = await this.obterEstabId();
+            const { data } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome, cargo, foto_url, ativo')
+                .eq('estabelecimento_id', estabId);
+
+            let profs = (data || []).filter(function (p) { return p.ativo !== false; });
+            profs.sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'); });
+
+            this._profsLateral = profs;
+
+            // Se ninguem estiver selecionado, pega o primeiro
+            const selecionado = localStorage.getItem('hairconcept_prof_selecionado');
+            if (!selecionado || !profs.some(function (p) { return p.id === selecionado; })) {
+                if (profs.length > 0) localStorage.setItem('hairconcept_prof_selecionado', profs[0].id);
+            }
+
+            this.desenharLateralProfs(profs);
+        } catch (e) {
+            console.warn('Nao foi possivel montar a barra de profissionais:', e);
+        }
+    },
+
+    desenharLateralProfs(profs) {
+        const lista = document.getElementById('ag-lista-profs');
+        if (!lista) return;
+        const selecionado = localStorage.getItem('hairconcept_prof_selecionado');
+        const comNome = profs.length <= 15;
+
+        lista.innerHTML = '';
+        if (profs.length === 0) {
+            const p = document.createElement('p');
+            p.className = 'text-[10px] text-zinc-500 px-1';
+            p.textContent = 'Nenhum profissional ativo.';
+            lista.appendChild(p);
+            return;
+        }
+
+        profs.forEach(function (pf) {
+            const item = document.createElement('div');
+            item.className = 'ag-item' + (pf.id === selecionado ? ' ativo' : '');
+            item.title = (pf.nome || '') + (pf.cargo ? ' - ' + pf.cargo : '');
+            item.onclick = function () { App.selecionarProfAgenda(pf.id); };
+
+            const av = document.createElement('div');
+            av.className = 'ag-avatar';
+            if (pf.foto_url) {
+                const img = document.createElement('img');
+                img.src = pf.foto_url;
+                img.className = 'w-full h-full rounded-[inherit] object-cover';
+                av.appendChild(img);
+            } else {
+                av.textContent = App.iniciaisDoNome(pf.nome);
+            }
+            item.appendChild(av);
+
+            if (comNome) {
+                const nome = document.createElement('span');
+                nome.className = 'ag-item-nome';
+                nome.textContent = pf.nome || '';
+                item.appendChild(nome);
+            }
+
+            lista.appendChild(item);
+        });
+    },
+
+    filtrarLateralProfs(termo) {
+        const t = String(termo || '').toLowerCase();
+        const todos = this._profsLateral || [];
+        const filtrados = todos.filter(function (p) {
+            return String(p.nome || '').toLowerCase().indexOf(t) >= 0;
+        });
+        this.desenharLateralProfs(filtrados);
+    },
+
+    selecionarProfAgenda(id) {
+        localStorage.setItem('hairconcept_prof_selecionado', id);
+        const lateral = document.getElementById('ag-lateral');
+        if (lateral) lateral.classList.remove('aberta');
+        this.montarLateralProfs();
+        this.renderAgendaGrid();
+    },
+
+// ===== CERTIFICADOS DO PROFISSIONAL =====
+    handleFotoCertificado(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this._certFotoTemp = e.target.result;
+            const prev = document.getElementById('cert-preview');
+            if (prev) { prev.src = this._certFotoTemp; prev.classList.remove('hidden'); }
+            const nome = document.getElementById('cert-arquivo-nome');
+            if (nome) nome.textContent = file.name;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async salvarCertificado(event) {
+        if (event) event.preventDefault();
+        const curso = (document.getElementById('cert-curso') || {}).value || '';
+        const instituicao = (document.getElementById('cert-instituicao') || {}).value || '';
+        const dataConc = (document.getElementById('cert-data') || {}).value || null;
+        const link = (document.getElementById('cert-link') || {}).value || '';
+        if (!String(curso).trim()) { UI.showToast('Escreva o nome do curso.', 'error'); return; }
+        if (!this._certFotoTemp && !String(link).trim()) {
+            UI.showToast('Anexe a foto ou cole o link do certificado.', 'error');
+            return;
+        }
+        try {
+            const estabId = await this.obterEstabId();
+            const profId = localStorage.getItem('hairconcept_prof_id');
+            if (!profId) { UI.showToast('Nao encontrei o seu cadastro. Saia e entre de novo.', 'error'); return; }
+            const { error } = await supabaseClient.from('certificados').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                curso: String(curso).trim(),
+                instituicao: instituicao ? String(instituicao).trim() : null,
+                data_conclusao: dataConc || null,
+                comprovante_url: this._certFotoTemp || String(link).trim() || null
+            }]);
+            if (error) throw error;
+            this._certFotoTemp = null;
+            if (event && event.target && event.target.reset) event.target.reset();
+            const prev = document.getElementById('cert-preview');
+            if (prev) { prev.src = ''; prev.classList.add('hidden'); }
+            const nome = document.getElementById('cert-arquivo-nome');
+            if (nome) nome.textContent = '';
+            UI.showToast('Certificado salvo!');
+            this.carregarMeusCertificados();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarMeusCertificados() {
+        const lista = document.getElementById('lista-certificados');
+        if (!lista) return;
+        try {
+            const profId = localStorage.getItem('hairconcept_prof_id');
+            if (!profId) return;
+            const { data, error } = await supabaseClient
+                .from('certificados').select('*')
+                .eq('profissional_id', profId)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            const itens = data || [];
+            lista.innerHTML = '';
+            if (itens.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-[10px] text-zinc-500';
+                p.textContent = 'Nenhum certificado cadastrado ainda.';
+                lista.appendChild(p);
+                return;
+            }
+            itens.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-white/10';
+                const ehLink = c.comprovante_url && c.comprovante_url.indexOf('http') === 0;
+                let img;
+                if (ehLink) {
+                    img = document.createElement('a');
+                    img.href = c.comprovante_url;
+                    img.target = '_blank';
+                    img.rel = 'noopener';
+                    img.className = 'w-12 h-12 rounded-lg border border-white/10 shrink-0 flex items-center justify-center bg-zinc-950 text-brand-500';
+                    img.title = 'Abrir o certificado';
+                    img.innerHTML = '<i class="fa-solid fa-up-right-from-square"></i>';
+                } else {
+                    img = document.createElement('img');
+                    img.src = c.comprovante_url || FOTO_PADRAO;
+                    img.className = 'w-12 h-12 rounded-lg object-cover cursor-pointer border border-white/10 shrink-0';
+                    img.title = 'Ver certificado';
+                    img.onclick = () => App.verCertificado(c.comprovante_url, c.curso);
+                }
+                const info = document.createElement('div');
+                info.className = 'flex-1 min-w-0';
+                const h = document.createElement('p');
+                h.className = 'text-[11px] font-bold text-white truncate';
+                h.textContent = c.curso || '';
+                const sub = document.createElement('p');
+                sub.className = 'text-[9px] text-zinc-400';
+                const partes = [];
+                if (c.instituicao) partes.push(c.instituicao);
+                if (c.data_conclusao) partes.push(new Date(c.data_conclusao + 'T00:00:00').toLocaleDateString('pt-BR'));
+                sub.textContent = partes.join(' · ') || 'Certificado registrado';
+                info.appendChild(h); info.appendChild(sub);
+                const btn = document.createElement('button');
+                btn.className = 'px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[9px] font-bold uppercase hover:bg-rose-500/20 transition shrink-0';
+                btn.textContent = 'Apagar';
+                btn.onclick = () => App.apagarCertificado(c.id, c.curso);
+                card.appendChild(img); card.appendChild(info); card.appendChild(btn);
+                lista.appendChild(card);
+            });
+        } catch (e) {
+            console.warn('Nao foi possivel carregar os certificados:', e);
+        }
+    },
+
+    verCertificado(url, curso) {
+        if (!url) return;
+        const janela = window.open('', '_blank');
+        if (!janela) return;
+        janela.document.write('<html><head><title>' + (curso || 'Certificado') + '</title><style>body{margin:0;background:#18181b;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:96vw;max-height:96vh;box-shadow:0 8px 40px rgba(0,0,0,.6)}</style></head><body><img src="' + url + '" alt="Certificado"></body></html>');
+    },
+
+    async apagarCertificado(id, curso) {
+        if (!confirm('Apagar o certificado "' + (curso || '') + '"?')) return;
+        try {
+            const { error } = await supabaseClient.from('certificados').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Certificado apagado.');
+            this.carregarMeusCertificados();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarSeloCertificados() {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('certificados').select('profissional_id')
+                .eq('estabelecimento_id', estabId);
+            // Conta quantos certificados cada profissional tem
+            const mapa = {};
+            (data || []).forEach(c => {
+                if (!c.profissional_id) return;
+                mapa[c.profissional_id] = (mapa[c.profissional_id] || 0) + 1;
+            });
+            this._certPorProf = mapa;
+            this._temCertificado = new Set(Object.keys(mapa));
+        } catch (e) {
+            this._certPorProf = {};
+            this._temCertificado = new Set();
+        }
+    },
+
+    // Devolve o selo. Com 1 curso: 🎓  Com 2+: 🎓 + o numero
+    seloCertificado(profId) {
+        const n = (this._certPorProf && this._certPorProf[profId]) || 0;
+        if (n === 0) return '';
+        if (n === 1) {
+            return ' <i class="fa-solid fa-graduation-cap text-amber-400" title="1 curso registrado"></i>';
+        }
+        return ' <i class="fa-solid fa-graduation-cap text-amber-400" title="' + n + ' cursos registrados"></i>' +
+               '<span class="text-[9px] font-black text-amber-400 align-super">+' + (n - 1) + '</span>';
+    },
+
+// ===== MODELO DE AGENDA DO SALAO (preferencia no banco) =====
+    async salvarModeloAgenda(modelo) {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { error } = await supabaseClient
+                .from('estabelecimentos')
+                .update({ modelo_agenda: modelo })
+                .eq('id', estabId);
+            if (error) throw error;
+            localStorage.setItem('hairconcept_modo_agenda', modelo);
+            UI.showToast('Modelo da agenda salvo! Ele abre assim para o salao inteiro.');
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // Le a preferencia do salao ao entrar
+    async carregarModeloAgenda() {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('estabelecimentos')
+                .select('modelo_agenda')
+                .eq('id', estabId)
+                .maybeSingle();
+            const modo = (data && data.modelo_agenda) || 'semana';
+            localStorage.setItem('hairconcept_modo_agenda', modo);
+            const sel = document.getElementById('config-modelo-agenda');
+            if (sel) sel.value = modo;
+        } catch (e) { /* segue no padrao */ }
+    },
+
+// ===== EXCLUIR CONTA (carencia de 7 dias) =====
+    async pedirExclusaoConta() {
+        const nomeSalao = (document.getElementById('config-nome-salao') || {}).value || '';
+        const digitado = prompt('EXCLUIR A CONTA\n\nSeus dados serao apagados definitivamente em 7 dias.\nDurante esse prazo voce pode entrar e cancelar.\n\nPara confirmar, digite o nome do salao:');
+        if (digitado === null) return;
+        if (String(digitado).trim().toLowerCase() !== String(nomeSalao).trim().toLowerCase()) {
+            UI.showToast('O nome digitado nao confere. Nada foi alterado.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.rpc('pedir_exclusao_conta');
+            if (error) throw error;
+            UI.showToast('Conta marcada para exclusao. Voce tem 7 dias para voltar atras.', 'success');
+            setTimeout(function () { Auth.logout(); }, 2500);
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async cancelarExclusaoConta() {
+        try {
+            const { error } = await supabaseClient.rpc('cancelar_exclusao_conta');
+            if (error) throw error;
+            UI.showToast('Exclusao cancelada. Sua conta continua ativa.', 'success');
+            this.verificarExclusaoPendente();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async verificarExclusaoPendente() {
+        const caixa = document.getElementById('aviso-exclusao');
+        if (!caixa) return;
+        try {
+            const s = await supabaseClient.auth.getSession();
+            const uid = s && s.data && s.data.session ? s.data.session.user.id : null;
+            if (!uid) return;
+            const { data } = await supabaseClient.from('estabelecimentos')
+                .select('excluido_em').eq('user_id', uid).maybeSingle();
+            if (data && data.excluido_em) {
+                const limite = new Date(data.excluido_em);
+                limite.setDate(limite.getDate() + 7);
+                const txt = document.getElementById('aviso-exclusao-data');
+                if (txt) txt.textContent = limite.toLocaleDateString('pt-BR');
+                caixa.classList.remove('hidden');
+            } else {
+                caixa.classList.add('hidden');
+            }
+        } catch (e) { /* silencioso */ }
+    },
+
+    async checarContaExcluida(session) {
+        if (!session || !session.user) return false;
+        try {
+            const { data } = await supabaseClient.from('estabelecimentos')
+                .select('excluido_em').eq('user_id', session.user.id).maybeSingle();
+            if (data && data.excluido_em) {
+                const limite = new Date(data.excluido_em);
+                limite.setDate(limite.getDate() + 7);
+                UI.showToast('Esta conta foi excluida. Os dados serao apagados em ' + limite.toLocaleDateString('pt-BR') + '.', 'error');
+                return true;
+            }
+        } catch (e) { /* segue */ }
+        return false;
+    },
+
+    // ===== MODELO DE AGENDA DO SALAO =====
+    // Rotulo do modelo escolhido (mostrado no topo da agenda)
+    rotuloModeloAgenda() {
+        const m = this.modoAgendaAtual ? this.modoAgendaAtual() : 'semana';
+        if (m === 'dia') return 'Agenda do dia (todos os profissionais)';
+        return 'Semana do profissional';
+    },
+
+// ===== GRADE DA SEMANA =====
+    // Seg a Sab do profissional selecionado. No celular mostra um dia por vez.
+    diasDaSemana(baseISO) {
+        // baseISO = qualquer data da semana; retorna o domingo anterior (inicio da semana)
+        const d = new Date((baseISO || dataLocalISO()) + 'T00:00:00');
+        const dow = d.getDay(); // 0=dom
+        const inicio = new Date(d);
+        inicio.setDate(d.getDate() - dow);
+        const dias = [];
+        for (let i = 1; i <= 6; i++) { // 1=seg .. 6=sab
+            const x = new Date(inicio);
+            x.setDate(inicio.getDate() + i);
+            dias.push(dataLocalISO(x));
+        }
+        return dias;
+    },
+
+    nomeDiaCurto(iso) {
+        const d = new Date(iso + 'T00:00:00');
+        const nomes = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+        const num = String(d.getDate()).padStart(2, '0');
+        return nomes[d.getDay()] + ' ' + num;
+    },
+
+    // Desenha a grade da semana do profissional selecionado
+    async renderAgendaSemana() {
+        const wrap = document.getElementById('semana-wrap');
+        const cab = document.getElementById('semana-cabecalho');
+        const corpo = document.getElementById('semana-corpo');
+        if (!wrap || !cab || !corpo) return;
+
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+
+            const { data: profsTodos } = await supabaseClient
+                .from('profissionais').select('id, nome')
+                .eq('estabelecimento_id', estabId);
+            const ativos = (profsTodos || []).filter(function (p) { return true; });
+
+            // Profissional da semana: o selecionado na lateral, ou o proprio (se for profissional)
+            let profId = null;
+            if (this.user.role === 'profissional') {
+                profId = this.user.id;
+            } else {
+                profId = localStorage.getItem('hairconcept_prof_selecionado');
+            }
+            if (!profId || !ativos.some(function (p) { return p.id === profId; })) {
+                profId = ativos.length > 0 ? ativos[0].id : null;
+            }
+            this._profSemana = profId;
+
+            if (!profId) {
+                cab.innerHTML = '';
+                corpo.innerHTML = '<tr><td class="py-6 px-4 text-center text-zinc-500 text-xs">Cadastre um profissional para ver a semana.</td></tr>';
+                return;
+            }
+
+            // Data de referencia (o campo de data manda)
+            const campoData = document.getElementById('filtro-data-agenda');
+            const ref = (campoData && campoData.value) || dataLocalISO();
+            const dias = this.diasDaSemana(ref);
+
+            // Busca os agendamentos da semana inteira de uma vez
+            const { data: ags } = await supabaseClient
+                .from('agendamentos')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .eq('profissional_id', profId)
+                .gte('data', dias[0])
+                .lte('data', dias[5]);
+
+            const todos = ags || [];
+
+            // Bloqueios do periodo (fechado / folga / intervalo)
+            let bloqueios = [];
+            try {
+                const { data: bl } = await supabaseClient.rpc('bloqueios_do_periodo', { p_de: dias[0], p_ate: dias[5] });
+                bloqueios = bl || [];
+            } catch (e) {
+                // Se a funcao ainda nao existir, a grade simplesmente nao pinta bloqueio
+                console.warn('Bloqueios indisponiveis:', e);
+            }
+
+            // Descobre o bloqueio que cobre um dia (e horario, se houver)
+            const bloqueioEm = function (iso, hhmm, profIdSel) {
+                return (bloqueios || []).find(function (b) {
+                    if (b.data !== iso) return false;
+                    // prof_id nulo = salao inteiro; senao, so o profissional
+                    if (b.profissional_id && b.profissional_id !== profIdSel) return false;
+                    if (!b.hora_inicio) return true; // dia todo
+                    const hi = App.normalizarHora(b.hora_inicio);
+                    const hf = App.normalizarHora(b.hora_fim);
+                    const alvo = hhmm;
+                    return hhmm >= hi && hhmm < hf;
+                });
+            };
+            this._bloqueioEm = bloqueioEm;
+
+            // Cabecalho: dias + botao de menu por dia
+            const hoje = dataLocalISO();
+            cab.innerHTML = '';
+            const thHora = document.createElement('th');
+            thHora.className = 'semana-th-hora';
+            thHora.textContent = 'Horário';
+            cab.appendChild(thHora);
+
+            dias.forEach(function (iso, idx) {
+                const th = document.createElement('th');
+                th.className = 'semana-th' + (iso === hoje ? ' hoje' : '') + (idx === 0 ? ' primeiro' : '');
+                th.dataset.dia = iso;
+
+                const topo = document.createElement('div');
+                topo.className = 'semana-th-topo';
+                const nome = document.createElement('span');
+                nome.className = 'semana-dia-nome';
+                nome.textContent = App.nomeDiaCurto(iso);
+                topo.appendChild(nome);
+
+                const btnMenu = document.createElement('button');
+                btnMenu.type = 'button';
+                btnMenu.className = 'semana-menu-btn';
+                btnMenu.title = 'Opções do dia';
+                btnMenu.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                btnMenu.onclick = function (ev) { ev.stopPropagation(); App.abrirMenuDia(ev, iso); };
+                topo.appendChild(btnMenu);
+
+                th.appendChild(topo);
+                cab.appendChild(th);
+            });
+
+            // Corpo: horarios x dias
+            const horarios = [];
+            for (let m = 8 * 60; m < 19 * 60; m += 30) {
+                horarios.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+            }
+
+            corpo.innerHTML = '';
+            horarios.forEach(function (h, hi) {
+                const tr = document.createElement('tr');
+                tr.className = 'semana-linha';
+
+                const tdH = document.createElement('td');
+                tdH.className = 'semana-hora';
+                tdH.textContent = h;
+                tr.appendChild(tdH);
+
+                dias.forEach(function (iso, idx) {
+                    const td = document.createElement('td');
+                    td.className = 'semana-cel' + (idx === 0 ? ' primeiro' : '');
+                    td.dataset.dia = iso;
+                    td.dataset.hora = h;
+
+                    // 1) atendimento que comeca neste bloco
+                    const ag = todos.find(function (a) {
+                        return a.data === iso && App.normalizarHora(a.horario) === h;
+                    });
+                    if (ag) {
+                        const dur = App.duracaoMinutos(ag);
+                        const blocos = Math.max(1, Math.round(dur / 30));
+                        const caixa = document.createElement('div');
+                        caixa.className = 'semana-ag ' + App.classeEstado(ag.status);
+                        caixa.style.height = (blocos * 26 - 4) + 'px';
+                        const cli = document.createElement('strong');
+                        cli.className = 'semana-ag-cli';
+                        cli.textContent = ag.cliente || '';
+                        const sv = document.createElement('span');
+                        sv.className = 'semana-ag-sv';
+                        sv.textContent = ag.servico || '';
+                        const hr = document.createElement('span');
+                        hr.className = 'semana-ag-hr';
+                        hr.textContent = App.normalizarHora(ag.horario) + '-' + App.normalizarHora(ag.horario_fim || '');
+                        caixa.appendChild(cli); caixa.appendChild(sv); caixa.appendChild(hr);
+                        caixa.title = (ag.cliente || '') + ' • ' + (ag.servico || '') + ' • R$ ' + parseFloat(ag.valor || 0).toFixed(2);
+                        caixa.onclick = function (ev) { ev.stopPropagation(); App.abrirDiaDoAtendimento(iso, ag); };
+                        td.appendChild(caixa);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 2) bloco coberto por um atendimento longo (continuacao)
+                    const cobrindo = todos.find(function (a) {
+                        return a.data === iso && App.cobreHorario(a, h);
+                    });
+                    if (cobrindo) {
+                        const cont = document.createElement('div');
+                        cont.className = 'semana-ag-cont ' + App.classeEstado(cobrindo.status);
+                        cont.title = (cobrindo.cliente || '') + ' (continuação)';
+                        td.appendChild(cont);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 3) fechado pelo dono
+                    const blq = App._bloqueioEm ? App._bloqueioEm(iso, h, App._profSemana) : null;
+                    if (blq) {
+                        const f = document.createElement('div');
+                        f.className = 'semana-ag fechado';
+                        f.style.height = '24px';
+                        f.title = blq.motivo || 'Fechado';
+                        const t = document.createElement('span');
+                        t.className = 'semana-ag-cli';
+                        t.style.fontSize = '8.5px';
+                        t.textContent = blq.hora_inicio ? (App.normalizarHora(blq.hora_inicio) + ' ' + (blq.motivo || 'Fechado')) : (blq.motivo || 'Fechado');
+                        f.appendChild(t);
+                        td.appendChild(f);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 4) livre
+                    if (App.user.role === 'admin') {
+                        const b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'semana-livre';
+                        b.textContent = '';
+                        b.title = 'Marcar em ' + App.nomeDiaCurto(iso) + ' as ' + h;
+                        b.onclick = function () { App.marcarNoDia(iso, h); };
+                        td.appendChild(b);
+                    }
+                    tr.appendChild(td);
+                });
+
+                corpo.appendChild(tr);
+            });
+
+            wrap.classList.remove('hidden');
+        } catch (e) {
+            console.warn('Erro ao montar a semana:', e);
+        }
+    },
+
+    // Marca atendimento num dia/hora clicados na semana
+    marcarNoDia(iso, hora) {
+        const campoData = document.getElementById('filtro-data-agenda');
+        if (campoData) campoData.value = iso;
+        const sel = document.getElementById('agendamento-profissional');
+        if (sel && this._profSemana) sel.value = this._profSemana;
+        this.abrirMarcar(hora);
+    },
+
+    // Abre o dia do atendimento na agenda detalhada
+    abrirDiaDoAtendimento(iso, ag) {
+        const campoData = document.getElementById('filtro-data-agenda');
+        if (campoData) campoData.value = iso;
+        if (ag && ag.profissional_id) localStorage.setItem('hairconcept_prof_selecionado', ag.profissional_id);
+        this.trocarModoAgenda('dia');
+        this.renderAgendaGrid();
+    },
+
+    // ===== MENU DO DIA (≡) =====
+    abrirMenuDia(ev, iso) {
+        this._diaMenu = iso;
+        const pop = document.getElementById('menu-dia-pop');
+        if (!pop) return;
+        const rotulo = document.getElementById('menu-dia-rotulo');
+        if (rotulo) {
+            const d = new Date(iso + 'T00:00:00');
+            rotulo.textContent = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+        }
+        // periodo de horarios do intervalo
+        pop.classList.remove('hidden');
+        const r = ev.currentTarget.getBoundingClientRect();
+        const larg = 230;
+        let left = r.left - larg / 2;
+        if (left < 8) left = 8;
+        if (left + larg > window.innerWidth - 8) left = window.innerWidth - larg - 8;
+        pop.style.left = left + 'px';
+        pop.style.top = (r.bottom + 6) + 'px';
+    },
+
+    fecharMenuDia() {
+        const pop = document.getElementById('menu-dia-pop');
+        if (pop) pop.classList.add('hidden');
+    },
+
+    async fecharAgendaDia() {
+        const iso = this._diaMenu;
+        if (!iso) return;
+        const selProf = document.getElementById('menu-dia-todos');
+        const soProfissional = selProf && selProf.checked;
+        const profId = soProfissional ? (this._profSemana || null) : null;
+        const motivo = (document.getElementById('menu-dia-motivo') || {}).value || 'Fechado';
+        try {
+            const estabId = await this.obterEstabId();
+            const { error } = await supabaseClient.from('bloqueios').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                data: iso,
+                motivo: motivo
+            }]);
+            if (error) throw error;
+            this.fecharMenuDia();
+            UI.showToast('Dia fechado: ' + motivo + '.');
+            this.renderAgendaSemana();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async fecharAgendaIntervalo() {
+        const iso = this._diaMenu;
+        if (!iso) return;
+        const hi = (document.getElementById('menu-dia-de') || {}).value || '';
+        const hf = (document.getElementById('menu-dia-ate') || {}).value || '';
+        if (!hi || !hf || hf <= hi) {
+            UI.showToast('Escolha o horário de início e de fim.', 'error');
+            return;
+        }
+        const selProf = document.getElementById('menu-dia-todos');
+        const soProfissional = selProf && selProf.checked;
+        const profId = soProfissional ? (this._profSemana || null) : null;
+        const motivo = (document.getElementById('menu-dia-motivo') || {}).value || 'Fechado';
+        try {
+            const estabId = await this.obterEstabId();
+            const { error } = await supabaseClient.from('bloqueios').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                data: iso,
+                hora_inicio: hi,
+                hora_fim: hf,
+                motivo: motivo
+            }]);
+            if (error) throw error;
+            this.fecharMenuDia();
+            UI.showToast('Intervalo fechado das ' + hi + ' às ' + hf + '.');
+            this.renderAgendaSemana();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // ===== TROCA DE MODO (Dia / Semana) =====
+    trocarModoAgenda(modo) {
+        localStorage.setItem('hairconcept_modo_agenda', modo);
+        const d = document.getElementById('agenda-modo-dia');
+        const s = document.getElementById('agenda-modo-semana');
+        const bD = document.getElementById('btn-modo-dia');
+        const bS = document.getElementById('btn-modo-semana');
+        if (!d || !s) return;
+        // A classe do container controla o que aparece
+        const cont = document.getElementById('agenda-modos');
+        if (cont) cont.classList.toggle('ag-modo-semana', modo === 'semana');
+        if (modo === 'semana') {
+            d.classList.add('hidden');
+            s.classList.remove('hidden');
+            if (bD) bD.classList.remove('ativo');
+            if (bS) bS.classList.add('ativo');
+            this.renderAgendaSemana();
+        } else {
+            s.classList.add('hidden');
+            d.classList.remove('hidden');
+            if (bS) bS.classList.remove('ativo');
+            if (bD) bD.classList.add('ativo');
+            this.renderAgendaGrid();
+        }
+    },
+
+    modoAgendaAtual() {
+        return localStorage.getItem('hairconcept_modo_agenda') || 'dia';
+    },
+
+    async renderAgendaGrid() {
+        const tbody = document.getElementById('grid-horarios-body');
+        const headerRow = document.getElementById('grid-header-row');
+        if (!tbody || !headerRow) return;
+        // Garante que a barra lateral esta montada (so para o dono)
+        if (this.user && this.user.role !== 'profissional' && !this._profsLateral) {
+            this.montarLateralProfs();
+        }
+        // Selos de certificado (🎓) junto das estrelas
+        if (!this._temCertificado) await this.carregarSeloCertificados();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const dataFiltro = document.getElementById('filtro-data-agenda').value;
+        try {
+            const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
+            const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
+            // Pontos de elogio e total de clientes, para as estrelas do cabeçalho
+            let votosProf = {};
+            let totalClientesBase = 0;
+            try {
+                const { data: vv } = await supabaseClient
+                    .from('avaliacoes_cliente').select('profissional_id, tipo')
+                    .eq('estabelecimento_id', estabId);
+                (vv || []).forEach(function (v) {
+                    if (!v.profissional_id || v.tipo !== 'mais') return;
+                    votosProf[v.profissional_id] = (votosProf[v.profissional_id] || 0) + 1;
+                });
+                const { count } = await supabaseClient
+                    .from('clientes').select('*', { count: 'exact', head: true })
+                    .eq('estabelecimento_id', estabId);
+                totalClientesBase = count || 0;
+            } catch (e) {
+                console.warn('Nao foi possivel carregar as estrelas:', e);
+            }
+            if (!profs || profs.length === 0) {
+                headerRow.innerHTML = '<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>';
+                tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipe para ver a agenda.</td></tr>';
+                return;
+            }
+            let profsExibicao = profs;
+            if (this.user.role === 'profissional') {
+                // O profissional ve so a agenda dele
+                profsExibicao = profs.filter(p => p.id == this.user.id);
+            } else {
+                // O dono escolhe na barra lateral qual profissional ver
+                var sel = localStorage.getItem('hairconcept_prof_selecionado');
+                var escolhido = (profs || []).filter(function (p) { return p.id === sel && p.ativo !== false; });
+                if (escolhido.length > 0) profsExibicao = escolhido;
+            }
+            headerRow.innerHTML = '';
+            const thHora = document.createElement('th');
+            thHora.className = 'py-3 px-4 w-24';
+            thHora.textContent = 'Horário';
+            headerRow.appendChild(thHora);
+
+            profsExibicao.forEach(function (p) {
+                const th = document.createElement('th');
+                th.className = 'py-3 px-4';
+                const linha = document.createElement('div');
+                linha.className = 'flex items-center gap-2';
+
+                const img = document.createElement('img');
+                img.src = p.foto_url || FOTO_PADRAO;
+                img.className = 'w-7 h-7 rounded-lg object-cover';
+
+                const bloco = document.createElement('div');
+                const nomeEl = document.createElement('span');
+                nomeEl.className = 'block text-white font-bold';
+                nomeEl.textContent = p.nome || '';
+                const cargoEl = document.createElement('span');
+                cargoEl.className = 'block text-[9px] text-zinc-400';
+                cargoEl.textContent = p.cargo || '';
+
+                const meusPontos = (votosProf || {})[p.id] || 0;
+                const estP = App.calcularEstrelaProf(meusPontos, totalClientesBase);
+                const linhaEst = document.createElement('span');
+                linhaEst.className = 'prof-estrelas mt-0.5';
+                for (let i = 0; i < estP.cheias; i++) linhaEst.innerHTML += '<i class="fa-solid fa-star"></i>';
+                if (estP.meia) linhaEst.innerHTML += '<i class="fa-solid fa-star-half-stroke"></i>';
+                for (let i = 0; i < estP.vazias; i++) linhaEst.innerHTML += '<i class="fa-regular fa-star text-zinc-600"></i>';
+                const contEst = document.createElement('span');
+                contEst.className = 'text-[8px] text-zinc-500 ml-1';
+                contEst.textContent = meusPontos + '/' + totalClientesBase;
+                linhaEst.appendChild(contEst);
+
+                bloco.appendChild(nomeEl);
+                bloco.appendChild(cargoEl);
+                bloco.appendChild(linhaEst);
+                const qtdCert = (App._certPorProf && App._certPorProf[p.id]) || 0;
+                if (qtdCert > 0) {
+                    const selo = document.createElement('span');
+                    selo.className = 'text-[9px] text-amber-400 font-bold';
+                    selo.title = qtdCert === 1 ? '1 curso registrado' : (qtdCert + ' cursos registrados');
+                    selo.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> ' + qtdCert + (qtdCert === 1 ? ' curso' : ' cursos');
+                    bloco.appendChild(selo);
+                }
+                linha.appendChild(img);
+                linha.appendChild(bloco);
+                th.appendChild(linha);
+                headerRow.appendChild(th);
+            });
+
+            const horarios = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"];
+            let atendimentoCount = 0;
+            let totalGanhos = 0;
+
+            tbody.innerHTML = '';
+            horarios.forEach(h => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-white/5';
+
+                const tdHora = document.createElement('td');
+                tdHora.className = 'py-3 px-4 text-brand-500 font-bold';
+                tdHora.textContent = h;
+                tr.appendChild(tdHora);
+
+                profsExibicao.forEach(p => {
+                    // O banco guarda 14:00:00 e a grade usa 14:00: compara só HH:MM
+                    const hhmm = (v) => String(v || '').slice(0, 5);
+                    // 1) o atendimento que COMECA neste bloco
+                    const ag = (agendamentos || []).find(a => a.profissional_id == p.id && hhmm(a.horario) === hhmm(h));
+                    // 2) o atendimento que COBRE este bloco (servico longo em andamento)
+                    const agCobrindo = !ag ? (agendamentos || []).find(a => a.profissional_id == p.id && this.cobreHorario(a, hhmm(h))) : null;
+                    const agExibir = ag || agCobrindo;
+                    if (ag && this.user.role === 'profissional') {
+                        atendimentoCount++;
+                        totalGanhos += (ag.valor * 0.5);
+                    }
+
+                    const td = document.createElement('td');
+                    td.className = 'py-3 px-4';
+
+                    if (agExibir) {
+                        const ag = agExibir;
+                        const ehInicio = this.normalizarHora(ag.horario) === this.normalizarHora(h);
+                        if (!ag.status) ag.status = 'espera';
+
+                        if (!ehInicio) {
+                            // Bloco de continuacao: faixa colorida, sem texto repetido
+                            const cont = document.createElement('div');
+                            const est = String(ag.status || 'espera').toLowerCase();
+                            const estOk = ['espera','atendendo','finalizado','faltou'].indexOf(est) >= 0 ? est : 'espera';
+                            cont.className = 'ag-continuacao ag-cont-' + estOk;
+                            cont.title = ag.cliente + ' • ' + this.rotuloEstado(ag.status);
+
+                            // Se um encaixe COMECA neste bloco, ele aparece aqui em verde
+                            const encaixesAqui = (agendamentos || []).filter(x => {
+                                if (x.id === ag.id || x.profissional_id != p.id) return false;
+                                if (this.normalizarHora(x.horario) !== this.normalizarHora(h)) return false;
+                                if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
+                                return this.duracaoMinutos(x) < this.duracaoMinutos(ag);
+                            });
+                            encaixesAqui.forEach(x => {
+                                const e = document.createElement('span');
+                                e.className = 'ag-encaixe';
+                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + this.normalizarHora(x.horario_fim) + ' - ' + x.cliente;
+                                cont.appendChild(e);
+                            });
+
+                            td.appendChild(cont);
+                        } else {
+                        const caixa = document.createElement('div');
+                        caixa.className = 'ag-atendimento ' + this.classeEstado(ag.status);
+
+                        const cor = document.createElement('span');
+                        cor.className = 'ag-cor ag-cor-' + (String(ag.status || 'espera').toLowerCase());
+                        const nome = document.createElement('strong');
+                        nome.className = 'text-white block';
+                        nome.textContent = ag.cliente;
+                        nome.prepend(cor);
+
+                        const serv = document.createElement('span');
+                        serv.className = 'block opacity-90';
+                        serv.textContent = ag.servico;
+
+                        const faixa = document.createElement('span');
+                        faixa.className = 'block text-[9px] opacity-80';
+                        const mi = this.minutosDoDia(this.normalizarHora(ag.horario));
+                        const mf = mi + this.duracaoMinutos(ag);
+                        const fimMostrar = (mi >= 0)
+                            ? String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0')
+                            : '';
+                        faixa.textContent = this.normalizarHora(ag.horario) + ' - ' + fimMostrar + ' • ' + this.rotuloEstado(ag.status);
+
+                        const val = document.createElement('span');
+                        val.className = 'block font-bold mt-0.5';
+                        val.textContent = 'R$ ' + parseFloat(ag.valor).toFixed(2);
+
+                        caixa.appendChild(nome);
+                        caixa.appendChild(serv);
+                        caixa.appendChild(faixa);
+                        caixa.appendChild(val);
+
+                        // Encaixes dentro deste atendimento
+                        // Encaixes que COMECAM neste bloco exato (nao no bloco inicial do pai)
+                        const encaixes = (agendamentos || []).filter(x => {
+                            if (x.id === ag.id || x.profissional_id != p.id) return false;
+                            if (this.normalizarHora(x.horario) !== this.normalizarHora(h)) return false;
+                            if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
+                            // So entra como encaixe se for um atendimento curto dentro do longo
+                            return this.duracaoMinutos(x) < this.duracaoMinutos(ag);
+                        });
+                        if (encaixes.length > 0) {
+                            encaixes.forEach(x => {
+                                const e = document.createElement('span');
+                                e.className = 'ag-encaixe';
+                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + this.normalizarHora(x.horario_fim) + ' - ' + x.cliente;
+                                caixa.appendChild(e);
+                            });
+                        }
+
+                        if (this.user.role === 'admin') {
+                            const acoes = document.createElement('div');
+                            acoes.className = 'flex flex-wrap gap-1 mt-1.5';
+                            ['espera','atendendo','finalizado','faltou'].forEach(st => {
+                                const b = document.createElement('button');
+                                b.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-white/20 hover:bg-white/10 transition cursor-pointer';
+                                b.textContent = this.rotuloEstado(st);
+                                b.onclick = () => this.mudarStatusAgendamento(ag.id, st);
+                                acoes.appendChild(b);
+                            });
+
+                            // Serviço dentro deste atendimento (encaixe)
+                            const bDentro = document.createElement('button');
+                            bDentro.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 transition cursor-pointer';
+                            bDentro.textContent = 'Adicionar dentro';
+                            bDentro.onclick = () => this.abrirEncaixe(ag);
+                            acoes.appendChild(bDentro);
+
+                            const bExcluir = document.createElement('button');
+                            bExcluir.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-rose-500/40 text-rose-300 hover:bg-rose-500/20 transition cursor-pointer';
+                            bExcluir.textContent = 'Desmarcar';
+                            bExcluir.onclick = () => this.excluirAgendamento(ag.id, ag.cliente);
+                            acoes.appendChild(bExcluir);
+
+                            caixa.appendChild(acoes);
+                        }
+
+                        td.appendChild(caixa);
+                        }
+                    } else if (this.user.role === 'admin') {
+                        const btnLivre = document.createElement('button');
+                        btnLivre.className = 'text-zinc-600 hover:text-brand-500 text-[11px] transition cursor-pointer';
+                        btnLivre.textContent = 'Disponível';
+                        btnLivre.onclick = () => this.abrirMarcar(h);
+                        td.appendChild(btnLivre);
+                    } else {
+                        const span = document.createElement('span');
+                        span.className = 'text-zinc-600 text-[11px]';
+                        span.textContent = 'Disponível';
+                        td.appendChild(span);
+                    }
+
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+
+            if (this.user.role === 'profissional') {
+                document.getElementById('prof-stat-atendimentos').textContent = atendimentoCount;
+                document.getElementById('prof-stat-comissao').textContent = `R$ ${totalGanhos.toFixed(2)}`;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async handleCreateProduto(event) {
+        event.preventDefault();
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
+        const nome = document.getElementById('prod-nome').value;
+        const tipo = document.getElementById('prod-tipo').value;
+        const preco_venda = parseValor(document.getElementById('prod-preco').value);
+        const stock = parseInt(document.getElementById('prod-stock').value) || 0;
+        const data_validade = document.getElementById('prod-validade').value;
+        try {
+            const { error } = await supabaseClient.from('produtos').insert([{
+                estabelecimento_id: estabId,
+                nome,
+                tipo,
+                preco_venda,
+                stock,
+                data_validade
+            }]);
+            if (error) throw error;
+            UI.showToast('Produto cadastrado com sucesso!');
+            event.target.reset();
+            this.renderProdutos();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+    async handleCreateServico(event) {
+        event.preventDefault();
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
+        const nome = document.getElementById('serv-nome').value;
+        const preco = parseValor(document.getElementById('serv-preco').value);
+        const comissao = parseFloat(document.getElementById('serv-comissao').value) || 50;
+        try {
+            const { error } = await supabaseClient.from('servicos').insert([{
+                estabelecimento_id: estabId,
+                nome,
+                preco,
+                comissao
+            }]);
+            if (error) throw error;
+            UI.showToast('Serviço adicionado com sucesso!');
+            event.target.reset();
+            this.renderServicos();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+    async renderServicos() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const lista = document.getElementById('lista-servicos');
+        if (!lista) return;
+        try {
+            const { data, error } = await supabaseClient.from('servicos').select('*').eq('estabelecimento_id', estabId);
+            if (error) throw error;
+            lista.innerHTML = data && data.length > 0 ? data.map(s => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-bold text-white uppercase">${s.nome}</h4>
+                        <p class="text-[10px] text-zinc-400 mt-0.5">Comissão: ${s.comissao}%</p>
+                    </div>
+                    <div class="text-right flex items-center gap-3">
+                        <span class="text-xs font-bold text-brand-500">R$ ${parseFloat(s.preco).toFixed(2)}</span>
+                        <button onclick="App.excluirServico('${s.id}')" class="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition">Excluir</button>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-xs text-zinc-500 md:col-span-2">Nenhum serviço cadastrado.</p>';
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async excluirServico(id) {
+        if (!confirm("Tem certeza que deseja excluir este serviço?")) return;
+        try {
+            const { error } = await supabaseClient.from('servicos').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Serviço excluído com sucesso!');
+            this.renderServicos();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+    async renderListaProfissionais() {
+        const lista = document.getElementById('lista-profissionais');
+        if (!lista) return;
+        try {
+            await this.carregarSeloCertificados();
+            const estabId = await this.obterEstabId();
+            // Esqueleto enquanto carrega: parece instantaneo mesmo em 3G
+            if (!lista.querySelector('.hc-esqueleto')) {
+                lista.innerHTML = '<div class="hc-esqueleto mb-2"></div><div class="hc-esqueleto mb-2"></div><div class="hc-esqueleto"></div>';
+            }
+            const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
+            if (error) {
+                console.error('Erro ao buscar profissionais:', error);
+                lista.textContent = 'Não foi possível carregar a equipe agora.';
+                return;
+            }
+
+            lista.innerHTML = '';
+            if (!data || data.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-zinc-500';
+                p.textContent = 'Nenhum profissional cadastrado.';
+                lista.appendChild(p);
+                return;
+            }
+
+            data.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between gap-3 flex-wrap';
+
+                const esquerda = document.createElement('div');
+                esquerda.className = 'flex items-center gap-3';
+
+                const img = document.createElement('img');
+                img.src = p.foto_url || FOTO_PADRAO;
+                img.className = 'w-10 h-10 rounded-xl object-cover';
+
+                const info = document.createElement('div');
+                const h4 = document.createElement('h4');
+                h4.className = 'text-xs font-bold text-white';
+                h4.innerHTML = (p.nome || '') + App.seloCertificado(p.id);
+                const pcargo = document.createElement('p');
+                pcargo.className = 'text-[10px] text-brand-500';
+                pcargo.textContent = p.cargo || '';
+                const pcpf = document.createElement('p');
+                pcpf.className = 'text-[9px] text-zinc-500';
+                pcpf.textContent = 'CPF: ' + (p.cpf || '');
+                info.appendChild(h4); info.appendChild(pcargo); info.appendChild(pcpf);
+                esquerda.appendChild(img); esquerda.appendChild(info);
+
+                const acoes = document.createElement('div');
+                acoes.className = 'flex items-center gap-2 flex-wrap';
+
+                const btnEditar = document.createElement('button');
+                btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-xs font-bold uppercase transition cursor-pointer';
+                btnEditar.textContent = 'Editar';
+                btnEditar.onclick = () => this.abrirEditarProfissional(p.id, p.nome, p.cargo, p.cpf);
+
+                const btnExcluir = document.createElement('button');
+                btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold uppercase transition cursor-pointer';
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.onclick = () => this.excluirProfissional(p.id);
+
+                acoes.appendChild(btnEditar);
+                acoes.appendChild(btnExcluir);
+
+                card.appendChild(esquerda);
+                card.appendChild(acoes);
+                lista.appendChild(card);
+            });
+        } catch (e) {
+            console.error('Erro inesperado ao listar profissionais:', e);
+            lista.textContent = 'Não foi possível carregar a equipe agora.';
+        }
+    },
+    async renderProdutos() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const lista = document.getElementById('lista-produtos');
+        const alertaBadge = document.getElementById('alerta-validade-badge');
+        if (!lista) return;
+        try {
+            const { data, error } = await supabaseClient.from('produtos').select('*').eq('estabelecimento_id', estabId);
+            if (error) throw error;
+            const hoje = new Date();
+            const daqui3Meses = new Date();
+            daqui3Meses.setMonth(hoje.getMonth() + 3);
+            let alertaCount = 0;
+            lista.innerHTML = data && data.length > 0 ? data.map(prod => {
+                const dataVal = new Date(prod.data_validade);
+                const pertoVencer = dataVal <= daqui3Meses && dataVal >= hoje;
+                if (pertoVencer) alertaCount++;
+                return `
+                    <div class="p-3.5 rounded-2xl bg-zinc-950 border ${pertoVencer ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10'} flex justify-between items-center">
+                        <div>
+                            <h4 class="text-xs font-bold text-white">${prod.nome} ${pertoVencer ? '<span class="text-[9px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full ml-2">Validade Próxima (&lt; 3 meses)</span>' : ''}</h4>
+                            <p class="text-[10px] text-zinc-400">Estoque: ${prod.stock} | Validade: ${prod.data_validade} | Tipo: ${prod.tipo}</p>
+                        </div>
+                        <span class="text-xs font-bold text-brand-500">R$ ${parseFloat(prod.preco_venda).toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('') : '<p class="text-xs text-zinc-500">Nenhum produto cadastrado.</p>';
+            if (alertaBadge) {
+                alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Estoque Regular';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async renderRelatorios() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data: agendamentos, error } = await supabaseClient
+                .from('agendamentos')
+                .select('*')
+                .eq('estabelecimento_id', estabId);
+            if (error) throw error;
+
+            let faturamentoTotal = 0;
+            const clientesSet = new Set();
+
+            if (agendamentos) {
+                agendamentos.forEach(a => {
+                    faturamentoTotal += parseValor(a.valor);
+                    if (a.cliente) clientesSet.add(a.cliente.trim().toLowerCase());
+                });
+            }
+
+            const fatElem = document.getElementById('relatorio-faturamento');
+            const atemElem = document.getElementById('relatorio-atendimentos');
+            const cliElem = document.getElementById('relatorio-clientes');
+
+            if (fatElem) fatElem.textContent = `R$ ${faturamentoTotal.toFixed(2)}`;
+            if (atemElem) atemElem.textContent = agendamentos ? agendamentos.length : 0;
+            if (cliElem) cliElem.textContent = clientesSet.size;
+        } catch (e) {
+            console.error("Erro ao carregar relatórios:", e);
+        }
+    },
+    async renderAvaliacoes() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const container = document.getElementById('lista-avaliacoes');
+        if (!container) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('avaliacoes')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('created_at', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                container.innerHTML = '<p class="text-xs text-zinc-500">Nenhuma avaliação registrada até o momento.</p>';
+                return;
+            }
+
+            container.innerHTML = data.map(av => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-white uppercase">${av.cliente_nome || 'Cliente Anônimo'}</span>
+                        <div class="flex text-yellow-400 text-xs">
+                            ${'★'.repeat(av.nota || 5)}${'☆'.repeat(5 - (av.nota || 5))}
+                        </div>
+                    </div>
+                    <p class="text-xs text-zinc-300 italic">"${av.comentario || 'Sem comentário'}"</p>
+                    <span class="text-[9px] text-zinc-500 block">${new Date(av.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+            `).join('');
+        } catch (e) {
+            container.innerHTML = '<p class="text-xs text-zinc-500">Nenhuma avaliação registrada até o momento.</p>';
+        }
+    },
+    handleFotoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.fotoBase64Temp = e.target.result;
+            const preview = document.getElementById('preview-foto-prof');
+            const icon = document.getElementById('icon-foto-prof');
+            if (preview) {
+                preview.src = this.fotoBase64Temp;
+                preview.classList.remove('hidden');
+            }
+            if (icon) icon.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    },
+    carregarPostIts() {
+        const container = document.getElementById('lista-postits');
+        if (!container) return;
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '["Ligar para fornecedor", "Comprar novo secador"]');
+        container.innerHTML = postits.map((nota, index) => `
+            <div class="p-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs flex justify-between items-center">
+                <span>${nota}</span>
+                <button onclick="App.removerPostIt(${index})" class="text-zinc-400 hover:text-red-400 text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        `).join('') || '<p class="text-[10px] text-zinc-500">Nenhuma nota colada.</p>';
+    },
+    adicionarPostIt() {
+        const nota = prompt("Digite a sua nova nota ou lembrete:");
+        if (!nota || nota.trim() === '') return;
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
+        postits.push(nota);
+        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
+        this.carregarPostIts();
+    },
+    removerPostIt(index) {
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
+        postits.splice(index, 1);
+        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
+        this.carregarPostIts();
+    },
+    calcularGanhosPessoal() {
+        const val = parseValor(document.getElementById('prof-calc-val').value);
+        const porc = parseFloat(document.getElementById('prof-calc-porc').value);
+        const percentual = isNaN(porc) ? 50 : porc;
+        const total = (val * percentual) / 100;
+        document.getElementById('prof-calc-result').textContent = `R$ ${total.toFixed(2)}`;
+    },
+    proximaFrase() {
+        const frases = [
+            "O sucesso é a soma de pequenos esforços repetidos.",
+            "A beleza está nos detalhes e no carinho com o cliente.",
+            "Um dia produtivo começa com um sorriso e foco."
+        ];
+        const aleatoria = frases[Math.floor(Math.random() * frases.length)];
+        document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
+    },
+    // Links de pagamento do Mercado Pago (PIX, QR Code, boleto e cartao).
+    // Sao pagamentos AVULSOS: PIX nao existe em assinatura recorrente,
+    // porque a assinatura precisa de um cartao para cobrar todo mes.
+    LINKS_PIX: {
+        mensal: 'https://mpago.la/2FwRxii',
+        anual:  'https://mpago.la/2BGEEVK'
+    },
+
+    // Abre o pagamento por PIX / QR Code / boleto
+    pagarComPix(plano) {
+        const link = this.LINKS_PIX[plano];
+        if (!link) { UI.showToast('Plano invalido.', 'error'); return; }
+        localStorage.setItem('hairconcept_plan_pendente', plano);
+        UI.showToast('Abrindo o pagamento por PIX / QR Code...');
+        setTimeout(function () { window.open(link, '_blank'); }, 600);
+    },
+
+    async setPlan(plano) {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        if (plano === 'gratis') {
+            localStorage.setItem('hairconcept_plan', 'gratis');
+            if (estabId && supabaseClient) {
+                await supabaseClient.from('estabelecimentos').update({ plano: 'gratis' }).eq('id', estabId);
+            }
+            UI.showToast('Plano Grátis ativado com sucesso!');
+            UI.switchTab('aba-agenda');
+            return;
+        }
+
+        const linksPagamento = {
+            mensal: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=c6608384109b43c787b82d8f9646331f',
+            anual: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=ba575f230a314a8c8446da6d3832fe3d' 
+        };
+
+        const linkCheckout = linksPagamento[plano];
+        if (linkCheckout) {
+            localStorage.setItem('hairconcept_plan_pendente', plano);
+            UI.showToast('Redirecionando para o Mercado Pago...');
+            setTimeout(() => {
+                window.location.href = linkCheckout;
+            }, 1000);
+        } else {
+            UI.showToast('Plano inválido.', 'error');
+        }
+    },
+    mudarDia(dias) {
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (!dataInput.value) return;
+        const atual = new Date(dataInput.value + 'T00:00:00');
+        atual.setDate(atual.getDate() + dias);
+        dataInput.value = dataLocalISO(atual);
+        this.renderAgendaGrid();
+    },
+    irParaHoje() {
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (dataInput) {
+            dataInput.value = dataLocalISO();
+            this.renderAgendaGrid();
+        }
+    },
+    saltarParaMes(mesIndex) {
+        const ano = 2026;
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (dataInput) {
+            const mesStr = String(parseInt(mesIndex) + 1).padStart(2, '0');
+            dataInput.value = `${ano}-${mesStr}-01`;
+            this.renderAgendaGrid();
+        }
+    },
+    async carregarConfiguracoes() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('*')
+                .eq('id', estabId)
+                .single();
+            if (error) throw error;
+            if (data) {
+                const inputNome = document.getElementById('config-nome-salao');
+                const inputEmail = document.getElementById('config-email-salao');
+                const inputCnpj = document.getElementById('config-cnpj');
+                const inputWhatsapp = document.getElementById('config-whatsapp');
+                const inputEndereco = document.getElementById('config-endereco');
+                const inputInstagram = document.getElementById('config-instagram');
+                const inputFacebook = document.getElementById('config-facebook');
+                const inputAbertura = document.getElementById('config-horario-abertura');
+                const inputFechamento = document.getElementById('config-horario-fechamento');
+
+                if (inputNome) inputNome.value = data.nome_salao || '';
+                if (inputEmail) inputEmail.value = data.email || '';
+                if (inputCnpj && data.cnpj) inputCnpj.value = data.cnpj;
+                if (inputWhatsapp && data.whatsapp) inputWhatsapp.value = data.whatsapp;
+                if (inputEndereco && data.endereco) inputEndereco.value = data.endereco;
+                if (inputInstagram && data.instagram) inputInstagram.value = data.instagram;
+                if (inputFacebook && data.facebook) inputFacebook.value = data.facebook;
+                if (inputAbertura && data.horario_abertura) inputAbertura.value = String(data.horario_abertura).slice(0, 5);
+                if (inputFechamento && data.horario_fechamento) inputFechamento.value = String(data.horario_fechamento).slice(0, 5);
+
+                if (data.logo_url) {
+                    this.logoBase64Temp = data.logo_url;
+                    const preview = document.getElementById('preview-logo-salao');
+                    const icon = document.getElementById('icon-logo-salao');
+                    if (preview) {
+                        preview.src = data.logo_url;
+                        preview.classList.remove('hidden');
+                    }
+                    if (icon) icon.classList.add('hidden');
+                }
+                // Nome, assinatura e logo de uma vez só
+                this.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
+            }
+        } catch (e) {
+            console.error("Erro ao carregar configurações:", e);
+        }
+    },
+    async handleSalvarConfiguracoes(event) {
+        event.preventDefault();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const nome_salao = document.getElementById('config-nome-salao').value.trim();
+        const email = document.getElementById('config-email-salao').value.trim();
+        const cnpj = document.getElementById('config-cnpj')?.value.trim() || '';
+        const whatsapp = document.getElementById('config-whatsapp')?.value.trim() || '';
+        const endereco = document.getElementById('config-endereco')?.value.trim() || '';
+        const instagram = document.getElementById('config-instagram')?.value.trim() || '';
+        const facebook = document.getElementById('config-facebook')?.value.trim() || '';
+        // Campo de hora vazio precisa virar null: o banco recusa string vazia
+        const horario_abertura = document.getElementById('config-horario-abertura')?.value || null;
+        const horario_fechamento = document.getElementById('config-horario-fechamento')?.value || null;
+        const logo_url = this.logoBase64Temp;
+
+        if (!estabId || !supabaseClient) {
+            UI.showToast('Erro: Estabelecimento não identificado.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient
+                .from('estabelecimentos')
+                .update({ 
+                    nome_salao, 
+                    email, 
+                    cnpj, 
+                    whatsapp, 
+                    endereco, 
+                    instagram, 
+                    facebook, 
+                    horario_abertura, 
+                    horario_fechamento,
+                    logo_url 
+                })
+                .eq('id', estabId);
+            if (error) throw error;
+            UI.showToast('Configurações salvas com sucesso!');
+            // Aplica nome, assinatura e logo na hora
+            this.aplicarIdentidadeNoHeader(nome_salao, logo_url || null);
+        } catch (e) {
+            console.error('Erro ao salvar configurações:', e);
+            const msg = String(e && e.message ? e.message : e);
+            if (msg.toLowerCase().indexOf('time') >= 0) {
+                UI.showToast('Preencha os dois horários de funcionamento antes de salvar.', 'error');
+            } else {
+                UI.showToast('Erro ao salvar configurações: ' + msg, 'error');
+            }
         }
     }
 };
 
-window.App = App;
-window.Auth = Auth;
-window.UI = window.UI || {};
+const UI = {
+    showToast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `p-3 rounded-2xl glass-water border ${type === 'error' ? 'border-rose-500/50 text-rose-300' : 'border-emerald-500/50 text-emerald-300'} text-xs font-bold uppercase shadow-xl transition-all transform translate-y-2 opacity-0`;
+        toast.textContent = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+        setTimeout(() => {
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    },
+    trocarEspaco(qual) {
+        const paineis = ['servicos', 'produtos', 'avaliacoes-nova', 'config-salao', 'notas'];
+        if (paineis.indexOf(qual) < 0) return;
+        paineis.forEach(function (p) {
+            const painel = document.getElementById('aba-' + p);
+            const botao = document.getElementById('btn-espaco-' + p);
+            const ativo = (p === qual);
+            if (painel) painel.classList.toggle('hidden', !ativo);
+            if (botao) {
+                botao.classList.toggle('bg-brand-500/15', ativo);
+                botao.classList.toggle('text-brand-500', ativo);
+                botao.classList.toggle('bg-zinc-900', !ativo);
+                botao.classList.toggle('border', !ativo);
+                botao.classList.toggle('border-white/10', !ativo);
+                botao.classList.toggle('text-zinc-400', !ativo);
+            }
+        });
+        // Recarrega a lista do painel aberto
+        if (qual === 'servicos') App.renderServicos();
+        if (qual === 'produtos') App.renderProdutos();
+        if (qual === 'avaliacoes-nova') App.renderAvaliacao();
+        if (qual === 'config-salao') Auth.carregarConfigSalao();
+        if (qual === 'notas') { Auth.carregarConfigSalao(); Auth.carregarComissoesTipo(); }
+    },
+    abrirGestao(qual) {
+        this.switchTab('aba-gestao');
+        this.trocarEspaco(qual || 'servicos');
+    },
 
-if (window.addEventListener) {
-    window.addEventListener('DOMContentLoaded', function () {
-        try { if (Auth.prepararAbertura) Auth.prepararAbertura(); } catch (e) {}
-        try { if (App.init) App.init(); } catch (e) { console.error('Erro ao iniciar App:', e); }
-    });
-}
+    // Monta a aba de PLANOS: mostra o plano atual, o selo e os botoes de PIX.
+    // Fica no objeto App porque e chamada como UI.carregarPlanos().
+    async carregarPlanos() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos').select('plano').eq('id', estabId).maybeSingle();
+            const plano = (data && data.plano) || 'gratis';
+            const limites = { gratis: 2, mensal: 10, anual: 30 };
 
-window.supabaseClient = supabaseClient;
+            // Selo SEU PLANO no cartao do plano atual
+            ['gratis','mensal','anual'].forEach(function (p) {
+                const bt = document.querySelector('[onclick="App.setPlan(\'' + p + '\')"]');
+                if (!bt) return;
+                const cartao = bt.closest('div.glass-water') || bt.parentNode;
+                const velho = cartao.querySelector('.hc-selo-plano');
+                if (velho) velho.remove();
+                if (p === plano) {
+                    const selo = document.createElement('span');
+                    selo.className = 'hc-selo-plano';
+                    selo.textContent = 'SEU PLANO';
+                    bt.parentNode.insertBefore(selo, bt);
+                }
+            });
+
+            // Os botoes de PIX estao no proprio index.html (um por plano pago).
+            // Antes eram criados aqui tambem, e apareciam DUPLICADOS na tela.
+
+            // Aviso de quantos profissionais o plano permite
+            let aviso = document.getElementById('hc-plano-limite');
+            if (!aviso) {
+                const alvo = document.querySelector('#aba-planos .glass-water');
+                if (alvo) {
+                    aviso = document.createElement('p');
+                    aviso.id = 'hc-plano-limite';
+                    aviso.className = 'text-center text-[11px] text-brand-500 font-bold uppercase mt-4';
+                    alvo.appendChild(aviso);
+                }
+            }
+            if (aviso) aviso.textContent = 'Seu plano permite ' + (limites[plano] || 2) + ' profissionais na equipe.';
+        } catch (e) {
+            console.warn('Nao foi possivel carregar os planos:', e);
+        }
+    },
+    switchTab(tabId) {
+        const alvo = document.getElementById(tabId);
+        if (!alvo) return;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        alvo.classList.remove('hidden');
+        // Cada aba carrega o que precisa ao abrir. Sem isto a aba abre VAZIA,
+        // que era o caso da aba PLANOS.
+        if (tabId === 'aba-gestao') this.trocarEspaco('servicos');
+        if (tabId === 'aba-clientes') App.renderClientes();
+        if (tabId === 'aba-equipe') App.renderListaProfissionais();
+        if (tabId === 'aba-relatorios') App.renderRelatorios();
+        if (tabId === 'aba-planos') UI.carregarPlanos();
+        if (tabId === 'aba-configuracoes') App.carregarConfiguracoes();
+        if (tabId === 'aba-avisos') { App.carregarAvisos(); App.carregarRecadosEstabelecimento(); }
+        if (tabId === 'aba-agenda') { App.popularClientesAgenda(); App.montarLateralProfs(); App.renderAgendaGrid(); }
+    },
+
+    // A aba PLANOS mostra qual plano o salao tem AGORA.
+    // O plano vem do BANCO, nao do navegador: assim nunca diverge.
+    toggleMobileMenu(forceState) {
+        const menu = document.getElementById('mobile-nav-menu');
+        if (!menu) return;
+        if (typeof forceState === 'boolean') {
+            if (forceState) menu.classList.remove('hidden');
+            else menu.classList.add('hidden');
+        } else {
+            menu.classList.toggle('hidden');
+        }
+    }
+};
+
+window.addEventListener('DOMContentLoaded', async () => {
+    // Profissional: restaura o login salvo no navegador
+    const profSalvo = localStorage.getItem('hairconcept_prof_dados');
+    if (profSalvo) {
+        try {
+            const data = JSON.parse(profSalvo);
+            if (!data || !data.id) throw new Error('dados incompletos');
+            App.user = { loggedIn: true, role: 'profissional', name: data.nome || '', id: data.id };
+            App.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
+            if (data.estabelecimento_id) App.carregarIdentidadeDoSalao(data.estabelecimento_id);
+            const nomeEl = document.getElementById('prof-header-nome');
+            const cargoEl = document.getElementById('prof-header-cargo');
+            const fotoEl = document.getElementById('prof-header-foto');
+            if (nomeEl) nomeEl.textContent = data.nome || '';
+            if (cargoEl) cargoEl.textContent = data.cargo || '';
+            if (fotoEl && data.foto_url) fotoEl.src = data.foto_url;
+            App.finishLogin();
+            return;
+        } catch (e) {
+            localStorage.removeItem('hairconcept_prof_dados');
+        }
+    }
+
+    // Link de recuperação de senha: o Supabase entrega o token na barra de endereços
+    const hash = window.location.hash || '';
+    const query = window.location.search || '';
+    // IMPORTANTE: o Supabase poe ?code=... em QUALQUER retorno de login.
+    // Por isso so tratamos como recuperacao se for explicitamente de recuperacao.
+    const params = new URLSearchParams(query);
+    const ehRecuperacao = /type=recovery/.test(hash) ||
+                          params.get('type') === 'recovery' ||
+                          (/access_token/.test(hash) && /type=recovery/.test(hash));
+    if (ehRecuperacao) {
+        if (supabaseClient && supabaseClient.auth) {
+            try {
+                const { error } = await supabaseClient.auth.getSessionFromUrl
+                    ? await supabaseClient.auth.getSessionFromUrl({ storeSession: true })
+                    : { error: null };
+                if (error) console.error('Erro ao ler o link de recuperação:', error);
+            } catch (e) {
+                console.error('Erro ao processar o link de recuperação:', e);
+            }
+            Auth.abrirModal('modal-nova-senha');
+            return;
+        }
+    }
+
+    // Admin: restaura a sessão do Supabase
+    if (supabaseClient && supabaseClient.auth) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && App.checarContaExcluida && await App.checarContaExcluida(session)) {
+            await supabaseClient.auth.signOut();
+            localStorage.clear();
+            location.reload();
+            return;
+        }
+        if (session && !App.user.loggedIn) {
+            const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+            App.user = { loggedIn: true, role: 'admin', name: name };
+            App.finishLogin();
+        }
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session && !App.user.loggedIn) {
+                const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+                App.user = { loggedIn: true, role: 'admin', name: name };
+                App.finishLogin(`Bem-vindo, ${name}!`);
+            }
+        });
+    }
+
+    // DECISAO DA ABERTURA, agora no fim: so aqui o sistema ja sabe se ha sessao.
+    // Quem ja esta logado entra direto, sem passar pela tela de boas-vindas.
+    try {
+        const temProf = !!localStorage.getItem('hairconcept_prof_dados');
+        let temAdmin = false;
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            temAdmin = !!(session && session.user);
+        } catch (e) {}
+        const logado = temProf || temAdmin || (App.user && App.user.loggedIn);
+        if (logado) {
+            localStorage.setItem('hairconcept_viu_abertura', 'sim');
+            Auth.liberarAbertura();
+        } else {
+            let jaViu = false;
+            try { jaViu = localStorage.getItem('hairconcept_viu_abertura') === 'sim'; } catch (e) {}
+            if (jaViu) Auth.liberarAbertura();
+            else document.body.classList.add('hc-abertura-ativa');
+        }
+    } catch (e) { console.warn('Abertura:', e); }
+});
