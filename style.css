@@ -90,90 +90,6 @@ table th, table td {
 }
 
 
-/* ===== Modais (janelas sobre a tela) ===== */
-/* A janela precisa ficar ACIMA do cabecalho (que usa z-index 40) e cobrir
-   a tela toda, inclusive no celular. Antes ficava atras da barra do topo. */
-/* O FUNDO ocupa a tela toda; a CAIXA do formulario fica centralizada e
-   com largura limitada. Antes o width/height ia para tudo e a janela
-   esticava de ponta a ponta. */
-  position: fixed !important;
-  inset: 0 !important;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  overflow-y: auto;
-}
-.modal-overlay > .modal-caixa {
-  width: 100% !important;
-  max-width: 26rem !important;
-  height: auto !important;
-  flex: 0 1 auto !important;
-  margin: auto;
-  max-height: 92vh;
-  overflow-y: auto;
-}
-@media (min-width: 768px) {
-  .modal-overlay > .modal-caixa { max-width: 30rem !important; }
-}
-
-.modal-caixa {
-  width: 100%;
-  max-width: 26rem;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 1.75rem;
-  border-radius: 1.5rem;
-  background: rgba(24, 24, 27, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
-}
-
-/* Aviso colorido conforme o tipo de pedido */
-.aviso-item {
-  padding: 0.9rem 1rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(9, 9, 11, 0.6);
-}
-.aviso-item.resolvido {
-  opacity: 0.5;
-}
-
-
-/* ===== Campos preenchidos pelo navegador (autofill) ===== */
-/* Sem isto, o Chrome pinta os campos de branco e o texto some. */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active,
-textarea:-webkit-autofill,
-select:-webkit-autofill {
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0 1000px rgba(9, 9, 11, 0.95) inset !important;
-  box-shadow: 0 0 0 1000px rgba(9, 9, 11, 0.95) inset !important;
-  transition: background-color 9999s ease-in-out 0s;
-  caret-color: #ffffff;
-}
-
-/* Força o navegador a tratar o site como escuro (evita fundo branco em campos e menus) */
-html {
-  color-scheme: dark;
-}
-
-/* Placeholders precisam ser visíveis, mas discretos */
-input::placeholder,
-textarea::placeholder {
-  color: rgba(161, 161, 170, 0.7);
-  opacity: 1;
-}
-
-
-/* ===== Estados do atendimento na agenda ===== */
-.ag-espera     { background: rgba(234, 179, 8, 0.18);   border-color: rgba(234, 179, 8, 0.5)   !important; color: #fde68a; }
 .ag-atendendo  { background: rgba(59, 130, 246, 0.18);  border-color: rgba(59, 130, 246, 0.5)  !important; color: #bfdbfe; }
 .ag-finalizado { background: rgba(161, 161, 170, 0.14); border-color: rgba(161, 161, 170, 0.4) !important; color: #d4d4d8; }
 .ag-faltou     { background: rgba(239, 68, 68, 0.18);   border-color: rgba(239, 68, 68, 0.5)   !important; color: #fecaca; }
@@ -327,23 +243,6 @@ html, body {
   }
 
   /* Janelas (modais) quase de tela cheia, com rolagem interna */
-  .modal-caixa {
-    max-width: 100%;
-    max-height: 88vh;
-    padding: 1.25rem;
-    border-radius: 1.25rem;
-  }
-
-  /* Tabelas longas nunca esticam a página */
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-}
-
-/* Tablet: mantém duas colunas confortáveis */
-@media (min-width: 768px) and (max-width: 1023px) {
   main {
     padding-left: 1rem;
     padding-right: 1rem;
@@ -356,24 +255,6 @@ html, body {
 
 /* Telas muito estreitas: agenda ainda utilizável */
 @media (max-width: 420px) {
-  .modal-caixa {
-    padding: 1rem;
-  }
-
-  #saloon-name-header {
-    font-size: 0.9rem;
-  }
-
-  /* O contador de avisos não cobre o ícone */
-  #badge-avisos {
-    font-size: 8px;
-    padding: 1px 4px;
-  }
-}
-
-
-/* ===== Estados do atendimento na agenda ===== */
-.ag-atendimento {
   border-radius: 0.75rem;
   padding: 0.5rem;
   font-size: 11px;
@@ -840,7 +721,6 @@ html, body {
 .hc-cuidado i { font-size: 11px; }
 
 /* O botao de confirmar estava passando da borda da janela. */
-.modal-caixa, .modal-caixa form { max-width: 100%; box-sizing: border-box; }
 .modal-caixa button[type="submit"],
 .modal-caixa .hc-btn-largo {
   display: block;
@@ -943,10 +823,62 @@ body.hc-abertura-ativa .modal-overlay { display: none !important; }
    96 = conteudo   97 = cabecalho   98 = janelas   99 = abertura
    Um bloco so, para nao brigar com regras antigas. */
 .hc-z-header { z-index: 97 !important; }
-.modal-overlay { z-index: 98 !important; }
 .modal-x-fixo, .modal-x { z-index: 98 !important; }
 #tela-abertura { z-index: 99 !important; }
 body.hc-abertura-ativa #main-header,
 body.hc-abertura-ativa .tab-content,
 body.hc-abertura-ativa .modal-overlay { display: none !important; }
 body.hc-abertura-ativa { overflow: hidden; }
+
+
+/* ==========================================================
+   JANELAS — bloco unico e definitivo
+   O fundo ocupa a tela e comeca do TOPO (nao centraliza),
+   a pagina rola, e o X fica preso no canto de cima.
+   ========================================================== */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 98 !important;
+  display: flex !important;
+  align-items: flex-start !important;   /* NAO centraliza: o topo nunca sai da tela */
+  justify-content: center !important;
+  padding: 1.25rem 1rem 2.5rem !important;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow-y: auto !important;          /* a tela rola, nao a caixa */
+}
+.modal-overlay.hidden { display: none !important; }
+.modal-caixa {
+  position: relative;
+  width: 100% !important;
+  max-width: 26rem !important;
+  margin: 3.25rem auto 1rem !important;  /* espaco do X no topo */
+  max-height: none !important;            /* sem limite: a pagina rola */
+  overflow: visible !important;
+  padding: 1.75rem;
+  border-radius: 1.5rem;
+  background: rgba(24, 24, 27, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+}
+@media (min-width: 768px) { .modal-caixa { max-width: 30rem !important; } }
+@media (max-width: 640px) { .modal-caixa { padding: 1.25rem; border-radius: 1.25rem; } }
+
+/* O X fica preso no canto e acompanha a rolagem */
+.modal-x-fixo, .modal-x {
+  position: fixed !important;
+  top: 0.9rem !important;
+  right: 1rem !important;
+  z-index: 99 !important;
+  width: 2.4rem; height: 2.4rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 0.75rem;
+  background: rgba(24, 24, 27, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e4e4e7;
+  cursor: pointer;
+}
+.modal-x-fixo:hover, .modal-x:hover { color: #fff; background: rgba(244, 63, 94, 0.3); }
