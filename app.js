@@ -317,7 +317,8 @@ const Auth = {
         el.style.setProperty('position', 'fixed', 'important');
         el.style.setProperty('inset', '0', 'important');
         el.style.setProperty('z-index', '99999', 'important');
-        el.style.setProperty('display', 'flex', 'important');
+        // Nao forcar o display: assim o fecharModal consegue esconder depois.
+        el.style.removeProperty('display');
         el.style.setProperty('align-items', 'center', 'important');
         el.style.setProperty('justify-content', 'center', 'important');
         // NAO forca largura/altura no fundo: quem esticava a janela era isso.
@@ -336,9 +337,20 @@ const Auth = {
         }
     },
     fecharModal(id) {
-        document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.classList.add('hidden'); });
-        const algumaAberta = document.querySelector('.modal-overlay:not(.hidden)');
-        if (!algumaAberta) document.body.style.overflow = '';
+        // Esconde a janela E o fundo dela. O abrirModal forca display:flex por
+        // JavaScript, e o display inline vence a classe 'hidden' — por isso a
+        // janela "fechava" no codigo e continuava na tela.
+        const esconder = function (el) {
+            el.classList.add('hidden');
+            el.style.setProperty('display', 'none', 'important');
+        };
+        document.querySelectorAll('[id="' + id + '"]').forEach(esconder);
+        // Fundo: qualquer overlay visivel volta a sumir
+        document.querySelectorAll('.modal-overlay').forEach(function (m) {
+            if (m.classList.contains('hidden') && m.style.display === 'none') return;
+            esconder(m);
+        });
+        document.body.style.overflow = '';
     },
     abrirCadastro() { this.abrirModal('modal-cadastro'); },
     abrirRecuperarSenha() { this.abrirModal('modal-recuperar'); },
@@ -3262,7 +3274,16 @@ const App = {
 
     filtrarLateralProfs(termo) {
         const t = String(termo || '').toLowerCase();
-        const todos = this._profsLateral || [];
+        // Se a lateral ainda nao foi montada, monta agora: antes a busca
+        // devolvia lista vazia e nada era filtrado, sem aviso nenhum.
+        if (!this._profsLateral) {
+            if (typeof this.montarLateralProfs === 'function') {
+                this.montarLateralProfs();
+                return;
+            }
+            this._profsLateral = [];
+        }
+        const todos = this._profsLateral;
         const filtrados = todos.filter(function (p) {
             return String(p.nome || '').toLowerCase().indexOf(t) >= 0;
         });
