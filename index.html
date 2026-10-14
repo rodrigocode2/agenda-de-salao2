@@ -1609,6 +1609,19 @@ v>
           <input type="tel" id="cfg-whatsapp" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
         <div class="md:col-span-2">
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Logotipo do Salão</label>
+          <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
+            <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+              <img alt="Logo do salao" id="cfg-logo-preview" src="" class="w-full h-full object-cover hidden">
+              <i id="cfg-logo-icone" class="fa-solid fa-store text-zinc-600 text-2xl"></i>
+            </div>
+            <div class="flex-grow space-y-1">
+              <input type="file" id="cfg-logo-arquivo" accept="image/*" onchange="App.handleLogoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-500 file:text-white hover:file:bg-brand-600 cursor-pointer">
+              <p class="text-[10px] text-zinc-500">Aparece no topo do sistema. Sem logo, fica a tesoura.</p>
+            </div>
+          </div>
+        </div>
+        <div class="md:col-span-2">
           <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Endereço</label>
           <input type="text" id="cfg-endereco" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
@@ -2096,4 +2109,3 @@ handleParticles();
 <script src="app.js"></script>
 </body>
 </html>
-
