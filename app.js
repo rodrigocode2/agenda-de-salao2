@@ -674,7 +674,9 @@ const App = {
                 if (estab.plano) {
                     localStorage.setItem('hairconcept_plan', estab.plano);
                 }
-                if (headerSub) headerSub.textContent = estab.nome_salao;
+                // Mesma regra do aplicarIdentidadeNoHeader: nome do salao se existir,
+                // senao HairConcept. Antes escrevia o que viesse, mesmo vazio.
+                if (headerSub) headerSub.textContent = (estab.nome_salao && estab.nome_salao.trim()) ? estab.nome_salao.trim() : 'HairConcept';
             }
             // Primeiro login: mostra o guia antes da agenda
             const jaViu = localStorage.getItem('hairconcept_boasvindas_' + userId);
@@ -2756,7 +2758,7 @@ const App = {
         const temNome = !!(nomeSalao && nomeSalao.trim()) && nomeSalao.trim().toLowerCase() !== 'meu salão';
 
         // Nome: o do salão, ou um neutro até ele cadastrar
-        if (elNome) elNome.textContent = temNome ? nomeSalao.trim() : 'Bem-vindo';
+        if (elNome) elNome.textContent = temNome ? nomeSalao.trim() : 'HairConcept';
         // A assinatura HairConcept some quando o salão tem nome próprio
         if (assinatura) assinatura.classList.toggle('hidden', temNome);
 
