@@ -320,11 +320,11 @@ tailwind.config = {
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
     <button onclick="UI.switchTab('aba-agenda'); UI.toggleMobileMenu(false);" class="p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agenda</button>
     <button onclick="UI.switchTab('aba-equipe'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Equipe</button>
-    <button onclick="Auth.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços, Estoque e Avaliação</button>
+    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços, Estoque e Avaliação</button>
     <button onclick="UI.switchTab('aba-clientes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Clientes</button>
     <button onclick="UI.switchTab('aba-planos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Planos</button>
     <button onclick="UI.switchTab('aba-relatorios'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Relatórios</button>
-    <button onclick="Auth.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
+    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
     <button onclick="UI.switchTab('aba-avisos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avisos</button>
   </div>
 </div>
@@ -733,7 +733,7 @@ tailwind.config = {
 
     <div class="relative z-10 flex flex-col md:flex-row items-center justify-center gap-3">
       <button onclick="App.concluirBoasVindas()" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-brand-500/20">Começar agora</button>
-      <button onclick="Auth.abrirGestao('servicos')" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider transition">Configurar o salão</button>
+      <button onclick="UI.abrirGestao('servicos')" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider transition">Configurar o salão</button>
     </div>
   </div>
 </section>
@@ -2096,3 +2096,4 @@ handleParticles();
 <script src="app.js"></script>
 </body>
 </html>
+
