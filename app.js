@@ -285,6 +285,13 @@ const Auth = {
             por('cfg-uf', data.uf);
             por('cfg-cep', data.cep);
             por('cfg-instagram', data.instagram);
+            // Mostra a logo ja gravada na tela (preview)
+            if (data.logo_url) {
+                const prev = document.getElementById('cfg-logo-preview');
+                const ic = document.getElementById('cfg-logo-icone');
+                if (prev) { prev.src = data.logo_url; prev.classList.remove('hidden'); }
+                if (ic) ic.classList.add('hidden');
+            }
             por('cfg-abertura', (data.horario_abertura || '').slice(0, 5));
             por('cfg-fechamento', (data.horario_fechamento || '').slice(0, 5));
             por('cfg-inscricao-municipal', data.inscricao_municipal);
@@ -1060,8 +1067,9 @@ const App = {
         const reader = new FileReader();
         reader.onload = (e) => {
             this.logoBase64Temp = e.target.result;
-            const preview = document.getElementById('preview-logo-salao');
-            const icon = document.getElementById('icon-logo-salao');
+            // Aceita os ids da tela NOVA (cfg-*) e os da tela antiga (preview-*)
+            const preview = document.getElementById('cfg-logo-preview') || document.getElementById('preview-logo-salao');
+            const icon = document.getElementById('cfg-logo-icone') || document.getElementById('icon-logo-salao');
             if (preview) {
                 preview.src = this.logoBase64Temp;
                 preview.classList.remove('hidden');
@@ -2757,10 +2765,14 @@ const App = {
         const assinatura = document.getElementById('header-assinatura');
         const temNome = !!(nomeSalao && nomeSalao.trim()) && nomeSalao.trim().toLowerCase() !== 'meu salão';
 
-        // Nome: o do salão, ou um neutro até ele cadastrar
+        // Nome grande: o nome do salao. Sem nome cadastrado, mostra HairConcept.
         if (elNome) elNome.textContent = temNome ? nomeSalao.trim() : 'HairConcept';
-        // A assinatura HairConcept some quando o salão tem nome próprio
-        if (assinatura) assinatura.classList.toggle('hidden', temNome);
+        // Assinatura pequena: SEMPRE HairConcept e sempre visivel.
+        // Antes ela sumia quando o salao tinha nome; agora fica junto do nome.
+        if (assinatura) {
+            assinatura.textContent = 'HairConcept';
+            assinatura.classList.remove('hidden');
+        }
 
         this.aplicarLogoNoHeader(logoUrl);
     },
@@ -4605,16 +4617,29 @@ const App = {
     async handleSalvarConfiguracoes(event) {
         event.preventDefault();
         const estabId = localStorage.getItem('hairconcept_estab_id');
-        const nome_salao = document.getElementById('config-nome-salao').value.trim();
-        const email = document.getElementById('config-email-salao').value.trim();
-        const cnpj = document.getElementById('config-cnpj')?.value.trim() || '';
-        const whatsapp = document.getElementById('config-whatsapp')?.value.trim() || '';
-        const endereco = document.getElementById('config-endereco')?.value.trim() || '';
-        const instagram = document.getElementById('config-instagram')?.value.trim() || '';
-        const facebook = document.getElementById('config-facebook')?.value.trim() || '';
+        // Le os campos da tela de Configuracao do Salao (ids "cfg-*").
+        // O recuo para os ids antigos ("config-*") mantem a tela velha funcionando.
+        const pega = function (ids) {
+            for (let i = 0; i < ids.length; i++) {
+                const el = document.getElementById(ids[i]);
+                if (el) return el.value.trim();
+            }
+            return '';
+        };
+        const nome_salao = pega(['cfg-nome-salao', 'config-nome-salao']);
+        const email = pega(['cfg-email', 'config-email-salao']);
+        const cnpj = pega(['cfg-cnpj', 'config-cnpj']);
+        const whatsapp = pega(['cfg-whatsapp', 'config-whatsapp']);
+        const endereco = pega(['cfg-endereco', 'config-endereco']);
+        const instagram = pega(['cfg-instagram', 'config-instagram']);
+        const facebook = pega(['config-facebook']);
+        // Campos novos da tela de configuracao: cidade, uf, cep
+        const cidade = pega(['cfg-cidade']);
+        const uf = pega(['cfg-uf']);
+        const cep = pega(['cfg-cep']);
         // Campo de hora vazio precisa virar null: o banco recusa string vazia
-        const horario_abertura = document.getElementById('config-horario-abertura')?.value || null;
-        const horario_fechamento = document.getElementById('config-horario-fechamento')?.value || null;
+        const horario_abertura = (document.getElementById('cfg-abertura') || document.getElementById('config-horario-abertura'))?.value || null;
+        const horario_fechamento = (document.getElementById('cfg-fechamento') || document.getElementById('config-horario-fechamento'))?.value || null;
         const logo_url = this.logoBase64Temp;
 
         if (!estabId || !supabaseClient) {
@@ -4634,6 +4659,9 @@ const App = {
                     facebook, 
                     horario_abertura, 
                     horario_fechamento,
+                    cidade,
+                    uf,
+                    cep,
                     logo_url 
                 })
                 .eq('id', estabId);
