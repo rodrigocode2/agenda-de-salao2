@@ -294,7 +294,7 @@ tailwind.config = {
     <button onclick="UI.switchTab('aba-planos')" title="Planos" aria-label="Planos" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-crown text-sm"></i></button>
 
     <button onclick="UI.switchTab('aba-relatorios')" title="Relatórios" aria-label="Relatórios" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-chart-line text-sm"></i></button>
-    <button onclick="App.trocarEspaco('config-salao')" title="Configurações" aria-label="Configurações" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
+    <button onclick="UI.switchTab('aba-gestao'); UI.trocarEspaco('config-salao'); Auth.carregarConfigSalao()" title="Configurações" aria-label="Configurações" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
             <i class="fa-solid fa-gear text-sm"></i>
           </button>
           <button onclick="UI.switchTab('aba-avisos')" title="Avisos" aria-label="Avisos" class="admin-only relative px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
