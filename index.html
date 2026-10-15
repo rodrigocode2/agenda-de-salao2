@@ -1,1 +1,137 @@
-__PLACEHOLDER__
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HairConcept — gestão completa para salão de beleza: agenda, equipe, clientes, comissões e avaliação. Sistema interno do salão.">
+  <meta name="theme-color" content="#ec4899">
+  <meta property="og:title" content="HairConcept Gestão Integrada">
+  <meta property="og:description" content="Agenda, equipe, clientes e comissões do seu salão em um só lugar.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<title>HairConcept Gestão Integrada</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="text/javascript">
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          500: '#ec4899',
+          600: '#db2777'
+        },
+        darkbg: {
+          300: '#030303'
+        }
+      },
+      fontFamily: {
+        sans: ['Space Grotesk', 'sans-serif'],
+        syne: ['Syne', 'sans-serif']
+      }
+    }
+  }
+}
+</script>
+<!-- Google Fonts (Space Grotesk + Syne, usadas no Tailwind) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+
+<style type="text/css"></style>
+<style type="text/css"></style>
+<!-- FontAwesome CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
+
+<!-- Canvas para o rastro do mouse -->
+<canvas id="mouse-trail-canvas"></canvas>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+<!-- HEADER -->
+<header id="main-header" class="hidden sticky top-0 hc-z-header glass-water border-b border-white/10" style="z-index:97">
+<div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-2">
+  <div class="flex items-center gap-3 overflow-hidden">
+    <div id="header-logo-box" class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0 overflow-hidden">
+      <i id="header-icon-scissors" class="fa-solid fa-scissors text-lg"></i>
+          <img id="header-logo-img" src="" alt="Logo do salao" class="w-full h-full object-cover hidden">
+    </div>
+    <div class="overflow-hidden">
+      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight max-w-[22rem]">Bem-vindo</span>
+            <span id="header-assinatura" class="hidden block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
+    </div>
+  </div>
+  <nav id="nav-menu" class="hidden lg:flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
+    <button onclick="UI.switchTab('aba-agenda')" title="Agenda" class="px-4 py-2 bg-brand-500/15 text-brand-500 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition"><i class="fa-solid fa-calendar-days mr-1"></i> Agenda</button>
+    
+    <button onclick="UI.switchTab('aba-equipe')" title="Equipe" aria-label="Equipe" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-users text-sm"></i></button>
+    <button onclick="UI.switchTab('aba-clientes')" title="Clientes" aria-label="Clientes" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-address-book text-sm"></i></button>
+
+    <button onclick="UI.switchTab('aba-planos')" title="Planos" aria-label="Planos" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-crown text-sm"></i></button>
+
+    <button onclick="UI.switchTab('aba-relatorios')" title="Relatórios" aria-label="Relatórios" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-chart-line text-sm"></i></button>
+    <button onclick="UI.switchTab('aba-gestao'); UI.trocarEspaco('config-salao'); Auth.carregarConfigSalao()" title="Configurações" aria-label="Configurações" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
+            <i class="fa-solid fa-gear text-sm"></i>
+          </button>
+          <button onclick="UI.switchTab('aba-avisos')" title="Avisos" aria-label="Avisos" class="admin-only relative px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
+            <i class="fa-solid fa-bell text-sm"></i>
+            <span id="badge-avisos" class="hidden absolute -top-0.5 -right-0.5 bg-brand-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+          </button>
+  </nav>
+  <div class="flex items-center gap-3 shrink-0">
+    <button onclick="UI.toggleMobileMenu()" class="lg:hidden p-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition">
+      <i class="fa-solid fa-bars text-base"></i>
+    </button>
+    <div class="text-right hidden sm:block">
+      <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[90px] sm:max-w-[200px]">Nome</span>
+      <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase">Cargo</span>
+    </div>
+    <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition flex items-center gap-2">
+      <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden md:inline">Sair</span>
+    </button>
+  </div>
+</div>
+<!-- Menu Mobile Dropdown -->
+<div id="mobile-nav-menu" class="hidden lg:hidden glass-water border-t border-white/10 px-4 py-3">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+    <button onclick="UI.switchTab('aba-agenda'); UI.toggleMobileMenu(false);" class="p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agenda</button>
+    <button onclick="UI.switchTab('aba-equipe'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Equipe</button>
+    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços, Estoque e Avaliação</button>
+    <button onclick="UI.switchTab('aba-clientes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Clientes</button>
+    <button onclick="UI.switchTab('aba-planos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Planos</button>
+    <button onclick="UI.switchTab('aba-relatorios'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Relatórios</button>
+    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
+    <button onclick="UI.switchTab('aba-avisos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avisos</button>
+  </div>
+</div>
+</header>
+
+<!-- CONTEÚDO PRINCIPAL -->
+<main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-8">
+
+<!-- TELA DE LOGIN -->
+<!-- ============ TELA DE ABERTURA ============ -->
+<div id="tela-abertura" style="z-index:99" class="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#07070a]">
+  <div class="hc-brilho"></div>
+  <div class="hc-grao"></div>
+  <div class="relative z-10 text-center px-6">
+    <div class="hc-marca">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-500/15 border border-brand-500/40 flex items-center justify-center">
+        <i class="fa-solid fa-scissors text-brand-500 text-2xl"></i>
+      </div>
+    </div>
+    <p class="hc-frase hc-f1">Bem-vindo ao</p>
+    <h1 class="hc-nome hc-f2">HairConcept</h1>
+    <p class="hc-sub hc-f3">Sua agenda de gestão</p>
+    <button id="btn-entrar-abertura" type="button" onclick="Auth.entrarDoSistema()" class="hc-botao hc-f4">Entrar</button>
+  </div>
+</div>
