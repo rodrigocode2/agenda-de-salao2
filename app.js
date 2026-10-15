@@ -15,10 +15,26 @@ window.hcSalao = {
     }
 };
 
+// Token da sessao do profissional. O banco cria no login (tabela sessoes_profissional)
+// e exige de volta para saber quem esta pedindo. Sem isto, o profissional nao ve nada.
+window.hcProf = {
+    get token() {
+        try { return localStorage.getItem('hairconcept_prof_token') || ''; }
+        catch (e) { return ''; }
+    },
+    definir(t) {
+        try {
+            if (t) localStorage.setItem('hairconcept_prof_token', String(t));
+            else localStorage.removeItem('hairconcept_prof_token');
+        } catch (e) { /* silencioso */ }
+    }
+};
+
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: {
         headers: {
-            get 'x-salao-codigo'() { return window.hcSalao.codigo; }
+            get 'x-salao-codigo'() { return window.hcSalao.codigo; },
+            get 'x-prof-token'() { return window.hcProf.token; }
         }
     }
 }) : null;
@@ -100,6 +116,7 @@ const Auth = {
         localStorage.removeItem('hairconcept_prof_id');
         localStorage.removeItem('hairconcept_plan');
         localStorage.removeItem('hairconcept_prof_dados');
+        localStorage.removeItem('hairconcept_prof_token');
         localStorage.removeItem('hairconcept_plan_pendente');
         // Não apaga hairconcept_boasvindas_* : é para nunca mais aparecer
         if (supabaseClient && supabaseClient.auth) {
@@ -797,17 +814,18 @@ const App = {
                     UI.showToast('Salão, nome ou chave incorretos. Tentativa ' + tent + ' de 4.', 'error');
                 }
                 return;
-                UI.showToast('Salão, nome ou chave incorretos.', 'error');
-                return;
             }
             if (data.estabelecimento_id) {
                 localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
-            if (data.codigo_acesso) window.hcSalao.definir(data.codigo_acesso);
-            else if (data.nome_salao) window.hcSalao.definir(App.gerarCodigoSalao ? App.gerarCodigoSalao(data.nome_salao) : 'deconcept2');
-            this.limparTentativas(data.estabelecimento_id, cpf);
+                this.limparTentativas(data.estabelecimento_id, cpf);
+            }
+            if (data.codigo_acesso) {
+                window.hcSalao.definir(data.codigo_acesso);
+            } else if (data.nome_salao && App.gerarCodigoSalao) {
+                window.hcSalao.definir(App.gerarCodigoSalao(data.nome_salao));
             }
             localStorage.setItem('hairconcept_prof_id', data.id);
-            if (data.token) localStorage.setItem('hairconcept_prof_token', data.token);
+            if (data.token) window.hcProf.definir(data.token);
 
             // Guarda só o necessário (o servidor não devolve CPF nem senha)
             const dadosProf = {
