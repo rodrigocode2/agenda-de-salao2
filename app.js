@@ -3698,6 +3698,13 @@ const App = {
             thHora.textContent = 'Horário';
             cab.appendChild(thHora);
 
+            // Quantos atendimentos tem em cada dia (para o circulo de contagem)
+            const contagemDia = {};
+            todos.forEach(function (a) {
+                if (!a.data) return;
+                contagemDia[a.data] = (contagemDia[a.data] || 0) + 1;
+            });
+
             dias.forEach(function (iso, idx) {
                 const th = document.createElement('th');
                 th.className = 'semana-th' + (iso === hoje ? ' hoje' : '') + (idx === 0 ? ' primeiro' : '');
@@ -3709,6 +3716,13 @@ const App = {
                 nome.className = 'semana-dia-nome';
                 nome.textContent = App.nomeDiaCurto(iso);
                 topo.appendChild(nome);
+
+                // Circulo com a quantidade de atendimentos do dia
+                const cont = document.createElement('span');
+                cont.className = 'semana-dia-cont' + (contagemDia[iso] ? '' : ' vazio');
+                cont.textContent = contagemDia[iso] || '0';
+                cont.title = (contagemDia[iso] || 0) + ' atendimento(s)';
+                topo.appendChild(cont);
 
                 const btnMenu = document.createElement('button');
                 btnMenu.type = 'button';
@@ -3762,8 +3776,20 @@ const App = {
                         sv.textContent = ag.servico || '';
                         const hr = document.createElement('span');
                         hr.className = 'semana-ag-hr';
-                        hr.textContent = App.normalizarHora(ag.horario) + '-' + App.normalizarHora(ag.horario_fim || '');
+                        // Horario e duracao, no formato do painel: "08:30 | 30 min"
+                        const durTxt = dur >= 60
+                            ? (Math.floor(dur / 60) + ' h' + (dur % 60 ? ' ' + (dur % 60) + ' min' : ''))
+                            : (dur + ' min');
+                        hr.textContent = App.normalizarHora(ag.horario) + ' | ' + durTxt;
                         caixa.appendChild(cli); caixa.appendChild(sv); caixa.appendChild(hr);
+
+                        // Status do atendimento (Espera / Atendendo / Finalizado / Nao veio)
+                        if (ag.status) {
+                            const st = document.createElement('span');
+                            st.className = 'semana-ag-status';
+                            st.textContent = App.rotuloEstado(ag.status);
+                            caixa.appendChild(st);
+                        }
                         caixa.title = (ag.cliente || '') + ' • ' + (ag.servico || '') + ' • R$ ' + parseFloat(ag.valor || 0).toFixed(2);
                         caixa.onclick = function (ev) { ev.stopPropagation(); App.abrirDiaDoAtendimento(iso, ag); };
                         td.appendChild(caixa);
