@@ -1,1898 +1,921 @@
-<!DOCTYPE html>
-<html lang="pt-BR" class="dark scroll-smooth">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="HairConcept — gestão completa para salão de beleza: agenda, equipe, clientes, comissões e avaliação. Sistema interno do salão.">
-  <meta name="theme-color" content="#ec4899">
-  <meta property="og:title" content="HairConcept Gestão Integrada">
-  <meta property="og:description" content="Agenda, equipe, clientes e comissões do seu salão em um só lugar.">
-  <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
-<title>HairConcept Gestão Integrada</title>
-<!-- Tailwind CSS CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Supabase JS SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="text/javascript">
-tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        brand: {
-          500: '#ec4899',
-          600: '#db2777'
-        },
-        darkbg: {
-          300: '#030303'
-        }
-      },
-      fontFamily: {
-        sans: ['Space Grotesk', 'sans-serif'],
-        syne: ['Syne', 'sans-serif']
-      }
-    }
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(9, 9, 11, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(236, 72, 153, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 72, 153, 0.6);
+}
+
+/* Glassmorphism Classes */
+.glass-water {
+  background: rgba(24, 24, 27, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-input {
+  background: rgba(9, 9, 11, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: rgba(236, 72, 153, 0.5);
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.15);
+}
+
+.gota-agua {
+  background: radial-gradient(circle at 30% 30%, rgba(236, 72, 153, 0.15), rgba(24, 24, 27, 0.6) 70%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+/* Canvas de rastro */
+#mouse-trail-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Agenda Grid Cell Effects */
+.agenda-slot {
+  min-height: 52px;
+  transition: background-color 0.15s ease;
+}
+
+.agenda-slot:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Toast Notifications Animation */
+.toast-item {
+  animation: slideInRight 0.3s ease forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
-</script>
-<!-- Google Fonts (Space Grotesk + Syne, usadas no Tailwind) -->
 
-
-<style type="text/css">@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}</style>
-
-
-<style type="text/css">@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:400;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:500;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:'Space Grotesk';font-style:normal;font-weight:700;src:url(/cf-fonts/v/space-grotesk/5.2.10/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:700;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Syne';font-style:normal;font-weight:800;src:url(/cf-fonts/v/syne/5.2.7/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}</style>
-
-
-<style type="text/css"></style>
-<!-- FontAwesome CDN -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="style.css">
-</head>
-<body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
-
-<!-- Canvas para o rastro do mouse -->
-<canvas id="mouse-trail-canvas"></canvas>
-
-<!-- Toast Container -->
-<div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
-
-<!-- HEADER -->
-<header id="main-header" class="hidden sticky top-0 hc-z-header glass-water border-b border-white/10" style="z-index:97">
-<div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-2">
-  <div class="flex items-center gap-3 overflow-hidden">
-    <div id="header-logo-box" class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0 overflow-hidden">
-      <i id="header-icon-scissors" class="fa-solid fa-scissors text-lg"></i>
-          <img id="header-logo-img" src="" alt="Logo do salao" class="w-full h-full object-cover hidden">
-    </div>
-    <div class="overflow-hidden">
-      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight max-w-[22rem]">Bem-vindo</span>
-            <span id="header-assinatura" class="hidden block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
-    </div>
-  </div>
-  <nav id="nav-menu" class="hidden lg:flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
-    <button onclick="UI.switchTab('aba-agenda')" title="Agenda" class="px-4 py-2 bg-brand-500/15 text-brand-500 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition"><i class="fa-solid fa-calendar-days mr-1"></i> Agenda</button>
-    
-    <button onclick="UI.switchTab('aba-equipe')" title="Equipe" aria-label="Equipe" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-users text-sm"></i></button>
-    <button onclick="UI.switchTab('aba-clientes')" title="Clientes" aria-label="Clientes" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-address-book text-sm"></i></button>
-
-    <button onclick="UI.switchTab('aba-planos')" title="Planos" aria-label="Planos" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-crown text-sm"></i></button>
-
-    <button onclick="UI.switchTab('aba-relatorios')" title="Relatórios" aria-label="Relatórios" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-chart-line text-sm"></i></button>
-    <button onclick="UI.switchTab('aba-gestao'); UI.trocarEspaco('config-salao'); Auth.carregarConfigSalao()" title="Configurações" aria-label="Configurações" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
-            <i class="fa-solid fa-gear text-sm"></i>
-          </button>
-          <button onclick="UI.switchTab('aba-avisos')" title="Avisos" aria-label="Avisos" class="admin-only relative px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
-            <i class="fa-solid fa-bell text-sm"></i>
-            <span id="badge-avisos" class="hidden absolute -top-0.5 -right-0.5 bg-brand-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
-          </button>
-  </nav>
-  <div class="flex items-center gap-3 shrink-0">
-    <button onclick="UI.toggleMobileMenu()" class="lg:hidden p-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition">
-      <i class="fa-solid fa-bars text-base"></i>
-    </button>
-    <div class="text-right hidden sm:block">
-      <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[90px] sm:max-w-[200px]">Nome</span>
-      <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase">Cargo</span>
-    </div>
-    <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition flex items-center gap-2">
-      <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden md:inline">Sair</span>
-    </button>
-  </div>
-</div>
-<!-- Menu Mobile Dropdown -->
-<div id="mobile-nav-menu" class="hidden lg:hidden glass-water border-t border-white/10 px-4 py-3">
-  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-    <button onclick="UI.switchTab('aba-agenda'); UI.toggleMobileMenu(false);" class="p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agenda</button>
-    <button onclick="UI.switchTab('aba-equipe'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Equipe</button>
-    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços, Estoque e Avaliação</button>
-    <button onclick="UI.switchTab('aba-clientes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Clientes</button>
-    <button onclick="UI.switchTab('aba-planos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Planos</button>
-    <button onclick="UI.switchTab('aba-relatorios'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Relatórios</button>
-    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
-    <button onclick="UI.switchTab('aba-avisos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avisos</button>
-  </div>
-</div>
-</header>
-
-<!-- CONTEÚDO PRINCIPAL -->
-<main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-8">
-
-<!-- TELA DE LOGIN -->
-<!-- ============ TELA DE ABERTURA ============ -->
-<div id="tela-abertura" style="z-index:99" class="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#07070a]">
-  <div class="hc-brilho"></div>
-  <div class="hc-grao"></div>
-  <div class="relative z-10 text-center px-6">
-    <div class="hc-marca">
-      <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-500/15 border border-brand-500/40 flex items-center justify-center">
-        <i class="fa-solid fa-scissors text-brand-500 text-2xl"></i>
-      </div>
-    </div>
-    <p class="hc-frase hc-f1">Bem-vindo ao</p>
-    <h1 class="hc-nome hc-f2">HairConcept</h1>
-    <p class="hc-sub hc-f3">Sua agenda de gestão</p>
-    <button id="btn-entrar-abertura" type="button" onclick="Auth.entrarDoSistema()" class="hc-botao hc-f4">Entrar</button>
-  </div>
-</div>
-
-<section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 gota-agua border border-white/10 space-y-10 shadow-2xl">
-  <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-    <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-20"></video>
-    <div class="absolute inset-0 bg-gradient-to-b from-darkbg-300/60 via-darkbg-300/40 to-darkbg-300"></div>
-  </div>
-  <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-    <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white"><span id="titulo-marca">HairConcept</span> <span class="text-brand-500">GESTÃO</span></h1>
-    <p class="text-zinc-300 text-sm">Acesse a sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento.</p>
-  </div>
-  <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-    <!-- Login Estabelecimento -->
-    <div class="glass-water p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center">
-          <i class="fa-solid fa-store"></i>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold uppercase text-white">Login Estabelecimento</h3>
-          <p class="text-[11px] text-zinc-400">Dono do Salão / Admin</p>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <button onclick="Auth.loginSocial('google')" type="button" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition">
-          <i class="fa-brands fa-google text-rose-500"></i> Google
-        </button>
-        <button onclick="Auth.loginSocial('facebook')" type="button" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition">
-          <i class="fa-brands fa-facebook text-blue-500"></i> Facebook
-        </button>
-      </div>
-      <div class="flex items-center gap-3 text-zinc-600 text-[10px] uppercase font-bold">
-        <div class="flex-grow border-t border-white/10"></div> Ou e-mail <div class="flex-grow border-t border-white/10"></div>
-      </div>
-      <form onsubmit="Auth.loginAdmin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail do Salão</label>
-          <input type="email" id="login-admin-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha</label>
-          <input type="password" id="login-admin-senha" required placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition shadow-lg shadow-brand-500/20">Entrar como Admin</button>
-        <div class="flex items-center justify-between pt-1">
-          <button type="button" onclick="Auth.abrirRecuperarSenha()" class="text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Esqueci minha senha</button>
-          <button type="button" onclick="Auth.abrirCadastro()" class="text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Criar conta</button>
-        </div>
-      </form>
-    </div>
-    <!-- Login Profissional -->
-    <div class="glass-water p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-          <i class="fa-solid fa-user-tie"></i>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold uppercase text-white">Login Profissional</h3>
-          <p class="text-[11px] text-zinc-400">Cabeleireiros / Manicures / Esteticistas</p>
-        </div>
-      </div>
-      <form onsubmit="App.loginProfissional(event)" class="space-y-4 pt-2">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Salão</label>
-          <input type="text" id="login-prof-estabelecimento" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu nome</label>
-          <input type="text" id="login-prof-nome" required placeholder="Como o salão cadastrou você" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Chave de acesso (11 números)</label>
-          <input type="text" id="login-prof-id" required inputmode="numeric" maxlength="11" placeholder="00000000000" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          <p class="text-[10px] text-zinc-500 mt-1">Os 11 números que você combinou com o salão (pode ser o seu CPF ou outro número).</p>
-        </div>
-        <div>
-          <input type="hidden" id="login-prof-senha">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Entrar na Agenda</button>
-        <button type="button" onclick="Auth.abrirAjuda()" class="w-full text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Esqueci minha senha / Preciso de ajuda</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: CRIAR CONTA ============ -->
-  <div id="modal-cadastro" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Criar minha conta</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-cadastro')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="Auth.criarConta(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão</label>
-          <input type="text" id="cad-nome-salao" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-          <input type="email" id="cad-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha (mínimo 6 caracteres)</label>
-          <input type="password" id="cad-senha" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Confirmar senha</label>
-          <input type="password" id="cad-senha2" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Criar conta e entrar</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: RECUPERAR SENHA ============ -->
-  <div id="modal-recuperar" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Recuperar minha senha</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-recuperar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="Auth.enviarRecuperacao(event)" class="space-y-4">
-        <p class="text-[11px] text-zinc-400">Digite o e-mail que você usa para entrar. Vamos enviar um link para você criar uma senha nova.</p>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail do Salão</label>
-          <input type="email" id="rec-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Enviar link</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: DEFINE NOVA SENHA (abre pelo link do e-mail) ============ -->
-  <div id="modal-nova-senha" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Criar senha nova</h3>
-      </div>
-      <form onsubmit="Auth.salvarNovaSenha(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nova senha (mínimo 6 caracteres)</label>
-          <input type="password" id="nova-senha" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Repetir a nova senha</label>
-          <input type="password" id="nova-senha2" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar nova senha</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: EDITAR CLIENTE ============ -->
-  <div id="modal-editar-cliente" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 id="titulo-cliente" class="text-base font-bold uppercase text-white">Editar cliente</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-editar-cliente')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarEdicaoCliente(event)" class="space-y-4">
-        <input type="hidden" id="editar-cli-id">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
-          <input type="date" id="editar-cli-data" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional</label>
-          <select id="editar-cli-profissional" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo</label>
-          <input type="text" id="editar-cli-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
-          <input type="tel" id="editar-cli-telefone" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF</label>
-          <input type="text" id="editar-cli-cpf" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-          <input type="email" id="editar-cli-email" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar alterações</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: FECHAR CICLO ============ -->
-  <div id="modal-fechar" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Fechar ciclo</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-fechar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="space-y-4">
-        <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
-          <p id="fechar-periodo" class="text-[11px] text-zinc-400"></p>
-          <p class="text-xs text-white font-bold"><span id="fechar-atend">0</span> atendimento(s)</p>
-          <p class="text-xs text-white font-bold">Valor: <span id="fechar-valor">R$ 0,00</span></p>
-          <p class="text-xs text-emerald-400 font-bold">Comissão: <span id="fechar-comissao">R$ 0,00</span></p>
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data em que recebi</label>
-          <input type="date" id="fechar-recebido" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <p class="text-[10px] text-zinc-500">Ao fechar, o sistema guarda este período e o próximo ciclo começa no dia seguinte.</p>
-        <button onclick="App.confirmarFechamento()" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition">Confirmar fechamento</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: EDITAR PROFISSIONAL (com mensagem) ============ -->
-  <div id="modal-editar-prof-extra" class="hidden"></div>
-
-  <!-- ============ MODAL: VOTAR NO CLIENTE ============ -->
-  <div id="modal-voto" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Avaliar cliente</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-voto')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarVoto(event)" class="space-y-4">
-        <input type="hidden" id="voto-cliente-id">
-        <p class="text-[11px] text-zinc-400">Avaliando <span id="voto-cliente-nome" class="text-white font-bold"></span>. Este registro é interno do salão.</p>
-
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">O que aconteceu</label>
-          <select id="voto-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="mais">👍 Cliente boa — elogiou, é fácil de atender</option>
-            <option value="menos">👎 Cliente difícil — deu trabalho, atrasou, reclamou</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Qual profissional ela elogiou (opcional)</label>
-          <select id="voto-profissional" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-        </div>
-
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Observação (opcional)</label>
-          <textarea id="voto-obs" rows="2" placeholder="Ex: elogiou o corte da Antonia" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
-        </div>
-
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Registrar</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: TROCAR SENHA DO PROFISSIONAL ============ -->
-  <div id="modal-trocar-senha" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Trocar senha</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-trocar-senha')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarNovaSenhaProfissional(event)" class="space-y-4">
-        <input type="hidden" id="trocasenha-prof-id">
-        <input type="hidden" id="trocasenha-prof-cpf">
-        <p class="text-[11px] text-zinc-400">Definindo uma senha nova para <span id="trocasenha-prof-nome" class="text-white font-bold"></span>.</p>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha nova (mínimo 4 caracteres)</label>
-          <input type="password" id="trocasenha-senha" required minlength="4" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Repetir a senha nova</label>
-          <input type="password" id="trocasenha-senha2" required minlength="4" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar senha nova</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: EDITAR PROFISSIONAL ============ -->
-  <div id="modal-editar-prof" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Editar profissional</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-editar-prof')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarEdicaoProfissional(event)" class="space-y-4">
-        <input type="hidden" id="editar-prof-id">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo</label>
-          <input type="text" id="editar-prof-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Especialidade / Cargo</label>
-          <input type="text" id="editar-prof-cargo" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF (Chave de Acesso)</label>
-          <input type="text" id="editar-prof-cpf" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar alterações</button>
-      
-        <div class="pt-3 border-t border-white/10">
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Mensagem particular para ele (opcional)</label>
-          <input type="hidden" id="recado-prof-id">
-          <textarea id="recado-prof-texto" rows="2" placeholder="Ex: preciso falar com você sobre o horário de amanhã" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
-          <button type="button" onclick="App.enviarRecadoProfissional(event)" class="mt-2 w-full py-2.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-200 hover:text-white font-bold text-xs uppercase transition">Enviar mensagem</button>
-          <p class="text-[10px] text-zinc-500 mt-1">A mensagem aparece na aba do profissional.</p>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: PRECISO DE AJUDA (profissional) ============ -->
-  <div id="modal-ajuda" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Preciso de ajuda</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-ajuda')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="Auth.enviarAjuda(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Salão</label>
-          <input type="text" id="ajuda-salao" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu nome</label>
-          <input type="text" id="ajuda-nome" required placeholder="Seu nome completo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu CPF</label>
-          <input type="text" id="ajuda-cpf" required placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">O que aconteceu?</label>
-          <select id="ajuda-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="esqueci_senha">Esqueci minha senha</option>
-            <option value="reclamacao">Reclamação</option>
-            <option value="excluir_dados">Quero excluir meus dados</option>
-            <option value="outro">Outro assunto</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Mensagem</label>
-          <textarea id="ajuda-mensagem" rows="3" required placeholder="Escreva aqui o que você precisa" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Enviar pedido</button>
-      </form>
-    </div>
-  </div>
-</section>
-
-<!-- TELA DE BOAS-VINDAS (primeiro login) -->
-<section id="aba-boasvindas" class="tab-content hidden max-w-3xl mx-auto space-y-6">
-  <div class="glass-water p-8 md:p-12 rounded-3xl border border-white/10 space-y-8 shadow-2xl relative overflow-hidden gota-agua">
-    <div class="relative z-10 space-y-3 text-center">
-      <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center overflow-hidden">
-        <img id="welcome-logo-img" src="" alt="Logo do salão" class="w-full h-full object-cover hidden">
-        <i id="welcome-logo-icon" class="fa-solid fa-scissors text-2xl text-brand-500"></i>
-      </div>
-      <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Bem-vindo ao HairConcept</p>
-      <h1 id="welcome-nome-salao" class="text-2xl md:text-3xl font-black uppercase text-white">Seu Salão</h1>
-      <p class="text-xs text-zinc-400 max-w-lg mx-auto">Este é o painel do seu salão. Aqui você organiza a agenda, a equipe, os serviços e o estoque, tudo no mesmo lugar.</p>
-    </div>
-
-    <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
-        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-user-plus"></i></div>
-        <h3 class="text-xs font-bold uppercase text-white">1. Monte a equipe</h3>
-        <p class="text-[11px] text-zinc-400">Cadastre seus profissionais na aba Equipe, com foto, cargo e uma senha de acesso.</p>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
-        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-scissors"></i></div>
-        <h3 class="text-xs font-bold uppercase text-white">2. Crie os serviços</h3>
-        <p class="text-[11px] text-zinc-400">Cadastre os procedimentos com preço e comissão, e monte o catálogo do salão.</p>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
-        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-calendar-check"></i></div>
-        <h3 class="text-xs font-bold uppercase text-white">3. Comece a agendar</h3>
-        <p class="text-[11px] text-zinc-400">Marque os atendimentos na aba Agendar, em blocos de 30 minutos. A agenda aparece para todos.</p>
-      </div>
-    </div>
-
-    <div class="relative z-10 p-4 rounded-2xl bg-zinc-950/80 border border-white/10">
-      <p class="text-[11px] text-zinc-400"><i class="fa-solid fa-circle-info text-brand-500"></i> Dica: em <span class="text-white font-bold">Configurações</span> você define o nome do salão, a logo, o endereço e os horários de funcionamento. O nome e a logo aparecem no topo do sistema.</p>
-    </div>
-
-    <div class="relative z-10 flex flex-col md:flex-row items-center justify-center gap-3">
-      <button onclick="App.concluirBoasVindas()" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-brand-500/20">Começar agora</button>
-      <button onclick="UI.abrirGestao('servicos')" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider transition">Configurar o salão</button>
-    </div>
-  </div>
-</section>
-
-<!-- AGENDA PAINEL PRINCIPAL -->
-<section id="aba-agenda" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 glass-water">
-  <!-- PAINEL EXCLUSIVO DO PROFISSIONAL -->
-  <!-- BARRA DO PROFISSIONAL: ele ve so a propria barra e as estrelas -->
-  <div id="bloco-minha-barra" class="hidden glass-water rounded-2xl border border-white/10 p-5 mb-6">
-    <p class="text-[10px] font-bold uppercase text-zinc-400 mb-2">Meu desempenho</p>
-    <div id="minha-barra-prof"></div>
-  </div>
-
-  <div id="painel-profissional-extra" class="hidden space-y-6 pb-6 border-b border-white/10">
-    <div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-zinc-950/80 border border-white/10">
-      <div class="flex items-center gap-4">
-        <div class="relative group">
-          <img alt="Foto do profissional" id="prof-header-foto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E" class="w-20 h-20 rounded-2xl object-cover border border-white/10">
-          <label class="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-[10px] text-white font-bold uppercase text-center p-1">
-            Alterar Foto
-            <input type="file" accept="image/*" onchange="App.handleAtualizarMinhaFoto(event)" class="hidden">
-          </label>
-        </div>
-        <div>
-          <span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-md">Profissional</span>
-          <h2 id="prof-header-nome" class="text-lg font-bold text-white uppercase mt-1">Nome do Profissional</h2>
-          <p id="prof-header-cargo" class="text-xs text-zinc-400">Especialidade</p>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-3 w-full sm:w-auto">
-        <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Atendimentos</span>
-          <strong id="prof-stat-atendimentos" class="text-brand-500 text-sm font-bold">0</strong>
-        </div>
-        <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Minha Comissão</span>
-          <strong id="prof-stat-comissao" class="text-emerald-400 text-sm font-bold">R$ 0,00</strong>
-        </div>
-      </div>
-    </div>
-    
-    <!-- FECHAMENTO DO PROFISSIONAL -->
-    <div id="painel-fechamento" class="glass-water rounded-2xl border border-white/10 p-6 space-y-5">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h3 class="text-sm font-bold uppercase text-white"><i class="fa-solid fa-sack-dollar text-emerald-400 mr-2"></i>Meu Fechamento</h3>
-          <p id="fech-periodo" class="text-[10px] text-zinc-500 uppercase">Carregando período...</p>
-        </div>
-        <button onclick="App.abrirFecharCiclo()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">
-          <i class="fa-solid fa-lock mr-1"></i> Fechar ciclo
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Atendimentos</span>
-          <strong id="fech-qtd" class="text-brand-500 text-xl font-bold">0</strong>
-        </div>
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Valor real</span>
-          <strong id="fech-valor" class="text-white text-xl font-bold">R$ 0,00</strong>
-        </div>
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-emerald-500/30 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Minha comissão</span>
-          <strong id="fech-comissao" class="text-emerald-400 text-xl font-bold">R$ 0,00</strong>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Minha comissão (%)</label>
-          <input type="number" id="fech-pct" step="0.01" min="0" max="100" placeholder="Ex: 50" oninput="App.calcularFechamento()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div class="p-3 rounded-xl bg-zinc-950 border border-white/10">
-          <p class="text-[10px] text-zinc-400">Confira na <span class="text-white font-bold">Calculadora</span> ao lado, atendimento por atendimento.</p>
-        </div>
-      </div>
-
-      <div class="border-t border-white/10 pt-4 space-y-3">
-        <h4 class="text-[10px] font-bold text-zinc-400 uppercase">Meus atendimentos no ciclo</h4>
-        <div id="fech-lista" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
-      </div>
-
-      <div class="border-t border-white/10 pt-4 space-y-3">
-        <h4 class="text-[10px] font-bold text-zinc-400 uppercase">Ciclos já fechados</h4>
-        <div id="fech-historico" class="space-y-2"></div>
-      </div>
-    </div>
-
-    <!-- FERRAMENTAS DO PROFISSIONAL -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
-        <div class="flex justify-between items-center">
-          <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-note-sticky text-yellow-400 mr-1.5"></i> Notas Rápidas</h3>
-          <button onclick="App.adicionarPostIt()" class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-[10px] font-bold uppercase hover:bg-yellow-500/30 transition">+ Nota</button>
-        </div>
-        <div id="lista-postits" class="space-y-2.5 max-h-48 overflow-y-auto pr-1"></div>
-      </div>
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
-        <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-calculator text-brand-500 mr-1.5"></i> Calculadora Rápida</h3>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Valor do Serviço (R$)</label>
-            <input type="number" id="prof-calc-val" oninput="App.calcularGanhosPessoal()" placeholder="0.00" class="w-full glass-input rounded-xl px-3 py-2 text-white">
-          </div>
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Sua Comissão (%)</label>
-            <input type="number" id="prof-calc-porc" value="50" oninput="App.calcularGanhosPessoal()" class="w-full glass-input rounded-xl px-3 py-2 text-white">
-          </div>
-          <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 flex justify-between items-center">
-            <span class="text-zinc-400 text-[10px] uppercase">Recebimento:</span>
-            <strong id="prof-calc-result" class="text-emerald-400 text-sm">R$ 0,00</strong>
-          </div>
-        </div>
-      </div>
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4 cert-bloco md:col-span-3">
-        <div class="flex items-center justify-between gap-3">
-          <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-graduation-cap text-amber-400 mr-1.5"></i> Meus Certificados</h3>
-          <span class="text-[9px] text-zinc-500 uppercase">Selo 🎓 aparece na sua agenda</span>
-        </div>
-
-        <form onsubmit="App.salvarCertificado(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div class="sm:col-span-2">
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Curso *</label>
-            <input id="cert-curso" type="text" required placeholder="Ex: Biossegurança em Salão" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Instituição</label>
-            <input id="cert-instituicao" type="text" placeholder="Ex: Senac" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Conclusão</label>
-            <input id="cert-data" type="date" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-          </div>
-
-          <div class="sm:col-span-2">
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Foto do certificado</label>
-            <label class="cert-preview-box">
-              <img id="cert-preview" class="hidden" alt="Certificado">
-              <span id="cert-arquivo-nome" class="text-[10px] text-zinc-500">Foto do certificado (ou use o link ao lado)</span>
-              <input type="file" accept="image/*" onchange="App.handleFotoCertificado(event)" class="hidden">
-            </label>
-          </div>
-          <div class="sm:col-span-2 flex flex-col">
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Ou cole o link do certificado</label>
-            <input id="cert-link" type="url" placeholder="https://..." class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-            <button type="submit" class="w-full mt-3 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 font-bold text-[10px] uppercase tracking-wider transition">
-              <i class="fa-solid fa-plus mr-1"></i> Adicionar certificado
-            </button>
-          </div>
-        </form>
-
-        <div id="lista-certificados" class="space-y-2"></div>
-      </div>
-
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4 flex flex-col justify-between">
-        <div>
-          <h3 class="text-xs font-bold text-white uppercase mb-2"><i class="fa-solid fa-mug-hot text-amber-500 mr-1.5"></i> Intervalos & Pausas</h3>
-          <p class="text-[11px] text-zinc-400">Espaço para gerenciar pausas e intervalos na bancada.</p>
-        </div>
-        <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-center space-y-2">
-          <span id="frase-motivacional" class="text-[11px] text-zinc-300 italic">"O sucesso é a soma de pequenos esforços."</span>
-          <button onclick="App.proximaFrase()" class="w-full py-2 bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 rounded-xl text-[10px] font-bold uppercase transition">Nova Frase</button>
-        </div>
-      </div>
-    </div>
-
-    <script>
-  // Carrega "Meus Certificados" quando a aba do profissional aparece
-  (function () {
-    var alvo = document.getElementById('lista-certificados');
-    if (!alvo) return;
-    var t = setInterval(function () {
-      if (window.App && App.user && App.user.role === 'profissional') {
-        App.carregarMeusCertificados();
-        clearInterval(t);
-      }
-    }, 800);
-    setTimeout(function () { clearInterval(t); }, 15000);
-  })();
-  </script>
-
-  <!-- BIOSSEGURANÇA -->
-<details id="painel-biosseguranca" class="p-5 rounded-2xl bg-zinc-950 border border-white/10 md:col-span-3">
-  <summary class="cursor-pointer list-none flex items-center justify-between">
-    <span class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-shield-virus text-brand-500 mr-1.5"></i> Biossegurança & Capacitação</span>
-    <i class="fa-solid fa-chevron-down text-zinc-500 text-xs"></i>
-  </summary>
-  <div class="space-y-5 mt-4">
-    <div class="flex items-start justify-between border-b border-white/10 pb-4 gap-4 flex-wrap">
-      <div>
-        <h2 class="text-lg font-bold uppercase text-white"><i class="fa-solid fa-shield-virus text-brand-500 mr-2"></i>Biossegurança e Capacitação</h2>
-        <p class="text-[11px] text-zinc-400 mt-1">Curso de esterilização, manutenção de autoclave, reciclagem e as normas da Anvisa. Passe o dedo (ou o mouse) sobre o card para ver os detalhes.</p>
-      </div>
-    </div>
-
-
-      <div>
-        <h3 class="bio-grupo-titulo">Biossegurança e esterilização</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-virus-slash"></i></div>
-                <p class="bio-titulo mt-3">Biossegurança em Esterilização</p>
-                <div><span class="bio-tag gratis">Grátis</span><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac EAD · versão gratuita pelo PSG</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Biossegurança em Esterilização</p>
-                  <p class="bio-desc mt-2">Curso do Senac sobre recebimento, limpeza, desinfecção, inspeção, acondicionamento, esterilização e armazenamento de artigos. É o mais reconhecido da lista e o que tem mais peso numa fiscalização.</p>
-                </div>
-                <a class="bio-btn" href="https://www.ead.senac.br/gratuito/biosseguranca-em-esterilizacao" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-temperature-high"></i></div>
-                <p class="bio-titulo mt-3">Esterilização por Autoclave</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · 11 módulos · 10 a 120h</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Esterilização por Autoclave</p>
-                  <p class="bio-desc mt-2">Cobre ciclos de esterilização e seus parâmetros, indicadores químicos, físicos e biológicos, segurança no manuseio, MANUTENÇÃO E CALIBRAÇÃO da autoclave e a legislação vigente.</p>
-                </div>
-                <a class="bio-btn" href="https://onlinecursosgratuitos.com.br/curso/enfermagem/esterilizacao-por-autoclave" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-hand-sparkles"></i></div>
-                <p class="bio-titulo mt-3">Biossegurança em Salão de Beleza</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · certificado válido em todo o Brasil</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Biossegurança em Salão de Beleza</p>
-                  <p class="bio-desc mt-2">Norma Anvisa, normas técnicas, medidas de segurança, cuidados com a higiene, manual de biossegurança e o processo de esterilização aplicado ao dia a dia do salão.</p>
-                </div>
-                <a class="bio-btn" href="https://www.educafacilonline.com.br/curso-gratis/biosseguranca-em-salao-de-beleza" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-spray-can-sparkles"></i></div>
-                <p class="bio-titulo mt-3">Boas Práticas em Salões de Beleza</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · certificado em PDF</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Boas Práticas em Salões de Beleza</p>
-                  <p class="bio-desc mt-2">Rotina de boas práticas do salão: higienização de bancadas e utensílios, organização dos setores, descarte correto e cuidados que a vigilância sanitária observa.</p>
-                </div>
-                <a class="bio-btn" href="https://onlinecursosgratuitos.com.br/curso/estetica-e-beleza/boas-praticas-em-saloes-de-beleza" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div>
-        <h3 class="bio-grupo-titulo">Autoclave: manutenção e operação</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-                <p class="bio-titulo mt-3">Manutenção de Autoclave</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · 10 horas · curso livre</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Manutenção de Autoclave</p>
-                  <p class="bio-desc mt-2">Específico de manutenção: componentes da autoclave, procedimentos de limpeza, verificação do equipamento e cuidados que evitam falha de ciclo e queima de material.</p>
-                </div>
-                <a class="bio-btn" href="https://www.wreducacional.com.br/curso-gratis-de-nocoes-basicas-em-manutencao-de-autoclave" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-fire-flame-simple"></i></div>
-                <p class="bio-titulo mt-3">Esterilização e Medidas de Biossegurança</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac GO · 16 horas · presencial</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Esterilização e Medidas de Biossegurança</p>
-                  <p class="bio-desc mt-2">Capacita para operar autoclave com segurança e eficácia: o ciclo completo do material, da limpeza ao armazenamento, seguindo as melhores práticas.</p>
-                </div>
-                <a class="bio-btn" href="https://www.go.senac.br/cursos/esterilizacao-e-medidas-de-biosseguranca/" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-user-shield"></i></div>
-                <p class="bio-titulo mt-3">Biossegurança para Profissionais de Beleza</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac SP · 36 horas · certificado aceito no Brasil</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Biossegurança para Profissionais de Beleza</p>
-                  <p class="bio-desc mt-2">O mais completo para salão: legislação e órgãos de fiscalização (Anvisa, NRs, RDC, ABNT, Inmetro), riscos biológicos, químicos e físicos, uso de EPIs e classificação de itens por nível de desinfecção.</p>
-                </div>
-                <a class="bio-btn" href="https://www.sp.senac.br/cursos-livres/curso-de-biosseguranca-para-profissionais-de-beleza" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div>
-        <h3 class="bio-grupo-titulo">Cabeleireiro e reciclagem</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-scissors"></i></div>
-                <p class="bio-titulo mt-3">Cabeleireiro</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac SP · formação completa · certificado</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Cabeleireiro</p>
-                  <p class="bio-desc mt-2">Formação profissional completa: hidratação e reconstrução dos fios, coloração e descoloração, cortes e penteados, com conceitos de visagismo. Serve para quem está começando e para quem quer se reciclar.</p>
-                </div>
-                <a class="bio-btn" href="https://www.sp.senac.br/cursos-livres/curso-de-cabeleireiro" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-flask"></i></div>
-                <p class="bio-titulo mt-3">Aperfeiçoamento em Química Capilar</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac CE · para quem já atua</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Aperfeiçoamento em Química Capilar</p>
-                  <p class="bio-desc mt-2">Reciclagem para cabeleireiro que já trabalha: coloração e descoloração com métodos avançados, correção de cor e segurança química nos procedimentos capilares.</p>
-                </div>
-                <a class="bio-btn" href="https://cursos.ce.senac.br/produto/cabeleireiro-2/" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-graduation-cap"></i></div>
-                <p class="bio-titulo mt-3">Cabeleireiro Básico</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · online · certificado digital</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Cabeleireiro Básico</p>
-                  <p class="bio-desc mt-2">Curso introdutório para quem está voltando ao mercado ou começando: conceitos básicos, técnicas de corte, escova e cuidados com os cabelos.</p>
-                </div>
-                <a class="bio-btn" href="https://www.ginead.com.br/curso/curso-online-gratis-cabeleireiro-basico" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div>
-        <h3 class="bio-grupo-titulo">Normas oficiais da Anvisa — para consulta</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-scale-balanced"></i></div>
-                <p class="bio-titulo mt-3">O que observar no Salão de Beleza</p>
-                <div><span class="bio-tag oficial">Oficial</span></div>
-                <p class="bio-meta mt-auto">Anvisa · leitura oficial</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">O que observar no Salão de Beleza</p>
-                  <p class="bio-desc mt-2">É aqui que a Anvisa orienta o uso da autoclave em vez da estufa — porque a estufa não elimina vírus. Explica também regularização, higiene, produtos e boas práticas dos profissionais.</p>
-                </div>
-                <a class="bio-btn" href="https://www.gov.br/anvisa/pt-br/assuntos/noticias-anvisa/2018/o-que-observar-no-salao-de-beleza" target="_blank" rel="noopener">Ler na Anvisa</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-circle-question"></i></div>
-                <p class="bio-titulo mt-3">Perguntas e Respostas: Serviços de Embelezamento</p>
-                <div><span class="bio-tag oficial">Oficial</span></div>
-                <p class="bio-meta mt-auto">Anvisa · documento em PDF</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Perguntas e Respostas: Serviços de Embelezamento</p>
-                  <p class="bio-desc mt-2">As dúvidas mais comuns sobre serviços de embelezamento já respondidas pela própria Anvisa. Vale ter à mão no dia de uma inspeção sanitária.</p>
-                </div>
-                <a class="bio-btn" href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/perguntas-e-respostas-servicos-de-embelezamento" target="_blank" rel="noopener">Ler na Anvisa</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-file-shield"></i></div>
-                <p class="bio-titulo mt-3">Nota Técnica nº 2/2024 <span class="text-amber-400">(suspensa em 23/09/2026)</span></p>
-                <div><span class="bio-tag oficial">Oficial</span></div>
-                <p class="bio-meta mt-auto">Anvisa · o documento mais recente</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Nota Técnica nº 2/2024</p>
-                  <p class="bio-desc mt-2">Esclarece quais normas sanitárias valem hoje para serviços de estética. É o documento mais atualizado da lista — leia antes de mudar qualquer processo do salão.</p>
-                </div>
-                <a class="bio-btn" href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/notas-tecnicas/notas-tecnicas-vigentes/nota-tecnica-no-2-2024-sei-ggtes-dire3-anvisa-esclarecimentos-sobre-os-servicos-de-estetica-e-atendimento-as-normas-sanitarias-aplicaveis-a-esses-servicos/%40%40download/file" target="_blank" rel="noopener">Ler na Anvisa</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-<p class="text-[10px] text-zinc-500 border-t border-white/10 pt-4">Os cursos gratuitos têm certificado válido como capacitação, mas não conferem habilitação técnica. Para o salão se proteger numa fiscalização, prefira os cursos do Senac.</p>
-  </div>
-</details>
-
-
-    <!-- CHAT INTERATIVO DO PROFISSIONAL COM O ESTABELECIMENTO -->
-    <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
-      <h3 class="text-xs font-bold text-white uppercase flex items-center gap-2">
-        <i class="fa-solid fa-comments text-brand-500"></i> Chat com o Estabelecimento
-      </h3>
-      <div id="chat-historico-prof" class="space-y-2.5 max-h-52 overflow-y-auto pr-2 flex flex-col text-xs">
-        <p class="text-zinc-500 text-center py-2">Carregando conversa...</p>
-      </div>
-      <div class="flex gap-2 pt-2 border-t border-white/10">
-        <input type="text" id="prof-recado-input" placeholder="Escreva uma mensagem para o salão..." class="flex-grow glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRecadoEstabelecimento()">
-        <button onclick="App.enviarRecadoEstabelecimento()" class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition shrink-0">
-          <i class="fa-solid fa-paper-plane"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- CAIXA DE MENSAGENS / RECADOS RECEBIDOS (Visível para o Admin) -->
-  <div class="admin-only glass-water p-5 rounded-2xl border border-white/10 space-y-3">
-    <div class="flex items-center justify-between">
-      <h3 class="text-xs font-bold text-white uppercase flex items-center gap-2">
-        <i class="fa-solid fa-inbox text-brand-500"></i> Mensagens e Recados Recebidos da Equipe
-      </h3>
-      <span class="text-[10px] text-zinc-400">Comunicação interna</span>
-    </div>
-    <div id="lista-recados-estab" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-      <p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>
-    </div>
-    <div class="pt-3 border-t border-white/10 flex gap-2">
-      <input type="text" id="admin-resposta-input" placeholder="Escrever resposta ou aviso para a equipe..." class="flex-grow glass-input rounded-xl px-3.5 py-2 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRespostaAdmin()">
-      <button onclick="App.enviarRespostaAdmin()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition shrink-0">
-        <i class="fa-solid fa-paper-plane mr-1"></i> Responder
-      </button>
-    </div>
-  </div>
-
-  <!-- CONTROLE DE CALENDÁRIO & NAVEGAÇÃO -->
-  <div class="glass-water p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500 mr-1.5"></i> Data:</span>
-      <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-left"></i></button>
-      <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
-      <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-right"></i></button>
-      <button onclick="App.irParaHoje()" class="px-3 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-xs font-bold text-brand-400 hover:bg-brand-500/30 transition">Hoje</button>
-      <span class="hidden sm:inline-block w-px h-5 bg-white/10 mx-1"></span>
-      <button id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="modo-btn ativo">Dia</button>
-      <button id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="modo-btn">Semana</button>
-    </div>
-    <div class="flex items-center gap-3">
-      <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
-        <option value="" disabled selected>Saltar para Mês...</option>
-        <option value="9">Outubro 2026</option>
-        <option value="10">Novembro 2026</option>
-        <option value="11">Dezembro 2026</option>
-        <option value="0">Janeiro 2027</option>
-      </select>
-      <button onclick="App.abrirMarcar()" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
-    </div>
-  </div>
-
-  <!-- BARRA DE PROFISSIONAIS (mobile) -->
-  <button onclick="document.getElementById('ag-lateral').classList.toggle('aberta')" class="ag-lateral-toggle lg:hidden w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white uppercase items-center justify-between">
-    <span><i class="fa-solid fa-users text-brand-500 mr-2"></i> Profissionais</span>
-    <i class="fa-solid fa-chevron-down text-zinc-500"></i>
-  </button>
-
-  <!-- MENU DO DIA (≡) -->
-  <div id="menu-dia-pop" class="hidden">
-    <p id="menu-dia-rotulo" class="md-rot">Dia</p>
-
-    <label>Motivo</label>
-    <select id="menu-dia-motivo">
-      <option value="Fechado">Fechado</option>
-      <option value="Folga">Folga</option>
-      <option value="Feriado">Feriado</option>
-      <option value="Almoço">Almoço</option>
-      <option value="Manutenção">Manutenção</option>
-      <option value="Curso">Curso</option>
-    </select>
-
-    <div class="md-check">
-      <input type="checkbox" id="menu-dia-todos">
-      <label for="menu-dia-todos" style="margin:0;">Só o profissional selecionado</label>
-    </div>
-
-    <button type="button" class="md-btn principal" onclick="App.fecharAgendaDia()"><i class="fa-solid fa-lock mr-1"></i> Fechar o dia</button>
-
-    <label>Fechar um intervalo</label>
-    <div class="md-linha">
-      <div><input type="time" id="menu-dia-de" value="12:00"></div>
-      <div><input type="time" id="menu-dia-ate" value="13:00"></div>
-    </div>
-    <button type="button" class="md-btn neutro" onclick="App.fecharAgendaIntervalo()"><i class="fa-solid fa-clock mr-1"></i> Fechar intervalo</button>
-
-    <button type="button" class="md-btn neutro" onclick="App.trocarModoAgenda('dia')"><i class="fa-solid fa-list mr-1"></i> Ver este dia</button>
-  </div>
-
-  <!-- AGENDA: LATERAL + GRADE -->
-  <div class="ag-layout ag-modo-dia" id="agenda-modos">
-    <aside id="ag-lateral" class="ag-lateral">
-      <p class="ag-lateral-titulo">Profissionais</p>
-      <input type="text" id="ag-busca-prof" class="ag-busca" placeholder="Buscar..." oninput="App.filtrarLateralProfs(this.value)">
-      <div id="ag-lista-profs"></div>
-    </aside>
-
-    <div class="space-y-6">
-      <!-- MODO DIA: a agenda de sempre -->
-      <div id="agenda-modo-dia" class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
-        <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
-          <thead>
-            <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
-              <th class="py-3 px-4 w-24">Horário</th>
-            </tr>
-          </thead>
-          <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
-        </table>
-      </div>
-
-      <!-- MODO SEMANA: a visão nova -->
-      <div id="agenda-modo-semana" class="hidden">
-        <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 shadow-2xl">
-          <div class="semana-scroll">
-            <table class="semana-tabela">
-              <thead><tr id="semana-cabecalho" class="bg-zinc-950/90 border-b border-white/10"></tr></thead>
-              <tbody id="semana-corpo" class="semana-corpo"></tbody>
-            </table>
-          </div>
-        </div>
-        <p class="text-[10px] text-zinc-500 mt-3"><i class="fa-solid fa-circle-info mr-1"></i> Toque no <strong class="text-zinc-300">≡</strong> de cada dia para fechar o dia, fechar um intervalo ou abrir a agenda detalhada. No celular, a semana mostra um dia por vez.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- AGENDAR -->
-<div id="modal-marcar" class="modal-overlay flex">
-  <div class="modal-caixa">
-    <div class="flex items-center justify-between mb-5">
-      <h3 class="text-base font-bold uppercase text-white">Marcar Atendimento</h3>
-      <button type="button" onclick="Auth.fecharModal('modal-marcar')" class="modal-x-fixo text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
-        <input id="agendamento-data" type="date" required onchange="App.aplicarHorariosLivres()" data-preencher-hoje class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional *</label>
-        <select id="agendamento-profissional" required onchange="App.aplicarHorariosLivres()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
-        <input id="cliente-servico" type="text" required placeholder="Ex: Corte de Cabelo / Barba" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Início *</label>
-        <input type="time" id="agendamento-horario" required step="1800" min="06:00" max="23:30" value="08:00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fim *</label>
-        <input type="time" id="agendamento-horario-fim" required step="1800" min="06:00" max="23:30" value="08:30" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <p id="aviso-encaixe" class="hidden text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-2">Colocando um serviço DENTRO do atendimento. O horário não será bloqueado.</p>
-      <div class="flex items-center gap-2 p-3 rounded-xl bg-zinc-950 border border-white/10">
-        <input type="checkbox" id="agendamento-encaixe" class="w-4 h-4">
-        <label for="agendamento-encaixe" class="text-[11px] text-zinc-300">Aceita encaixe dentro deste atendimento (ex: escova durante o notavel)</label>
-      </div>
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <label class="block text-xs uppercase font-bold text-zinc-400">Cliente *</label>
-          <button type="button" onclick="App.novoClienteDaAgenda()" class="text-[10px] font-bold uppercase text-brand-500 hover:text-white">+ Cadastrar cliente</button>
-        </div>
-        <input id="cliente-nome" type="text" required list="lista-clientes-agenda" placeholder="Nome completo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        <datalist id="lista-clientes-agenda"></datalist>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Valor Final (R$) *</label>
-        <input id="cliente-valor" type="number" step="0.01" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Confirmar Agendamento</button>
-    </form>
-  </div>
-</div>
-
-<!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
-
-
-<!-- EQUIPE -->
-<section id="aba-equipe" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Gestão de Equipe e Turnos</h2>
-        <p class="text-xs text-zinc-400">Controle de fotos, credenciais de acesso por CPF e exclusão</p>
-      </div>
-    </div>
-    <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
-            <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
-        <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center relative">
-          <img alt="Foto do profissional" id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
-          <i id="icon-foto-prof" class="fa-solid fa-user text-zinc-600 text-2xl"></i>
-        </div>
-        <div class="flex-grow space-y-1">
-          <label class="block text-xs uppercase font-bold text-zinc-400">Foto de Perfil</label>
-          <input type="file" id="prof-foto-file" accept="image/*" onchange="App.handleFotoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800">
-          <p class="text-[10px] text-zinc-500">Se não colocar agora, o profissional pode enviar depois na aba dele.</p>
-        </div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo *</label>
-          <input type="text" id="prof-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Especialidade / Cargo *</label>
-          <input type="text" id="prof-cargo" placeholder="Ex: Master Colorista" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Chave de acesso (11 números) *</label>
-          <input type="text" id="prof-cpf" inputmode="numeric" maxlength="11" placeholder="11 números que o profissional escolheu" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          <p class="text-[10px] text-zinc-500 mt-1">Informativo: são 11 números livres. Pode ser o CPF ou qualquer número que o profissional escolher. É com ele + o nome que o profissional entra no salão.</p>
-        </div>
-        <div>
-          <input type="hidden" id="prof-senha">
-        </div>
-      </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Cadastrar Profissional</button>
-    </form>
-    <div class="border-t border-white/10 pt-6 space-y-4">
-      <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
-      <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-    </div>
-
-    <div class="border-t border-white/10 pt-6 space-y-4">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h3 class="text-xs font-bold text-zinc-400 uppercase"><i class="fa-solid fa-star text-yellow-400 mr-1"></i> Avaliação da Equipe</h3>
-          <p class="text-[10px] text-zinc-500">Pontos registrados pelo salão quando a cliente elogia. Uso interno.</p>
-        </div>
-        <span id="ranking-total-clientes" class="text-[10px] font-bold text-zinc-500 uppercase"></span>
-      </div>
-      <div id="ranking-profissionais" class="space-y-3"></div>
-    </div>
-  </div>
-</section>
-
-<!-- ESTOQUE / PRODUTOS -->
-
-
-<!-- GESTÃO DO SALÃO: Serviços, Estoque e Avaliação de Profissional -->
-<section id="aba-gestao" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-
-  <!-- Botões do espaço -->
-  <div class="glass-water rounded-3xl p-3 border border-white/10 flex flex-wrap gap-2">
-    <button id="btn-espaco-servicos" onclick="UI.trocarEspaco('servicos')" class="flex-1 min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2.5 rounded-2xl bg-brand-500/15 text-brand-500 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-scissors"></i> Serviços</button>
-    <button id="btn-espaco-produtos" onclick="UI.trocarEspaco('produtos')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-boxes-stacked"></i> Estoque</button>
-    <button id="btn-espaco-avaliacoes" onclick="UI.trocarEspaco('avaliacoes-nova')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-star"></i> Avaliação de Profissional</button>
-    <button id="btn-espaco-config-salao" onclick="UI.trocarEspaco('config-salao')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-store"></i> Configuração do Salão</button>
-    <button id="btn-espaco-notas" onclick="UI.trocarEspaco('notas')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-file-invoice-dollar"></i> Notas e Comissões</button>
-  </div>
-
-<section id="aba-servicos" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Catálogo de Serviços & Comissões</h2>
-        <p class="text-xs text-zinc-400">Cadastro de procedimentos e comissão percentual</p>
-      </div>
-    </div>
-    <form onsubmit="App.handleCreateServico(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="md:col-span-2">
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Serviço *</label>
-        <input type="text" id="serv-nome" required placeholder="Ex: Progressiva / Corte" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
-        <input type="number" step="0.01" id="serv-preco" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Comissão (%)</label>
-        <input type="number" id="serv-comissao" value="50" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="md:col-span-4 flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar Serviço</button>
-      </div>
-    </form>
-    <div id="lista-servicos" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-  </div>
-</section>
-
-<section id="aba-produtos" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Estoque e Alertas de Validade</h2>
-        <p class="text-xs text-zinc-400">Controle de inventário para venda e uso interno</p>
-      </div>
-      <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">Estoque Regular</span>
-    </div>
-    <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Produto *</label>
-        <input type="text" id="prod-nome" required placeholder="Ex: Máscara Hidratação" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Finalidade *</label>
-        <select id="prod-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          <option value="venda">Venda ao Cliente</option>
-          <option value="uso">Uso Interno</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
-        <input type="number" step="0.01" id="prod-preco" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Quantidade *</label>
-        <input type="number" id="prod-stock" required placeholder="0" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data de Validade *</label>
-        <input type="date" id="prod-validade" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="md:col-span-5 flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar ao Estoque</button>
-      </div>
-    </form>
-    <div id="lista-produtos" class="grid grid-cols-1 gap-4"></div>
-  </div>
-</section>
-
-<section id="aba-avaliacoes-nova" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-6 sm:p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-start border-b border-white/10 pb-4 gap-3 flex-wrap">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white"><i class="fa-solid fa-star text-yellow-400 mr-2"></i>Avaliação</h2>
-        <p class="text-xs text-zinc-400">O salão registra o ponto. A barra tem o tamanho da base de clientes.</p>
-      </div>
-      <span id="aval-total-clientes" class="text-[10px] font-bold uppercase text-zinc-400 px-3 py-1.5 rounded-full bg-zinc-900 border border-white/10">0 cliente(s) na base</span>
-    </div>
-    <div class="flex gap-2">
-      <button id="btn-aval-prof" onclick="UI.trocarTipoAvaliacao('prof')" class="flex-1 px-4 py-3 rounded-2xl bg-brand-500/15 text-brand-500 text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-user-tie"></i> Profissional</button>
-    </div>
-    <div class="relative">
-      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-      <input type="text" id="aval-busca" oninput="App.renderAvaliacao()" placeholder="Pesquisar por nome, telefone ou cargo..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
-    </div>
-    <div id="aval-lista" class="space-y-3"></div>
-    <div class="pt-2 border-t border-white/10">
-      <p class="text-[10px] font-bold uppercase text-zinc-500 mb-3">Ranking do salão</p>
-      <div id="ranking-gestao" class="space-y-2"></div>
-    </div>
-  </div>
-</section>
-
-<!-- TELA DE BOAS-VINDAS (primeiro login) -->
-
-
-<!-- AGENDA PAINEL PRINCIPAL -->
-
-
-<!-- AGENDAR -->
-<!-- janela de agendamento duplicada removida -->
-
-<!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
-
-
-<!-- EQUIPE -->
-
-
-<!-- ESTOQUE / PRODUTOS -->
-
-
-<!-- GESTÃO DO SALÃO: Serviços, Estoque e Avaliação de Profissional -->
-v>
-
-    <div class="pt-2 border-t border-white/10">
-      <p class="text-[10px] font-bold uppercase text-zinc-500 mb-3">Ranking do salão</p>
-      <!-- painel de ranking duplicado removido -->
-    </div>
-  </div>
-</section>
-
-
-<!-- PLANOS & MERCADO PAGO -->
-
-<section id="aba-config-salao" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="border-b border-white/10 pb-4">
-      <h2 class="text-xl font-bold uppercase text-white">Configuração do Salão</h2>
-      <p class="text-xs text-zinc-400">Nome, contato, endereço e horários de funcionamento</p>
-    </div>
-    <p class="text-xs text-zinc-400">Esta aba reúne o que o salão precisa para operar. Preencha e clique em Salvar.</p>
-    <form onsubmit="App.handleSalvarConfiguracoes(event)" class="space-y-5">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
-          <input type="text" id="cfg-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CNPJ</label>
-          <input type="text" id="cfg-cnpj" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="00.000.000/0001-00">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-          <input type="email" id="cfg-email" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">WhatsApp</label>
-          <input type="tel" id="cfg-whatsapp" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Logotipo do Salão</label>
-          <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
-            <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-              <img alt="Logo do salao" id="cfg-logo-preview" src="" class="w-full h-full object-cover hidden">
-              <i id="cfg-logo-icone" class="fa-solid fa-store text-zinc-600 text-2xl"></i>
-            </div>
-            <div class="flex-grow space-y-1">
-              <input type="file" id="cfg-logo-arquivo" accept="image/*" onchange="App.handleLogoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-500 file:text-white hover:file:bg-brand-600 cursor-pointer">
-              <p class="text-[10px] text-zinc-500">Aparece no topo do sistema. Sem logo, fica a tesoura.</p>
-            </div>
-          </div>
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Endereço</label>
-          <input type="text" id="cfg-endereco" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cidade</label>
-          <input type="text" id="cfg-cidade" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">UF</label>
-          <input type="text" id="cfg-uf" maxlength="2" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="SP">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CEP</label>
-          <input type="text" id="cfg-cep" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Instagram</label>
-          <input type="text" id="cfg-instagram" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Abre às</label>
-          <input type="time" id="cfg-abertura" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Fecha às</label>
-          <input type="time" id="cfg-fechamento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-      </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar configuração</button>
-    </form>
-  </div>
-</section>
-
-<section id="aba-notas" class="espaco-painel hidden space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="border-b border-white/10 pb-4">
-      <h2 class="text-xl font-bold uppercase text-white">Dados Fiscais</h2>
-      <p class="text-xs text-zinc-400">Aparecem no cabeçalho do recibo e identificam o prestador</p>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Inscrição Municipal</label>
-        <input type="text" id="cfg-inscricao-municipal" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Código do serviço (prefeitura)</label>
-        <input type="text" id="cfg-codigo-servico" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Alíquota do ISS (%)</label>
-        <input type="number" id="cfg-aliquota" step="0.01" min="0" max="100" value="0" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-    </div>
-    <button onclick="App.salvarDadosFiscais()" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-200 font-bold text-xs uppercase tracking-wider hover:text-white transition">Salvar dados fiscais</button>
-  </div>
-
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-5 shadow-2xl">
-    <div class="border-b border-white/10 pb-4">
-      <h2 class="text-xl font-bold uppercase text-white">Comissão por Tipo de Profissional</h2>
-      <p class="text-xs text-zinc-400">Percentual que o salão paga a cada tipo. De 0 a 100%.</p>
-    </div>
-    <div id="lista-comissoes-tipo" class="space-y-2"></div>
-    <button onclick="App.salvarComissoesTipo()" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar comissões</button>
-  </div>
-</section>
-
-<section id="aba-planos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="text-center space-y-2 mb-6">
-      <h2 class="text-xl font-bold uppercase text-white">Planos Oficiais do Salão</h2>
-      <p class="text-xs text-zinc-400">Escolha o plano ideal com integração direta ao Mercado Pago</p>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Plano Grátis -->
-      <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
-        <span class="px-3 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase rounded-full">Básico</span>
-        <h4 class="text-base font-bold text-white uppercase">Plano Grátis</h4>
-        <p class="text-2xl font-black text-brand-500">R$ 0</p>
-        <p class="text-xs text-zinc-400">Até 2 profissionais na equipe.</p>
-        <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs hover:bg-zinc-800 transition">Selecionar Grátis</button>
-      </div>
-      <!-- Plano Mensal -->
-      <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative">
-        <div class="absolute -right-3 -top-3 bg-brand-500 text-white text-[9px] font-bold uppercase px-3 py-1 rounded-full shadow-lg">Mais Popular</div>
-        <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Profissional</span>
-        <h4 class="text-base font-bold text-white uppercase">Plano Mensal</h4>
-        <p class="text-2xl font-black text-white">R$ 30,00<span class="text-xs text-zinc-400">/mês</span></p>
-        <p class="text-[10px] font-bold uppercase text-emerald-400">PIX ou QR Code</p>
-        <p class="text-xs text-zinc-400">Até 10 profissionais na equipe.</p>
-        <button onclick="App.setPlan('mensal')" class="block w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase text-center transition shadow-lg shadow-brand-500/20">Assinar Mensal</button>
-        <button onclick="App.pagarComPix('mensal')" class="block w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase text-center transition cursor-pointer">PIX</button>
-      </div>
-      <!-- Plano Anual -->
-      <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
-        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Enterprise</span>
-        <h4 class="text-base font-bold text-white uppercase">Plano Anual</h4>
-        <p class="text-2xl font-black text-blue-400">R$ 300,00<span class="text-xs text-zinc-400">/ano</span></p>
-        <p class="text-[10px] font-bold uppercase text-emerald-400">PIX ou QR Code</p>
-        <p class="text-xs text-zinc-400">Até 30 profissionais na equipe.</p>
-        <button onclick="App.setPlan('anual')" class="block w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase text-center transition shadow-lg">Assinar Anual</button>
-        <button onclick="App.pagarComPix('anual')" class="block w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase text-center transition cursor-pointer">PIX</button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- AVALIAÇÕES -->
-
-
-<!-- RELATÓRIOS -->
-<section id="aba-relatorios" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Relatórios Gerenciais</h2>
-        <p class="text-xs text-zinc-400">Histórico de caixa e indicadores acumulados</p>
-      </div>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-        <span class="text-[10px] text-zinc-400 uppercase font-bold">Faturamento Total</span>
-        <h3 id="relatorio-faturamento" class="text-xl font-black text-emerald-400">R$ 0,00</h3>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-        <span class="text-[10px] text-zinc-400 uppercase font-bold">Atendimentos</span>
-        <h3 id="relatorio-atendimentos" class="text-xl font-black text-brand-500">0</h3>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-        <span class="text-[10px] text-zinc-400 uppercase font-bold">Clientes Atendidos</span>
-        <h3 id="relatorio-clientes" class="text-xl font-black text-white">0</h3>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CONFIGURAÇÕES DO ESTABELECIMENTO -->
-<section id="aba-configuracoes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Configurações do Estabelecimento</h2>
-        <p class="text-xs text-zinc-400">Gerencie todas as informações do seu negócio, endereço e identidade visual</p>
-      </div>
-    </div>
-
-    <form onsubmit="App.handleSalvarConfiguracoes(event)" class="space-y-6">
-      
-      <!-- Seção 1: Identidade Visual e Logotipo -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Identidade Visual</h3>
-        <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
-          <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-            <img alt="Foto do profissional" id="preview-logo-salao" src="" class="w-full h-full object-cover hidden">
-            <i id="icon-logo-salao" class="fa-solid fa-store text-zinc-600 text-2xl"></i>
-          </div>
-          <div class="flex-grow space-y-1">
-            <label class="block text-xs uppercase font-bold text-zinc-400">Logotipo do Salão</label>
-            <input type="file" id="config-logo-file" accept="image/*" onchange="App.handleLogoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-500 file:text-white hover:file:bg-brand-600 cursor-pointer">
-          </div>
-        </div>
-      </div>
-
-      <!-- Seção 2: Informações do Negócio -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Informações do Negócio</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
-            <input type="text" id="config-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="Ex: HairConcept Studio">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CNPJ</label>
-            <input type="text" id="config-cnpj" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="00.000.000/0001-00">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail de Contato *</label>
-            <input type="email" id="config-email-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
-            <input type="text" id="config-whatsapp" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="(00) 90000-0000">
-          </div>
-        </div>
-      </div>
-
-      <!-- Seção 3: Endereço e Localização -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Endereço e Localização</h3>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Endereço Físico Completo</label>
-          <input type="text" id="config-endereco" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="Ex: Rua das Flores, 123 - Centro - São Paulo/SP">
-        </div>
-      </div>
-
-      <!-- Seção 4: Redes Sociais -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Redes Sociais</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1"><i class="fa-brands fa-instagram text-rose-500 mr-1"></i> Instagram</label>
-            <input type="text" id="config-instagram" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="@seusalao">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1"><i class="fa-brands fa-facebook text-blue-500 mr-1"></i> Facebook</label>
-            <input type="text" id="config-facebook" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="facebook.com/seusalao">
-          </div>
-        </div>
-      </div>
-
-      <!-- Seção 5: Horários de Funcionamento -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Horários de Funcionamento Padrão</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Abertura</label>
-            <input type="time" id="config-horario-abertura" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fechamento</label>
-            <input type="time" id="config-horario-fechamento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          </div>
-        </div>
-      </div>
-
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition-all shadow-lg shadow-brand-500/20">
-        Salvar Todas as Alterações
-      </button>
-    </form>
-
-    <!-- ===== MODELO DA AGENDA ===== -->
-    <div class="border-t border-white/10 pt-6 mt-6">
-      <h3 class="text-xs font-bold text-white uppercase mb-1"><i class="fa-solid fa-calendar-week text-brand-500 mr-1.5"></i> Modelo da Agenda</h3>
-      <p class="text-[11px] text-zinc-400 mb-3">Escolha como a agenda abre para o salão inteiro, em qualquer aparelho.</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Modelo padrão</label>
-          <select id="config-modelo-agenda" onchange="App.salvarModeloAgenda(this.value)" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="semana">Semana do profissional (Seg a Sáb)</option>
-            <option value="dia">Agenda do dia (todos os profissionais)</option>
-          </select>
-        </div>
-        <div class="p-3 rounded-xl bg-zinc-900 border border-white/10">
-          <p class="text-[10px] text-zinc-400"><strong class="text-white">Semana</strong> mostra a semana de um profissional por vez — bom para planejar.<br><strong class="text-white">Dia</strong> mostra todos lado a lado — bom para o balcão.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== AVISO DE EXCLUSÃO ===== -->
-    <div id="aviso-exclusao" class="hidden border border-rose-500/40 bg-rose-500/10 rounded-2xl p-4 mt-6">
-      <p class="text-xs font-bold text-rose-300 uppercase"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Conta marcada para exclusão</p>
-      <p class="text-[11px] text-rose-200/90 mt-1">Seus dados serão apagados definitivamente em <strong id="aviso-exclusao-data">—</strong>. Você ainda pode voltar atrás.</p>
-      <button type="button" onclick="App.cancelarExclusaoConta()" class="mt-3 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 font-bold text-[10px] uppercase transition">
-        <i class="fa-solid fa-rotate-left mr-1"></i> Cancelar exclusão
-      </button>
-    </div>
-
-    <!-- ===== ZONA DE EXCLUSÃO ===== -->
-    <div id="zona-exclusao" class="border-t border-rose-500/20 pt-6 mt-6">
-      <h3 class="text-xs font-bold text-rose-400 uppercase mb-1"><i class="fa-solid fa-user-xmark mr-1.5"></i> Excluir minha conta</h3>
-      <p class="text-[11px] text-zinc-400">Ao excluir, seus dados ficam guardados por <strong class="text-white">7 dias</strong> e depois são apagados definitivamente — agenda, clientes, profissionais, comissões e histórico. Nesse prazo você pode entrar e cancelar.</p>
-      <button type="button" onclick="App.pedirExclusaoConta()" class="mt-3 px-4 py-2 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 font-bold text-[10px] uppercase transition">
-        <i class="fa-solid fa-trash mr-1"></i> Excluir minha conta
-      </button>
-    </div>
-  </div>
-</section>
-</main>
-
-<!-- AVISOS E PEDIDOS DOS CLIENTES -->
-<section id="aba-avisos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4">
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-      <div>
-        <h2 class="text-lg font-bold uppercase text-white">Avisos e Pedidos</h2>
-        <p class="text-[11px] text-zinc-400">Pedidos de senha, reclamações e solicitações de exclusão enviados pelos clientes</p>
-      </div>
-      <button onclick="App.carregarAvisos()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition">
-        <i class="fa-solid fa-rotate"></i> Atualizar
-      </button>
-    </div>
-    <div id="lista-avisos" class="space-y-3"></div>
-  </div>
-
-  <!-- ===== DOCUMENTOS DO SALÃO (dono) ===== -->
-  <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4">
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-      <div>
-        <h2 class="text-lg font-bold uppercase text-white"><i class="fa-solid fa-shield-virus text-brand-500 mr-2"></i>Documentos do Salão</h2>
-        <p class="text-[11px] text-zinc-400">O que a fiscalização sanitária pede. Fica aqui, na área do estabelecimento — é documento do salão, não do profissional.</p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10">
-        <p class="text-[11px] font-bold text-white uppercase"><i class="fa-solid fa-file-lines text-brand-500 mr-1.5"></i> POP — Procedimento Operacional Padrão</p>
-        <p class="text-[10px] text-zinc-400 mt-1">Os cinco procedimentos essenciais e as fichas de registro do ciclo da autoclave.</p>
-        <a href="pop-biosseguranca-salao.pdf" download class="bio-btn mt-3"><i class="fa-solid fa-download mr-1"></i> Baixar PDF</a>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10">
-        <p class="text-[11px] font-bold text-white uppercase"><i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1.5"></i> Alvará e Licença Sanitária</p>
-        <p class="text-[10px] text-zinc-400 mt-1">Emitidos pela prefeitura e pela Vigilância do seu município. Procure "Vigilância Sanitária" no site da sua prefeitura para solicitar e renovar.</p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Sobre o salão em si</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Página oficial da Anvisa: como saber se o produto é autorizado, produtos irregulares e proibidos, e como relatar problemas.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica/produtos-alisantes-e-ondulantes-para-cabelo" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Alisantes e o formol</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Formol e glutaraldeído não podem ser usados como alisantes. Adicionar formol a um produto pronto é infração sanitária e crime hediondo.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/perguntas-e-respostas-servicos-de-embelezamento" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Dúvidas sobre o seu serviço</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Perguntas e respostas dos serviços de embelezamento. É onde a Anvisa explica se existe lei federal obrigando autoclave.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/rdc-222-de-marco-de-2018-comentada.pdf/view" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Descarte de resíduos</p>
-          <p class="text-[10px] text-zinc-400 mt-1">RDC 222/2018 comentada: a classificação dos resíduos e todas as etapas, da segregação ao destino final. Lâmina e agulha não vão no lixo comum.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://sebrae.com.br/sites/PortalSebrae/artigos/conheca-as-boas-praticas-para-saloes-de-beleza,1d978041d13b2510VgnVCM1000004c00210aRCRD" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Manual de Boas Práticas</p>
-          <p class="text-[10px] text-zinc-400 mt-1">O Sebrae explica as boas práticas do salão e indica o guia da ABNT específico do setor, com o roteiro de instalações e rotinas.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Sebrae →</span>
-        </a>
-
-        <a href="https://www.gov.br/saude/pt-br/vacinacao" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Vacinação do profissional</p>
-          <p class="text-[10px] text-zinc-400 mt-1">A fiscalização confere o calendário de vacinação, em especial Hepatite B e tétano. Veja como atualizar a caderneta.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Gov.br →</span>
-        </a>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/25">
-        <p class="text-[10px] text-amber-200/90"><strong class="text-amber-400">Alvará e licença sanitária:</strong> são emitidos pela prefeitura e pela Vigilância Sanitária do seu município — não existe link nacional para isso. Procure "Vigilância Sanitária" no site da sua prefeitura para ver como solicitar e renovar.</p>
-      </div>
-  </div>
-</section>
-
-<!-- CLIENTES CADASTRADOS -->
-<section id="aba-clientes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex items-center justify-between border-b border-white/10 pb-4 gap-4 flex-wrap">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white"><i class="fa-solid fa-address-book text-brand-500 mr-2"></i>Clientes</h2>
-        <p class="text-xs text-zinc-400">Contatos do salão. Busque por telefone, nome ou CPF e fale com o cliente.</p>
-      </div>
-      <span id="clientes-total" class="text-xs font-bold text-brand-500 uppercase"></span>
-    </div>
-
-    <form onsubmit="App.handleCreateCliente(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="sm:col-span-2">
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo *</label>
-        <input type="text" id="cli-nome" required placeholder="Ex: Antonia Silva" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
-        <input type="tel" id="cli-telefone" placeholder="(11) 90000-0000" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF</label>
-        <input type="text" id="cli-cpf" placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="sm:col-span-2 lg:col-span-3">
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-        <input type="email" id="cli-email" placeholder="cliente@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg"><i class="fa-solid fa-plus mr-1"></i> Adicionar</button>
-      </div>
-    </form>
-
-    <div class="border-t border-white/10 pt-5 space-y-4">
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="relative flex-grow min-w-[200px]">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-          <input type="text" id="busca-clientes" oninput="App.renderClientes()" placeholder="Buscar por telefone, nome ou CPF..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
-        </div>
-        <span class="text-[10px] text-zinc-500 uppercase font-bold">Sem duplicar contatos</span>
-      </div>
-      <div id="lista-clientes" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-    </div>
-  </div>
-</section>
-
-<!-- Rodapé com Créditos e Copyright -->
-<footer class="mt-12 py-6 text-center text-zinc-500 text-xs border-t border-white/10">
-    <p>Criado e desenvolvido por <span class="text-zinc-300 font-bold">rodrigocode2 / rodrigo-n-s@live.com</span> &copy; 2026. Todos os direitos reservados.</p>
-</footer>
-
-<!-- Script do Efeito de Rastro do Mouse -->
-<script>
-const canvas = document.getElementById('mouse-trail-canvas');
-const ctx = canvas.getContext('2d');
-let particles = [];
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+/* Table Responsive Adjustments */
+table th, table td {
+  white-space: nowrap;
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
 
-window.addEventListener('mousemove', (e) => {
-    for (let i = 0; i < 2; i++) {
-        particles.push({
-            x: e.clientX,
-            y: e.clientY,
-            size: Math.random() * 3 + 1,
-            speedX: (Math.random() - 0.5) * 1.5,
-            speedY: (Math.random() - 0.5) * 1.5,
-            life: 30
-        });
-    }
-});
 
-function handleParticles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = particles.length - 1; i >= 0; i--) {
-        let p = particles[i];
-        p.x += p.speedX;
-        p.y += p.speedY;
-        p.life--;
-        ctx.fillStyle = `rgba(236, 72, 153, ${p.life / 30})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-        if (p.life <= 0) {
-            particles.splice(i, 1);
-        }
-    }
-    requestAnimationFrame(handleParticles);
+.ag-atendendo  { background: rgba(59, 130, 246, 0.18);  border-color: rgba(59, 130, 246, 0.5)  !important; color: #bfdbfe; }
+.ag-finalizado { background: rgba(161, 161, 170, 0.14); border-color: rgba(161, 161, 170, 0.4) !important; color: #d4d4d8; }
+.ag-faltou     { background: rgba(239, 68, 68, 0.18);   border-color: rgba(239, 68, 68, 0.5)   !important; color: #fecaca; }
+
+.ag-cont-espera     { background: rgba(234, 179, 8, 0.18);   border: 1px solid rgba(234, 179, 8, 0.35); }
+.ag-cont-atendendo  { background: rgba(59, 130, 246, 0.18);  border: 1px solid rgba(59, 130, 246, 0.35); }
+.ag-cont-finalizado { background: rgba(161, 161, 170, 0.14); border: 1px solid rgba(161, 161, 170, 0.3); }
+.ag-cont-faltou     { background: rgba(239, 68, 68, 0.18);   border: 1px solid rgba(239, 68, 68, 0.35); }
+
+.ag-continuacao {
+  border-radius: 0.5rem;
+  min-height: 20px;
+  opacity: 0.6;
+  margin-top: 3px;
 }
-handleParticles();
-</script>
 
+.ag-encaixe {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.55);
+  color: #bbf7d0;
+  border-radius: 0.6rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 10px;
+  margin-top: 4px;
+  display: block;
+}
 
-<script>
-// No celular, a grade da semana mostra UM dia por vez, e deslizar troca de dia.
-(function () {
-  var diaAtivo = 0;
-  function aplicarDia() {
-    var cels = document.querySelectorAll('#semana-corpo .semana-cel');
-    var cabs = document.querySelectorAll('#semana-cabecalho .semana-th');
-    if (!cabs.length) return;
-    var n = cabs.length;
-    if (diaAtivo < 0) diaAtivo = n - 1;
-    if (diaAtivo >= n) diaAtivo = 0;
-    cels.forEach(function (c, i) { c.classList.toggle('mostrando', (i % n) === diaAtivo); });
-    cabs.forEach(function (c, i) { c.classList.toggle('mostrando', i === diaAtivo); });
+.ag-cor {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 9999px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.ag-cor-espera     { background: #eab308; }
+.ag-cor-atendendo  { background: #3b82f6; }
+.ag-cor-finalizado { background: #a1a1aa; }
+.ag-cor-faltou     { background: #ef4444; }
+
+/* ===== Menu do cabeçalho: aperta em telas mais estreitas ===== */
+#nav-menu {
+  max-width: 100%;
+}
+
+@media (max-width: 1500px) {
+  #nav-menu button {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.65rem;
+    letter-spacing: 0;
   }
-  window.__aplicarDiaSemana = aplicarDia;
+}
 
-  var x0 = null;
-  var alvo = document.getElementById('agenda-modo-semana');
-  if (alvo) {
-    alvo.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
-    alvo.addEventListener('touchend', function (e) {
-      if (x0 === null) return;
-      var dx = e.changedTouches[0].clientX - x0;
-      if (Math.abs(dx) > 45) { diaAtivo += (dx < 0 ? 1 : -1); aplicarDia(); }
-      x0 = null;
-    }, { passive: true });
+@media (max-width: 1280px) {
+  #nav-menu button {
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    font-size: 0.6rem;
+  }
+}
+
+/* O nome do site nunca encolhe nem quebra */
+header .font-syne {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+header .overflow-hidden {
+  min-width: 0;
+}
+
+
+/* ===== Tela de boas-vindas ===== */
+#aba-boasvindas .gota-agua {
+  animation: fadeInUp 0.45s ease both;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Espaço de Gestão: Serviços, Estoque e Avaliação ===== */
+/* Os painéis são controlados pelos botões do topo, não pelo sistema de abas. */
+.espaco-painel {
+  animation: fadeInUp 0.25s ease both;
+}
+
+.espaco-painel.hidden {
+  display: none !important;
+}
+
+
+/* ==========================================================
+   RESPONSIVO — PC, tablet e celular
+   ========================================================== */
+
+/* Evita rolagem lateral e melhora o toque no celular */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+  /* Cabeçalho mais baixo no celular */
+  header > div {
+    height: 4.25rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
-  // Reaplica sempre que a semana for redesenhada
-  var orig = window.renderAgendaSemanaHook;
-  var obs = new MutationObserver(function () { if (window.innerWidth < 768) aplicarDia(); });
-  var corpo = document.getElementById('semana-corpo');
-  if (corpo) obs.observe(corpo, { childList: true });
-  if (window.innerWidth < 768) setTimeout(aplicarDia, 400);
-})();
-</script>
+  /* O nome do salão ocupa o espaço disponível sem empurrar o resto */
+  #saloon-name-header {
+    font-size: 1rem;
+    line-height: 1.15;
+  }
 
-<!-- Script Principal -->
-<script src="app.js"></script>
-</body>
-</html>
+  /* Conteúdo principal com respiro menor */
+  main {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  /* Todas as seções ocupam a largura disponível */
+  .tab-content {
+    max-width: 100% !important;
+  }
+
+  /* Caixas internas com menos preenchimento */
+  .glass-water.rounded-3xl,
+  .glass-water.rounded-2xl {
+    padding: 1rem;
+  }
+
+  /* A grade da agenda rola na horizontal, sem empurrar a página */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Células da agenda mais compactas */
+  table th, table td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Botões de largura total, fáceis de tocar */
+  .tab-content button:not([class*="px-2"]) {
+    min-height: 2.5rem;
+  }
+
+  /* Janelas (modais) quase de tela cheia, com rolagem interna */
+  main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .tab-content {
+    max-width: 100% !important;
+  }
+}
+
+/* Telas muito estreitas: agenda ainda utilizável */
+@media (max-width: 420px) {
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  font-size: 11px;
+  border: 1px solid;
+  position: relative;
+}
+.ag-espera    { background: rgba(234, 179, 8, 0.16);  border-color: rgba(234, 179, 8, 0.45);  color: #fde68a; }
+.ag-atendendo { background: rgba(59, 130, 246, 0.16); border-color: rgba(59, 130, 246, 0.45); color: #bfdbfe; }
+.ag-finalizado{ background: rgba(161, 161, 170, 0.14);border-color: rgba(161, 161, 170, 0.4); color: #d4d4d8; }
+.ag-faltou    { background: rgba(239, 68, 68, 0.16);  border-color: rgba(239, 68, 68, 0.45);  color: #fecaca; }
+
+/* Bloco de continuação: só a faixa, sem texto repetido */
+.ag-continuacao {
+  border-radius: 0.4rem;
+  min-height: 18px;
+  opacity: 0.55;
+}
+.ag-cont-espera    { background: rgba(234, 179, 8, 0.16);  border: 1px solid rgba(234, 179, 8, 0.3); }
+.ag-cont-atendendo { background: rgba(59, 130, 246, 0.16); border: 1px solid rgba(59, 130, 246, 0.3); }
+.ag-cont-finalizado{ background: rgba(161, 161, 170, 0.14);border: 1px solid rgba(161, 161, 170, 0.28); }
+.ag-cont-faltou    { background: rgba(239, 68, 68, 0.16);  border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* Encaixe por cima de um atendimento: amarelo dentro do azul vira verde */
+.ag-encaixe {
+  background: rgba(34, 197, 94, 0.18);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  color: #bbf7d0;
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.ag-cor {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.ag-cor-espera     { background: #eab308; }
+.ag-cor-atendendo  { background: #3b82f6; }
+.ag-cor-finalizado { background: #a1a1aa; }
+.ag-cor-faltou     { background: #ef4444; }
+
+
+/* ===== Votos do cliente ===== */
+.cli-votos {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.cli-mais  { color: #4ade80; }
+.cli-menos { color: #f87171; }
+.cli-alerta {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+.cli-boa {
+  background: rgba(34, 197, 94, 0.10);
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+.cli-estrela-vermelha { color: #ef4444; }
+.cli-estrela-amarela  { color: #eab308; }
+.cli-obs {
+  font-size: 10px;
+  color: #a1a1aa;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===== Estrelas do profissional (na lista da equipe) ===== */
+.prof-estrelas {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #eab308;
+}
+.prof-barra {
+  width: 100%;
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(63, 63, 70, 0.8);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.prof-barra-cheia {
+  height: 100%;
+  border-radius: 9999px;
+  background: #eab308;
+  transition: width 0.3s ease;
+}
+
+
+/* ===== Fechamento do profissional ===== */
+.fech-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(9, 9, 11, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+.fech-linha .dia { color: #eab308; font-weight: 700; }
+.fech-linha .cli { color: #ffffff; font-weight: 700; }
+.fech-linha .val { color: #4ade80; font-weight: 700; white-space: nowrap; }
+
+
+/* ===== Aba Biossegurança: cards que viram ao passar o dedo / mouse ===== */
+.bio-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 640px) { .bio-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .bio-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.bio-card {
+  perspective: 1000px;
+  min-height: 230px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bio-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 230px;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+/* Mouse em cima: vira. Dedo encostou: vira. */
+.bio-card:hover .bio-inner,
+.bio-card:focus-within .bio-inner,
+.bio-card.virado .bio-inner {
+  transform: rotateY(180deg);
+}
+
+.bio-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 1.25rem;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  background: rgba(24, 24, 27, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.bio-costas {
+  transform: rotateY(180deg);
+  justify-content: space-between;
+}
+
+.bio-icone {
+  width: 40px; height: 40px;
+  border-radius: 0.75rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  color: #ec4899;
+  font-size: 16px;
+}
+
+.bio-titulo {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+.bio-meta {
+  font-size: 10px;
+  color: #a1a1aa;
+  line-height: 1.5;
+}
+
+.bio-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-right: 5px;
+  margin-top: 6px;
+}
+.bio-tag.gratis { background: rgba(74, 222, 128, 0.12); border: 1px solid rgba(74, 222, 128, 0.35); color: #4ade80; }
+.bio-tag.pago { background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35); color: #eab308; }
+.bio-tag.oficial { background: rgba(96, 165, 250, 0.12); border: 1px solid rgba(96, 165, 250, 0.35); color: #60a5fa; }
+
+.bio-desc {
+  font-size: 10.5px;
+  color: #d4d4d8;
+  line-height: 1.55;
+}
+
+.bio-btn {
+  display: block;
+  text-align: center;
+  padding: 9px 12px;
+  border-radius: 0.75rem;
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  color: #ec4899;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.2s;
+  margin-top: 10px;
+}
+.bio-btn:hover { background: rgba(236, 72, 153, 0.3); color: #fff; }
+
+.bio-grupo-titulo {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #ec4899;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+
+
+/* =====================================================================
+   ADICIONAL — HairConcept (Bloco 1: correções + agenda semanal)
+   Cole isto NO FIM do seu style.css. Não substitui nada.
+   Mesmo design system: glass, brand-500 (#ec4899), zinc.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1) AGENDA SEMANAL — as classes que estavam faltando.
+      O JavaScript já monta a tabela; sem isto ela fica torta.
+   --------------------------------------------------------------------- */
+#semana-wrap { overflow: hidden; }
+
+.semana-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.semana-tabela {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.semana-tabela thead th {
+  padding: 12px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a1a1aa;
+  font-weight: 700;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.semana-tabela thead th:first-child {
+  width: 78px;
+  text-align: left;
+  padding-left: 16px;
+}
+
+.semana-corpo td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 0;
+  vertical-align: top;
+  height: 48px;              /* cada linha = um bloco de 30 minutos */
+}
+
+.semana-hora {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: #71717a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.semana-celula {
+  position: relative;
+  height: 48px;
+  cursor: pointer;
+  transition: background 0.15s ease-in-out;
+}
+
+.semana-celula:hover { background: rgba(236, 72, 153, 0.06); }
+
+/* O atendimento cobre quantos blocos de 30 min ele durar.
+   A Carla (1 hora) cobre DOIS blocos: 08:30 e 09:00. */
+.semana-bloco {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 700;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(236, 72, 153, 0.18);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.semana-bloco .sb-cliente,
+.semana-bloco .sb-servico {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semana-bloco .sb-servico {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Cores por situação: a recepção entende antes de ler */
+.semana-bloco.st-espera   { background: rgba(236, 72, 153, 0.22); }
+.semana-bloco.st-atendido { background: rgba(16, 185, 129, 0.22); }
+.semana-bloco.st-faltou   { background: rgba(244, 63, 94, 0.24); }
+.semana-bloco.st-encaixe  { background: rgba(245, 158, 11, 0.22); }
+
+.semana-celula.bloqueada {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.03) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  cursor: not-allowed;
+}
+
+.semana-dia-fechado {
+  padding: 10px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #71717a;
+  text-align: center;
+}
+
+.semana-scroll::-webkit-scrollbar { height: 6px; }
+.semana-scroll::-webkit-scrollbar-track { background: rgba(9, 9, 11, 0.8); }
+.semana-scroll::-webkit-scrollbar-thumb {
+  background: rgba(236, 72, 153, 0.3);
+  border-radius: 9999px;
+}
+
+@media (max-width: 640px) {
+  .semana-tabela { min-width: 100%; }
+  .semana-tabela thead th { font-size: 10px; padding: 10px 4px; }
+  .semana-tabela thead th:first-child { width: 58px; padding-left: 8px; }
+  .semana-hora { padding: 6px 8px; font-size: 10px; }
+  .semana-bloco { font-size: 9px; padding: 4px 5px; }
+}
+
+/* ---------------------------------------------------------------------
+   2) ESQUELETO DE CARREGAMENTO (substitui o "Carregando...")
+   --------------------------------------------------------------------- */
+.hc-esqueleto {
+  border-radius: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: hc-brilho 1.4s ease-in-out infinite;
+  min-height: 44px;
+}
+
+@keyframes hc-brilho {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-esqueleto { animation: none; }
+  .prof-barra-cheia { transition: none; }
+}
+
+/* ---------------------------------------------------------------------
+   3) AVISO DE CONFLITO (horário já ocupado) e campo com erro
+   --------------------------------------------------------------------- */
+.hc-aviso-conflito {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fecdd3;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.hc-aviso-conflito i { color: #fb7185; margin-top: 2px; }
+
+.glass-input.hc-erro {
+  border-color: rgba(244, 63, 94, 0.65);
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.18);
+}
+
+
+/* Selo "SEU PLANO" na aba Planos — usa o rosa do design system */
+.hc-selo-plano {
+  display: inline-block;
+  margin: 0 auto 8px;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.45);
+  color: #ec4899;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Aviso quando o cliente chega a -1: a fileira de estrelas acaba e entra isto */
+.hc-cuidado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 0.6rem;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #fb7185;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.hc-cuidado i { font-size: 11px; }
+
+/* O botao de confirmar estava passando da borda da janela. */
+.modal-caixa button[type="submit"],
+.modal-caixa .hc-btn-largo {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  text-align: center;
+}
+.modal-caixa input, .modal-caixa select, .modal-caixa textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* O X da janela ficava fora da area visivel quando a caixa era mais alta
+   que a tela. Agora ele fica FIXO no canto superior direito, sempre clicavel. */
+.modal-x-fixo, .modal-x {
+  position: fixed !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: rgba(24, 24, 27, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e4e4e7;
+}
+.modal-x-fixo:hover, .modal-x:hover { color: #fff; background: rgba(244, 63, 94, 0.25); }
+
+@keyframes hcJanelaEntra {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* ===================== TELA DE ABERTURA =====================
+   Fundo quase preto, brilho rosa difuso e o nome aparecendo por etapas.
+   Cada etapa entra depois da anterior (0.4s de atraso entre elas). */
+#tela-abertura.hc-sai { opacity: 0; visibility: hidden; }
+.hc-brilho {
+  position: absolute; width: 130vw; height: 130vw; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(236,72,153,.20) 0%, rgba(236,72,153,.07) 35%, transparent 68%);
+  animation: hcPulsa 9s ease-in-out infinite;
+}
+@keyframes hcPulsa {
+  0%,100% { transform: translate(-50%,-50%) scale(1); opacity: .85; }
+  50%     { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
+}
+.hc-grao {
+  position: absolute; inset: 0; opacity: .05; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.hc-marca, .hc-frase, .hc-nome, .hc-sub, .hc-botao { opacity: 0; }
+.hc-marca { animation: hcSobe .8s ease-out .1s both; }
+.hc-f1    { animation: hcSobe .8s ease-out .55s both; }
+.hc-f2    { animation: hcSobe .9s ease-out 1s both; }
+.hc-f3    { animation: hcSobe .8s ease-out 1.5s both; }
+.hc-f4    { animation: hcSobe .8s ease-out 2s both; }
+@keyframes hcSobe {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hc-frase { margin-top: 1.5rem; font-size: 11px; letter-spacing: .38em; text-transform: uppercase; color: #a1a1aa; }
+.hc-nome  { font-size: clamp(2.6rem, 9vw, 6rem); font-weight: 900; letter-spacing: -.03em; text-transform: uppercase;
+            color: #fff; line-height: 1; text-shadow: 0 0 60px rgba(236,72,153,.35); }
+.hc-sub   { margin-top: .6rem; font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #ec4899; }
+.hc-botao {
+  margin-top: 2.75rem; padding: .95rem 3.2rem; border-radius: 999px;
+  background: #ec4899; color: #fff; font-weight: 800; font-size: 12px;
+  letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(236,72,153,.55); transition: transform .2s ease, background .2s ease;
+}
+.hc-botao:hover { background: #db2777; transform: translateY(-2px); }
+@media (prefers-reduced-motion: reduce) {
+  .hc-marca, .hc-frase, .hc-nome, .hc-sub, .hc-botao { animation-duration: .01s; animation-delay: 0s; }
+}
+
+/* Enquanto a tela de abertura estiver no ar, o sistema fica escondido.
+   Antes ele carregava por baixo e a janela de agendar travava a tela. */
+body.hc-abertura-ativa #main-header,
+body.hc-abertura-ativa .tab-content,
+body.hc-abertura-ativa .modal-overlay { display: none !important; }
+body.hc-abertura-ativa { overflow: hidden; }
+
+/* ===== CAMADAS DO SITE (ordem clara) =====
+   96 = conteudo do site      97 = cabecalho
+   98 = janelas (modais)      99 = tela de abertura  */
+.modal-x-fixo, .modal-x { z-index: 98 !important; }
+body.hc-abertura-ativa #main-header,
+body.hc-abertura-ativa .tab-content,
+body.hc-abertura-ativa .modal-overlay { display: none !important; }
+
+/* janelas ficam na camada 98 */
+
+
+/* ===================== CAMADAS DO SITE =====================
+   96 = conteudo   97 = cabecalho   98 = janelas   99 = abertura
+   Um bloco so, para nao brigar com regras antigas. */
+.hc-z-header { z-index: 97 !important; }
+.modal-x-fixo, .modal-x { z-index: 98 !important; }
+#tela-abertura { z-index: 99 !important; }
+body.hc-abertura-ativa #main-header,
+body.hc-abertura-ativa .tab-content,
+body.hc-abertura-ativa .modal-overlay { display: none !important; }
+body.hc-abertura-ativa { overflow: hidden; }
+
+
+/* ==========================================================
+   JANELAS — bloco unico e definitivo
+   O fundo ocupa a tela e comeca do TOPO (nao centraliza),
+   a pagina rola, e o X fica preso no canto de cima.
+   ========================================================== */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 98 !important;
+  display: flex !important;
+  align-items: flex-start !important;   /* NAO centraliza: o topo nunca sai da tela */
+  justify-content: center !important;
+  padding: 1.25rem 1rem 2.5rem !important;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow-y: auto !important;          /* a tela rola, nao a caixa */
+}
+.modal-overlay.hidden { display: none !important; }
+.modal-caixa {
+  position: relative;
+  width: 100% !important;
+  max-width: 26rem !important;
+  margin: 3.25rem auto 1rem !important;  /* espaco do X no topo */
+  max-height: none !important;            /* sem limite: a pagina rola */
+  overflow: visible !important;
+  padding: 1.75rem;
+  border-radius: 1.5rem;
+  background: rgba(24, 24, 27, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+}
+@media (min-width: 768px) { .modal-caixa { max-width: 30rem !important; } }
+@media (max-width: 640px) { .modal-caixa { padding: 1.25rem; border-radius: 1.25rem; } }
+
+/* O X fica preso no canto e acompanha a rolagem */
+.modal-x-fixo, .modal-x {
+  position: fixed !important;
+  top: 0.9rem !important;
+  right: 1rem !important;
+  z-index: 99 !important;
+  width: 2.4rem; height: 2.4rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 0.75rem;
+  background: rgba(24, 24, 27, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e4e4e7;
+  cursor: pointer;
+}
+.modal-x-fixo:hover, .modal-x:hover { color: #fff; background: rgba(244, 63, 94, 0.3); }
+
+
+/* =====================================================================
+   PAINEL DA AGENDA — circulo de contagem e status no bloco
+   ===================================================================== */
+
+.semana-dia-cont {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: rgba(236, 72, 153, 0.22);
+  border: 1px solid rgba(236, 72, 153, 0.5);
+  color: #ec4899;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.semana-dia-cont.vazio {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #52525b;
+}
+
+.semana-ag-status {
+  display: block;
+  font-size: 8px;
+  opacity: 0.85;
+  line-height: 1.1;
+  margin-top: 1px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
