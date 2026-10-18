@@ -274,6 +274,104 @@ const Auth = {
         if (window.innerWidth < 1024) this.toggleSidebar(false);
     },
 
+    // AREA DO PROFISSIONAL — dia a dia enxuto, so para consultar.
+    // Ele ve a agenda dele, avanca os dias e fala pelo chat.
+    // Nao marca: quem marca e o salao, por isso o aviso na tela.
+    // ============================================================
+    _diaProf: null,
+
+    abrirAreaProf() {
+        const area = document.getElementById('hc-area-prof');
+        if (area) area.classList.remove('hidden');
+        const p = (this.user && this.user.profDados) || {};
+        const el = function (id) { return document.getElementById(id); };
+        if (el('hc-prof-nome')) el('hc-prof-nome').textContent = (p.nome || this.user.name || 'Profissional');
+        if (el('hc-prof-cargo')) el('hc-prof-cargo').textContent = (p.cargo || '');
+        if (el('hc-prof-foto') && p.foto_url) { el('hc-prof-foto').src = p.foto_url; }
+        // Selo do certificado no nome
+        if (el('hc-prof-selo')) {
+            el('hc-prof-selo').innerHTML = (this.seloCertificado && p.id) ? this.seloCertificado(p.id) : '';
+        }
+        // Cor escolhida por ele
+        if (p.cor) this.aplicarCorProf(p.cor);
+        if (el('prof-bio') && p.bio) el('prof-bio').value = p.bio;
+        this._diaProf = dataLocalISO();
+        this.renderDiaProf();
+        // Carrega as ferramentas dele
+        this.carregarCursosProf();
+        this.carregarMeusCertificados();
+        this.carregarPostIts();
+        this.carregarRecadosEstabelecimento();
+        try { if (this.renderMinhaBarra) this.renderMinhaBarra(); } catch (e) {}
+    },
+
+    // Volta ou avanca o dia. 0 = hoje.
+    irDiaProf(passo) {
+        if (passo === 0) { this._diaProf = dataLocalISO(); }
+        else {
+            const base = this._diaProf || dataLocalISO();
+            const d = new Date(base + 'T12:00:00');
+            d.setDate(d.getDate() + passo);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            this._diaProf = y + '-' + m + '-' + dd;
+        }
+        this.renderDiaProf();
+    },
+
+    async renderDiaProf() {
+        const lista = document.getElementById('hc-prof-lista');
+        if (!lista) return;
+        const dia = this._diaProf || dataLocalISO();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const meuId = localStorage.getItem('hairconcept_prof_id');
+        const nomes = ['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+        const d = new Date(dia + 'T12:00:00');
+        const el = function (id) { return document.getElementById(id); };
+        if (el('hc-prof-data-dia')) el('hc-prof-data-dia').textContent = nomes[d.getDay()];
+        if (el('hc-prof-data-num')) el('hc-prof-data-num').textContent = d.getDate() + '/' + String(d.getMonth() + 1).padStart(2, '0');
+        lista.innerHTML = '<p class="hc-prof-vazio">Carregando...</p>';
+        try {
+            const { data, error } = await supabaseClient
+                .from('agendamentos').select('*')
+                .eq('estabelecimento_id', estabId)
+                .eq('data', dia)
+                .eq('profissional_id', meuId);
+            if (error) throw error;
+            const meus = (data || []).slice().sort(function (a, b) {
+                return String(a.horario).localeCompare(String(b.horario));
+            });
+            const total = meus.length;
+            const soma = meus.reduce(function (s, a) { return s + (parseFloat(a.valor) || 0); }, 0);
+            const pct = Number(((this.user && this.user.profDados) || {}).comissao_pct) || 50;
+            if (el('hc-prof-total')) el('hc-prof-total').textContent = total;
+            if (el('hc-prof-comissao')) el('hc-prof-comissao').textContent = 'R$ ' + (soma * pct / 100).toFixed(2).replace('.', ',');
+            if (!meus.length) {
+                lista.innerHTML = '<p class="hc-prof-vazio">Nenhum atendimento neste dia.</p>';
+                return;
+            }
+            lista.innerHTML = meus.map(function (a) {
+                const ini = App.normalizarHora(a.horario);
+                const fim = App.normalizarHora(a.horario_fim || '');
+                const estado = App.rotuloEstado(a.status);
+                const classe = a.status === 'finalizado' ? 'ok' : (a.status === 'faltou' ? 'falta' : '');
+                return '<div class="hc-prof-card ' + classe + '">' +
+                    '<div class="hc-prof-card-hora">' + ini + (fim ? '<span>' + fim + '</span>' : '') + '</div>' +
+                    '<div class="hc-prof-card-info">' +
+                        '<strong>' + (a.cliente || 'Cliente') + '</strong>' +
+                        '<span>' + (a.servico || '') + '</span>' +
+                        (a.observacao ? '<em>' + a.observacao + '</em>' : '') +
+                    '</div>' +
+                    '<div class="hc-prof-card-estado">' + estado + '</div>' +
+                '</div>';
+            }).join('');
+        } catch (e) {
+            console.error('Erro ao carregar o dia do profissional:', e);
+            lista.innerHTML = '<p class="hc-prof-vazio">Nao consegui carregar agora.</p>';
+        }
+    },
+
     // Chamada no inicio: mostra ou pula a abertura
     prepararAbertura() {
         const tela = document.getElementById('tela-abertura');
@@ -445,8 +543,14 @@ const Auth = {
         el.style.setProperty('z-index', '99999', 'important');
         // Nao forcar o display: assim o fecharModal consegue esconder depois.
         el.style.removeProperty('display');
-        el.style.setProperty('align-items', 'center', 'important');
+        // Alinha ao TOPO, nao ao centro: em tela pequena a janela ficava
+        // mais alta que a tela e o X (que fica no topo) saia da area visivel.
+        el.style.setProperty('align-items', 'flex-start', 'important');
         el.style.setProperty('justify-content', 'center', 'important');
+        el.style.setProperty('overflow-y', 'auto', 'important');
+        el.style.setProperty('padding-top', '16px', 'important');
+        el.style.setProperty('padding-bottom', '16px', 'important');
+        el.scrollTop = 0;
         // NAO forca largura/altura no fundo: quem esticava a janela era isso.
         // A caixa de dentro mantem a largura dela (definida no style.css).
         el.style.removeProperty('width');
@@ -707,11 +811,21 @@ const App = {
 
         // Mostra ou esconde as partes conforme o perfil
         if (ehProfissional) {
-            document.getElementById('painel-profissional-extra')?.classList.remove('hidden');
+            // O painel antigo saiu: a area nova ja tem tudo dentro dela.
+            document.getElementById('painel-profissional-extra')?.classList.add('hidden');
+            // O selo do certificado precisa estar carregado ANTES de desenhar
+            // a area, senao o chapeu nao aparece no nome.
+            try { await this.carregarSeloCertificados(); } catch (e) {}
+            // Cor salva no navegador (funciona mesmo sem a coluna no banco)
+            const corSalva = localStorage.getItem('hairconcept_prof_cor');
+            if (corSalva) this.aplicarCorProf(corSalva);
             this.carregarFechamento();
+            this.abrirAreaProf();
             document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
         } else {
+            document.getElementById('hc-area-prof')?.classList.add('hidden');
             document.getElementById('painel-profissional-extra')?.classList.add('hidden');
+            document.getElementById('bloco-minha-barra')?.classList.add('hidden');
             document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
         }
     },
@@ -1233,7 +1347,10 @@ const App = {
             const { error } = await supabaseClient.from('recados').insert([{
                 estabelecimento_id: estabId,
                 remetente: remetente,
-                mensagem: mensagem
+                mensagem: mensagem,
+                profissional_id: localStorage.getItem('hairconcept_prof_id') || null,
+                para_todos: false,
+                lido: false
             }]);
             if (error) throw error;
             input.value = '';
@@ -1275,7 +1392,15 @@ const App = {
             }
 
             if (containerProf) {
-                containerProf.innerHTML = mensagens.length > 0 ? mensagens.map(r => {
+                // O profissional so ve as mensagens DELE e os avisos para todos.
+                const meuId = localStorage.getItem('hairconcept_prof_id');
+                const meuNome = String((this.user && this.user.name) || '').toLowerCase();
+                const minhas = mensagens.filter(function (r) {
+                    if (r.para_todos) return true;
+                    if (r.profissional_id) return String(r.profissional_id) === String(meuId);
+                    return String(r.remetente || '').toLowerCase().indexOf(meuNome) >= 0;
+                });
+                containerProf.innerHTML = minhas.length > 0 ? minhas.map(r => {
                     const isEu = r.remetente.toLowerCase().includes((this.user.name || '').toLowerCase()) && !r.remetente.includes('Admin');
                     return `
                         <div class="flex flex-col ${isEu ? 'items-end' : 'items-start'} mb-2">
@@ -1312,10 +1437,18 @@ const App = {
         const estabId = localStorage.getItem('hairconcept_estab_id');
         
         try {
+            // O salao escolhe: responder a um profissional ou avisar a equipe toda.
+            const destino = document.getElementById('admin-resposta-para');
+            const paraTodos = destino ? destino.value === 'todos' : false;
+            const idDestino = (!paraTodos && destino) ? destino.value : null;
+
             const { error } = await supabaseClient.from('recados').insert([{
                 estabelecimento_id: estabId,
                 remetente: '👑 Salão (Admin)',
-                mensagem: mensagem
+                mensagem: mensagem,
+                profissional_id: idDestino,
+                para_todos: paraTodos,
+                lido: false
             }]);
             if (error) throw error;
             UI.showToast("Resposta enviada!", "success");
@@ -3387,6 +3520,16 @@ const App = {
     desenharLateralProfs(profs) {
         const lista = document.getElementById('ag-lista-profs');
         if (!lista) return;
+        // O selo do certificado aparece na agenda (o cliente ve).
+        // Se ainda nao carregou, carrega agora e redesenha uma vez.
+        if (!this._temCertificado) {
+            const self = this;
+            this.carregarSeloCertificados().then(function () {
+                if (self._profsLateral && self._profsLateral.length) {
+                    self.desenharLateralProfs(self._profsLateral);
+                }
+            }).catch(function () {});
+        }
         const selecionado = localStorage.getItem('hairconcept_prof_selecionado');
         const comNome = profs.length <= 15;
 
@@ -3402,7 +3545,7 @@ const App = {
         profs.forEach(function (pf) {
             const item = document.createElement('div');
             item.className = 'ag-item' + (pf.id === selecionado ? ' ativo' : '');
-            item.title = (pf.nome || '') + (pf.cargo ? ' - ' + pf.cargo : '');
+            item.title = (pf.nome || '') + (pf.cargo ? ' - ' + pf.cargo : '') + (pf.bio ? ' · ' + pf.bio : '');
             item.onclick = function () { App.selecionarProfAgenda(pf.id); };
 
             const av = document.createElement('div');
@@ -3420,7 +3563,11 @@ const App = {
             if (comNome) {
                 const nome = document.createElement('span');
                 nome.className = 'ag-item-nome';
-                nome.textContent = pf.nome || '';
+                const txt = document.createElement('span');
+                txt.textContent = pf.nome || '';
+                nome.appendChild(txt);
+                // Selo dourado: quem tem certificado aparece com o chapeu
+                if (App.seloCertificado) nome.insertAdjacentHTML('beforeend', App.seloCertificado(pf.id));
                 item.appendChild(nome);
             }
 
@@ -3587,6 +3734,231 @@ const App = {
         } catch (e) {
             UI.showToast(mensagemAmigavel(e), 'error');
         }
+    },
+
+    // ===== CURSOS (salao cadastra, profissional estuda) =====
+    async salvarCurso(event) {
+        if (event) event.preventDefault();
+        const titulo = ((document.getElementById('curso-titulo') || {}).value || '').trim();
+        const link = ((document.getElementById('curso-link') || {}).value || '').trim();
+        const tipo = ((document.getElementById('curso-tipo') || {}).value || 'Curso');
+        const descricao = ((document.getElementById('curso-descricao') || {}).value || '').trim();
+        if (!titulo || !link) { UI.showToast('Preencha o título e o link.', 'error'); return; }
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
+            const { error } = await supabaseClient.from('cursos').insert([{
+                estabelecimento_id: estabId,
+                titulo: titulo,
+                link: link,
+                tipo: tipo,
+                descricao: descricao || null
+            }]);
+            if (error) throw error;
+            if (event && event.target && event.target.reset) event.target.reset();
+            UI.showToast('Curso indicado para a equipe!');
+            this.carregarCursosSalao();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarCursosSalao() {
+        const box = document.getElementById('lista-cursos');
+        if (!box) return;
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data, error } = await supabaseClient
+                .from('cursos').select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('criado_em', { ascending: false });
+            if (error) throw error;
+            this.desenharCursosSalao(data || []);
+        } catch (e) {
+            box.innerHTML = '<p class="text-xs text-zinc-500 p-4 glass-water rounded-2xl border border-white/10">Rode o SQL no Supabase para liberar a aba de cursos.</p>';
+        }
+    },
+
+    desenharCursosSalao(cursos) {
+        const box = document.getElementById('lista-cursos');
+        if (!box) return;
+        box.innerHTML = '';
+        if (!cursos.length) {
+            box.innerHTML = '<p class="text-xs text-zinc-500 p-4 glass-water rounded-2xl border border-white/10">Nenhum curso indicado ainda. Use o formulário acima.</p>';
+            return;
+        }
+        const icones = { 'Video': 'fa-circle-play', 'Curso': 'fa-book', 'Artigo': 'fa-newspaper', 'PDF': 'fa-file-pdf', 'Site': 'fa-globe' };
+        cursos.forEach(function (c) {
+            const item = document.createElement('div');
+            item.className = 'glass-water rounded-2xl border border-white/10 p-4 flex items-center gap-3 flex-wrap';
+
+            const ic = document.createElement('div');
+            ic.className = 'w-9 h-9 rounded-xl flex items-center justify-center bg-brand-500/15 text-brand-500 flex-shrink-0';
+            ic.innerHTML = '<i class="fa-solid ' + (icones[c.tipo] || 'fa-graduation-cap') + '"></i>';
+
+            const info = document.createElement('div');
+            info.className = 'flex-grow min-w-[140px]';
+            const t = document.createElement('strong');
+            t.className = 'block text-xs font-bold text-white uppercase';
+            t.textContent = c.titulo || 'Curso';
+            info.appendChild(t);
+            const sub = document.createElement('span');
+            sub.className = 'block text-[10px] text-zinc-500';
+            sub.textContent = (c.tipo || 'Curso') + (c.descricao ? ' · ' + c.descricao : '');
+            info.appendChild(sub);
+
+            const ver = document.createElement('a');
+            ver.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-[10px] font-bold uppercase';
+            ver.href = c.link || '#';
+            ver.target = '_blank';
+            ver.rel = 'noopener';
+            ver.textContent = 'Abrir';
+
+            const del = document.createElement('button');
+            del.className = 'px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 text-[10px] font-bold uppercase cursor-pointer';
+            del.textContent = 'Remover';
+            del.onclick = function () { App.removerCurso(c.id); };
+
+            item.appendChild(ic); item.appendChild(info); item.appendChild(ver); item.appendChild(del);
+            box.appendChild(item);
+        });
+    },
+
+    async removerCurso(id) {
+        if (!id) return;
+        try {
+            const { error } = await supabaseClient.from('cursos').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Curso removido.');
+            this.carregarCursosSalao();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // ===== MEU JEITO: cor escolhida pelo profissional =====
+    // Fica salva no perfil dele (coluna cor_prof) e vem junto no login.
+    aplicarCorProf(cor) {
+        const area = document.getElementById('hc-area-prof');
+        if (!area || !cor) return;
+        area.style.setProperty('--pc', cor);
+        this._corProf = cor;
+    },
+
+    async escolherCorProf(cor) {
+        this.aplicarCorProf(cor);
+        const profId = localStorage.getItem('hairconcept_prof_id');
+        if (!profId) { UI.showToast('Cor aplicada nesta sessão.'); return; }
+        try {
+            const { error } = await supabaseClient
+                .from('profissionais').update({ cor_prof: cor }).eq('id', profId);
+            if (error) throw error;
+            if (this.user && this.user.profDados) this.user.profDados.cor = cor;
+            localStorage.setItem('hairconcept_prof_cor', cor);
+            UI.showToast('Sua cor foi salva!');
+        } catch (e) {
+            // Se a coluna ainda nao existir, guarda no navegador e segue
+            localStorage.setItem('hairconcept_prof_cor', cor);
+            UI.showToast('Cor aplicada. Rode o SQL para ela ficar salva no perfil.', 'error');
+        }
+    },
+
+    // ===== MINHA FRASE: aparece embaixo do nome na agenda =====
+    async salvarBio() {
+        const el = document.getElementById('prof-bio');
+        const bio = el ? String(el.value || '').trim() : '';
+        const profId = localStorage.getItem('hairconcept_prof_id');
+        if (!profId) return;
+        try {
+            const { error } = await supabaseClient
+                .from('profissionais').update({ bio: bio || null }).eq('id', profId);
+            if (error) throw error;
+            if (this.user && this.user.profDados) this.user.profDados.bio = bio;
+            UI.showToast('Sua frase foi salva!');
+        } catch (e) {
+            UI.showToast('Rode o SQL para a frase ficar salva no perfil.', 'error');
+        }
+    },
+
+    // ===== MEUS CURSOS: os que o salao indicou =====
+    async carregarCursosProf() {
+        const box = document.getElementById('hc-prof-cursos');
+        if (!box) return;
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data, error } = await supabaseClient
+                .from('cursos').select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('titulo', { ascending: true });
+            if (error) throw error;
+            this.desenharCursosProf(data || []);
+        } catch (e) {
+            box.innerHTML = '<p class="hc-prof-dica">Nenhum curso indicado ainda.</p>';
+        }
+    },
+
+    desenharCursosProf(cursos) {
+        const box = document.getElementById('hc-prof-cursos');
+        if (!box) return;
+        box.innerHTML = '';
+        if (!cursos.length) {
+            box.innerHTML = '<p class="hc-prof-dica">O salão ainda não indicou cursos. Fique de olho!</p>';
+            return;
+        }
+        const icones = { 'Video': 'fa-circle-play', 'Curso': 'fa-book', 'Artigo': 'fa-newspaper', 'PDF': 'fa-file-pdf', 'Site': 'fa-globe' };
+        cursos.forEach(function (c) {
+            const item = document.createElement('div');
+            item.className = 'hc-prof-curso';
+
+            const ic = document.createElement('div');
+            ic.className = 'hc-prof-curso-icone';
+            const fa = icones[c.tipo] || 'fa-graduation-cap';
+            ic.innerHTML = '<i class="fa-solid ' + fa + '"></i>';
+
+            const info = document.createElement('div');
+            info.className = 'hc-prof-curso-info';
+            const t = document.createElement('strong');
+            t.textContent = c.titulo || 'Curso';
+            info.appendChild(t);
+            if (c.descricao) {
+                const d = document.createElement('span');
+                d.textContent = c.descricao;
+                info.appendChild(d);
+            }
+
+            item.appendChild(ic);
+            item.appendChild(info);
+
+            if (c.link) {
+                const lk = document.createElement('a');
+                lk.className = 'hc-prof-curso-link';
+                lk.href = c.link;
+                lk.target = '_blank';
+                lk.rel = 'noopener';
+                lk.textContent = 'Abrir';
+                item.appendChild(lk);
+            }
+            box.appendChild(item);
+        });
+    },
+
+    // ===== EXPORTAR AS NOTAS =====
+    exportarPostIts() {
+        const lista = this._postIts || [];
+        if (!lista.length) { UI.showToast('Você ainda não tem notas.'); return; }
+        const txt = lista.map(function (p, i) {
+            return '--- Nota ' + (i + 1) + ' ---\n' + (p.texto || p.text || '');
+        }).join('\n\n');
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'minhas-notas.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+        UI.showToast('Notas baixadas!');
     },
 
     async carregarSeloCertificados() {
@@ -4920,7 +5292,7 @@ const UI = {
         }, 3000);
     },
     trocarEspaco(qual) {
-        const paineis = ['servicos', 'produtos', 'avaliacoes-nova', 'config-salao', 'notas'];
+        const paineis = ['servicos', 'produtos', 'avaliacoes-nova', 'config-salao', 'cursos', 'notas'];
         if (paineis.indexOf(qual) < 0) return;
         paineis.forEach(function (p) {
             const painel = document.getElementById('aba-' + p);
@@ -4941,6 +5313,7 @@ const UI = {
         if (qual === 'produtos') App.renderProdutos();
         if (qual === 'avaliacoes-nova') App.renderAvaliacao();
         if (qual === 'config-salao') Auth.carregarConfigSalao();
+        if (qual === 'cursos') App.carregarCursosSalao();
         if (qual === 'notas') { Auth.carregarConfigSalao(); Auth.carregarComissoesTipo(); }
     },
     abrirGestao(qual) {
