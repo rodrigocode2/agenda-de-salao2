@@ -553,596 +553,205 @@ tailwind.config = {
 
 <!-- AGENDA PAINEL PRINCIPAL -->
 <section id="aba-agenda" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 glass-water">
-  <!-- PAINEL EXCLUSIVO DO PROFISSIONAL -->
-  <!-- BARRA DO PROFISSIONAL: ele ve so a propria barra e as estrelas -->
-  <div id="bloco-minha-barra" class="hidden glass-water rounded-2xl border border-white/10 p-5 mb-6">
-    <p class="text-[10px] font-bold uppercase text-zinc-400 mb-2">Meu desempenho</p>
-    <div id="minha-barra-prof"></div>
-  </div>
+  <!-- ===== AREA DO PROFISSIONAL (mobile-first) ===== -->
+  <div id="hc-area-prof" class="hidden space-y-4" style="--pc: #ec4899;">
 
-  <div id="painel-profissional-extra" class="hidden space-y-6 pb-6 border-b border-white/10">
-    <div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-zinc-950/80 border border-white/10">
-      <div class="flex items-center gap-4">
-        <div class="relative group">
-          <img alt="Foto do profissional" id="prof-header-foto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E" class="w-20 h-20 rounded-2xl object-cover border border-white/10">
-          <label class="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-[10px] text-white font-bold uppercase text-center p-1">
-            Alterar Foto
+    <!-- Cabecalho -->
+    <div class="hc-prof-topo">
+      <div class="hc-prof-quem">
+        <div class="hc-prof-foto-wrap">
+          <img id="hc-prof-foto" src="" alt="" class="hc-prof-foto">
+          <label class="hc-prof-foto-troca" title="Trocar foto">
             <input type="file" accept="image/*" onchange="App.handleAtualizarMinhaFoto(event)" class="hidden">
+            <i class="fa-solid fa-camera"></i>
           </label>
         </div>
-        <div>
-          <span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-md">Profissional</span>
-          <h2 id="prof-header-nome" class="text-lg font-bold text-white uppercase mt-1">Nome do Profissional</h2>
-          <p id="prof-header-cargo" class="text-xs text-zinc-400">Especialidade</p>
+        <div class="hc-prof-ident">
+          <span class="hc-prof-etiqueta">Profissional</span>
+          <h2 class="hc-prof-nome">
+            <span id="hc-prof-nome">Meu espaço</span>
+            <span id="hc-prof-selo"></span>
+          </h2>
+          <p id="hc-prof-cargo" class="hc-prof-cargo"></p>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-3 w-full sm:w-auto">
-        <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Atendimentos</span>
-          <strong id="prof-stat-atendimentos" class="text-brand-500 text-sm font-bold">0</strong>
-        </div>
-        <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Minha Comissão</span>
-          <strong id="prof-stat-comissao" class="text-emerald-400 text-sm font-bold">R$ 0,00</strong>
-        </div>
-      </div>
+      <button type="button" class="hc-prof-sair" onclick="Auth.logout()" title="Sair">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
     </div>
-    
-    <!-- FECHAMENTO DO PROFISSIONAL -->
-    <div id="painel-fechamento" class="glass-water rounded-2xl border border-white/10 p-6 space-y-5">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h3 class="text-sm font-bold uppercase text-white"><i class="fa-solid fa-sack-dollar text-emerald-400 mr-2"></i>Meu Fechamento</h3>
-          <p id="fech-periodo" class="text-[10px] text-zinc-500 uppercase">Carregando período...</p>
-        </div>
-        <button onclick="App.abrirFecharCiclo()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">
-          <i class="fa-solid fa-lock mr-1"></i> Fechar ciclo
-        </button>
-      </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Atendimentos</span>
-          <strong id="fech-qtd" class="text-brand-500 text-xl font-bold">0</strong>
-        </div>
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-white/10 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Valor real</span>
-          <strong id="fech-valor" class="text-white text-xl font-bold">R$ 0,00</strong>
-        </div>
-        <div class="p-4 bg-zinc-900 rounded-2xl border border-emerald-500/30 text-center">
-          <span class="block text-[10px] text-zinc-400 uppercase">Minha comissão</span>
-          <strong id="fech-comissao" class="text-emerald-400 text-xl font-bold">R$ 0,00</strong>
-        </div>
+    <!-- Dias -->
+    <div class="hc-prof-dias">
+      <button type="button" class="hc-prof-dia-btn" onclick="App.irDiaProf(-1)" title="Dia anterior">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <button type="button" class="hc-prof-dia-hoje" onclick="App.irDiaProf(0)">Hoje</button>
+      <div class="hc-prof-dia-texto">
+        <strong id="hc-prof-data-dia">—</strong>
+        <span id="hc-prof-data-num">—</span>
       </div>
+      <button type="button" class="hc-prof-dia-btn" onclick="App.irDiaProf(1)" title="Próximo dia">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-        <div>
-          <label class="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Minha comissão (%)</label>
-          <input type="number" id="fech-pct" step="0.01" min="0" max="100" placeholder="Ex: 50" oninput="App.calcularFechamento()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div class="p-3 rounded-xl bg-zinc-950 border border-white/10">
-          <p class="text-[10px] text-zinc-400">Confira na <span class="text-white font-bold">Calculadora</span> ao lado, atendimento por atendimento.</p>
-        </div>
+    <!-- Numeros do dia -->
+    <div class="hc-prof-stats">
+      <div class="hc-prof-stat">
+        <span>Atendimentos hoje</span>
+        <strong id="hc-prof-total">0</strong>
       </div>
-
-      <div class="border-t border-white/10 pt-4 space-y-3">
-        <h4 class="text-[10px] font-bold text-zinc-400 uppercase">Meus atendimentos no ciclo</h4>
-        <div id="fech-lista" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
-      </div>
-
-      <div class="border-t border-white/10 pt-4 space-y-3">
-        <h4 class="text-[10px] font-bold text-zinc-400 uppercase">Ciclos já fechados</h4>
-        <div id="fech-historico" class="space-y-2"></div>
+      <div class="hc-prof-stat">
+        <span>Minha comissão</span>
+        <strong id="hc-prof-comissao" class="hc-prof-verde">R$ 0,00</strong>
       </div>
     </div>
 
-    <!-- FERRAMENTAS DO PROFISSIONAL -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
-        <div class="flex justify-between items-center">
-          <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-note-sticky text-yellow-400 mr-1.5"></i> Notas Rápidas</h3>
-          <button onclick="App.adicionarPostIt()" class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-[10px] font-bold uppercase hover:bg-yellow-500/30 transition">+ Nota</button>
-        </div>
-        <div id="lista-postits" class="space-y-2.5 max-h-48 overflow-y-auto pr-1"></div>
-      </div>
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
-        <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-calculator text-brand-500 mr-1.5"></i> Calculadora Rápida</h3>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Valor do Serviço (R$)</label>
-            <input type="number" id="prof-calc-val" oninput="App.calcularGanhosPessoal()" placeholder="0.00" class="w-full glass-input rounded-xl px-3 py-2 text-white">
+    <!-- Lista do dia -->
+    <div class="hc-prof-lista" id="hc-prof-lista">
+      <p class="hc-prof-vazio">Carregando os seus atendimentos...</p>
+    </div>
+
+    <p class="hc-prof-aviso">
+      <i class="fa-solid fa-circle-info"></i>
+      Para marcar ou alterar um horário, envie uma mensagem no chat abaixo.
+    </p>
+
+    <!-- ============ MINHAS FERRAMENTAS ============ -->
+    <div class="hc-prof-secao">
+      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-toolbox"></i> Minhas ferramentas</h3>
+
+      <div class="hc-prof-grid">
+
+        <!-- Post-its -->
+        <div class="hc-prof-card">
+          <div class="hc-prof-card-topo">
+            <h4><i class="fa-solid fa-note-sticky hc-prof-amarelo"></i> Minhas notas</h4>
+            <div class="hc-prof-card-acoes">
+              <button type="button" onclick="App.exportarPostIts()" title="Baixar as notas" class="hc-prof-mini">
+                <i class="fa-solid fa-download"></i>
+              </button>
+              <button type="button" onclick="App.adicionarPostIt()" class="hc-prof-mini hc-prof-mini-mais">+ Nota</button>
+            </div>
           </div>
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Sua Comissão (%)</label>
-            <input type="number" id="prof-calc-porc" value="50" oninput="App.calcularGanhosPessoal()" class="w-full glass-input rounded-xl px-3 py-2 text-white">
-          </div>
-          <div class="p-3 bg-zinc-900 rounded-xl border border-white/10 flex justify-between items-center">
-            <span class="text-zinc-400 text-[10px] uppercase">Recebimento:</span>
-            <strong id="prof-calc-result" class="text-emerald-400 text-sm">R$ 0,00</strong>
-          </div>
-        </div>
-      </div>
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4 cert-bloco md:col-span-3">
-        <div class="flex items-center justify-between gap-3">
-          <h3 class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-graduation-cap text-amber-400 mr-1.5"></i> Meus Certificados</h3>
-          <span class="text-[9px] text-zinc-500 uppercase">Selo 🎓 aparece na sua agenda</span>
+          <div id="lista-postits" class="hc-prof-notas"></div>
         </div>
 
-        <form onsubmit="App.salvarCertificado(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div class="sm:col-span-2">
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Curso *</label>
-            <input id="cert-curso" type="text" required placeholder="Ex: Biossegurança em Salão" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+        <!-- Calculadora -->
+        <div class="hc-prof-card">
+          <h4><i class="fa-solid fa-calculator hc-prof-rosa"></i> Calculadora de comissão</h4>
+          <div class="hc-prof-calc">
+            <label>Valor do serviço (R$)</label>
+            <input type="number" id="prof-calc-val" oninput="App.calcularGanhosPessoal()" placeholder="0.00" class="hc-prof-input">
+            <label>Minha comissão (%)</label>
+            <input type="number" id="prof-calc-porc" value="50" oninput="App.calcularGanhosPessoal()" class="hc-prof-input">
+            <div class="hc-prof-calc-res">
+              <span>Você recebe</span>
+              <strong id="prof-calc-result">R$ 0,00</strong>
+            </div>
           </div>
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Instituição</label>
-            <input id="cert-instituicao" type="text" placeholder="Ex: Senac" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+
+        <!-- Personalizar -->
+        <div class="hc-prof-card">
+          <h4><i class="fa-solid fa-palette hc-prof-rosa"></i> Meu jeito</h4>
+          <p class="hc-prof-dica">Escolha a cor do seu espaço. Fica salvo no seu perfil.</p>
+          <div class="hc-prof-cores">
+            <button type="button" class="hc-prof-cor" style="--c:#ec4899" onclick="App.escolherCorProf('#ec4899')" title="Rosa"></button>
+            <button type="button" class="hc-prof-cor" style="--c:#8b5cf6" onclick="App.escolherCorProf('#8b5cf6')" title="Roxo"></button>
+            <button type="button" class="hc-prof-cor" style="--c:#3b82f6" onclick="App.escolherCorProf('#3b82f6')" title="Azul"></button>
+            <button type="button" class="hc-prof-cor" style="--c:#10b981" onclick="App.escolherCorProf('#10b981')" title="Verde"></button>
+            <button type="button" class="hc-prof-cor" style="--c:#f59e0b" onclick="App.escolherCorProf('#f59e0b')" title="Âmbar"></button>
+            <button type="button" class="hc-prof-cor" style="--c:#ef4444" onclick="App.escolherCorProf('#ef4444')" title="Vermelho"></button>
+            <button type="button" class="hc-prof-cor" style="--c:#14b8a6" onclick="App.escolherCorProf('#14b8a6')" title="Turquesa"></button>
+            <button type="button" class="hc-prof-cor" style="--c:#6366f1" onclick="App.escolherCorProf('#6366f1')" title="Índigo"></button>
           </div>
-          <div>
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Conclusão</label>
-            <input id="cert-data" type="date" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+          <label class="hc-prof-bio-lbl">Uma frase sobre você (aparece na agenda)</label>
+          <input type="text" id="prof-bio" maxlength="60" placeholder="Ex: especialista em coloração" class="hc-prof-input" onchange="App.salvarBio()">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============ MEU DESENVOLVIMENTO ============ -->
+    <div class="hc-prof-secao">
+      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-arrow-trend-up"></i> Meu desenvolvimento</h3>
+
+      <div class="hc-prof-grid">
+
+        <!-- Desempenho -->
+        <div class="hc-prof-card" id="bloco-minha-barra">
+          <h4><i class="fa-solid fa-star hc-prof-amarelo"></i> Meu desempenho</h4>
+          <div id="minha-barra-prof"></div>
+        </div>
+
+        <!-- Cursos -->
+        <div class="hc-prof-card">
+          <h4><i class="fa-solid fa-book-open hc-prof-rosa"></i> Cursos para fazer</h4>
+          <p class="hc-prof-dica">Cursos indicados pelo salão. Ao concluir, guarde o certificado.</p>
+          <div id="hc-prof-cursos" class="hc-prof-cursos"></div>
+        </div>
+
+        <!-- Certificados -->
+        <div class="hc-prof-card hc-prof-card-largo">
+          <div class="hc-prof-card-topo">
+            <h4><i class="fa-solid fa-award hc-prof-amarelo"></i> Meus certificados</h4>
+            <span class="hc-prof-selo-info"><i class="fa-solid fa-graduation-cap"></i> aparece na agenda</span>
           </div>
 
-          <div class="sm:col-span-2">
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Foto do certificado</label>
-            <label class="cert-preview-box">
+          <form onsubmit="App.salvarCertificado(event)" class="hc-prof-form">
+            <input id="cert-curso" type="text" required placeholder="Nome do curso *" class="hc-prof-input">
+            <input id="cert-instituicao" type="text" placeholder="Instituição" class="hc-prof-input">
+            <input id="cert-data" type="date" class="hc-prof-input">
+            <input id="cert-link" type="url" placeholder="Link do certificado" class="hc-prof-input">
+            <label class="hc-prof-arquivo">
               <img id="cert-preview" class="hidden" alt="Certificado">
-              <span id="cert-arquivo-nome" class="text-[10px] text-zinc-500">Foto do certificado (ou use o link ao lado)</span>
+              <span id="cert-arquivo-nome"><i class="fa-solid fa-camera"></i> Foto do certificado</span>
               <input type="file" accept="image/*" onchange="App.handleFotoCertificado(event)" class="hidden">
             </label>
-          </div>
-          <div class="sm:col-span-2 flex flex-col">
-            <label class="block text-[10px] text-zinc-400 uppercase mb-1">Ou cole o link do certificado</label>
-            <input id="cert-link" type="url" placeholder="https://..." class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-            <button type="submit" class="w-full mt-3 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 font-bold text-[10px] uppercase tracking-wider transition">
-              <i class="fa-solid fa-plus mr-1"></i> Adicionar certificado
-            </button>
-          </div>
-        </form>
+            <button type="submit" class="hc-prof-botao">Salvar certificado</button>
+          </form>
 
-        <div id="lista-certificados" class="space-y-2"></div>
-      </div>
+          <div id="lista-certificados" class="hc-prof-certs"></div>
+        </div>
 
-      <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4 flex flex-col justify-between">
-        <div>
-          <h3 class="text-xs font-bold text-white uppercase mb-2"><i class="fa-solid fa-mug-hot text-amber-500 mr-1.5"></i> Intervalos & Pausas</h3>
-          <p class="text-[11px] text-zinc-400">Espaço para gerenciar pausas e intervalos na bancada.</p>
-        </div>
-        <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-center space-y-2">
-          <span id="frase-motivacional" class="text-[11px] text-zinc-300 italic">"O sucesso é a soma de pequenos esforços."</span>
-          <button onclick="App.proximaFrase()" class="w-full py-2 bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 rounded-xl text-[10px] font-bold uppercase transition">Nova Frase</button>
-        </div>
       </div>
     </div>
 
-    <script>
-  // Carrega "Meus Certificados" quando a aba do profissional aparece
-  (function () {
-    var alvo = document.getElementById('lista-certificados');
-    if (!alvo) return;
-    var t = setInterval(function () {
-      if (window.App && App.user && App.user.role === 'profissional') {
-        App.carregarMeusCertificados();
-        clearInterval(t);
-      }
-    }, 800);
-    setTimeout(function () { clearInterval(t); }, 15000);
-  })();
-  </script>
-
-  <!-- BIOSSEGURANÇA -->
-<details id="painel-biosseguranca" class="p-5 rounded-2xl bg-zinc-950 border border-white/10 md:col-span-3">
-  <summary class="cursor-pointer list-none flex items-center justify-between">
-    <span class="text-xs font-bold text-white uppercase"><i class="fa-solid fa-shield-virus text-brand-500 mr-1.5"></i> Biossegurança & Capacitação</span>
-    <i class="fa-solid fa-chevron-down text-zinc-500 text-xs"></i>
-  </summary>
-  <div class="space-y-5 mt-4">
-    <div class="flex items-start justify-between border-b border-white/10 pb-4 gap-4 flex-wrap">
-      <div>
-        <h2 class="text-lg font-bold uppercase text-white"><i class="fa-solid fa-shield-virus text-brand-500 mr-2"></i>Biossegurança e Capacitação</h2>
-        <p class="text-[11px] text-zinc-400 mt-1">Curso de esterilização, manutenção de autoclave, reciclagem e as normas da Anvisa. Passe o dedo (ou o mouse) sobre o card para ver os detalhes.</p>
+    <!-- ============ MEU FECHAMENTO ============ -->
+    <div class="hc-prof-secao">
+      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-sack-dollar"></i> Meu fechamento</h3>
+      <div id="painel-fechamento" class="hc-prof-fechamento">
+        <div class="hc-prof-card-topo">
+          <div>
+            <h4><i class="fa-solid fa-wallet hc-prof-verde"></i> Quanto tenho a receber</h4>
+            <p id="fech-periodo" class="hc-prof-dica">Carregando período...</p>
+          </div>
+          <button type="button" onclick="App.abrirFecharCiclo()" class="hc-prof-botao hc-prof-botao-verde">
+            Fechar ciclo
+          </button>
+        </div>
+        <div id="fech-resumo" class="hc-prof-fech-resumo"></div>
       </div>
     </div>
 
-
-      <div>
-        <h3 class="bio-grupo-titulo">Biossegurança e esterilização</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-virus-slash"></i></div>
-                <p class="bio-titulo mt-3">Biossegurança em Esterilização</p>
-                <div><span class="bio-tag gratis">Grátis</span><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac EAD · versão gratuita pelo PSG</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Biossegurança em Esterilização</p>
-                  <p class="bio-desc mt-2">Curso do Senac sobre recebimento, limpeza, desinfecção, inspeção, acondicionamento, esterilização e armazenamento de artigos. É o mais reconhecido da lista e o que tem mais peso numa fiscalização.</p>
-                </div>
-                <a class="bio-btn" href="https://www.ead.senac.br/gratuito/biosseguranca-em-esterilizacao" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-temperature-high"></i></div>
-                <p class="bio-titulo mt-3">Esterilização por Autoclave</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · 11 módulos · 10 a 120h</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Esterilização por Autoclave</p>
-                  <p class="bio-desc mt-2">Cobre ciclos de esterilização e seus parâmetros, indicadores químicos, físicos e biológicos, segurança no manuseio, MANUTENÇÃO E CALIBRAÇÃO da autoclave e a legislação vigente.</p>
-                </div>
-                <a class="bio-btn" href="https://onlinecursosgratuitos.com.br/curso/enfermagem/esterilizacao-por-autoclave" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-hand-sparkles"></i></div>
-                <p class="bio-titulo mt-3">Biossegurança em Salão de Beleza</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · certificado válido em todo o Brasil</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Biossegurança em Salão de Beleza</p>
-                  <p class="bio-desc mt-2">Norma Anvisa, normas técnicas, medidas de segurança, cuidados com a higiene, manual de biossegurança e o processo de esterilização aplicado ao dia a dia do salão.</p>
-                </div>
-                <a class="bio-btn" href="https://www.educafacilonline.com.br/curso-gratis/biosseguranca-em-salao-de-beleza" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-spray-can-sparkles"></i></div>
-                <p class="bio-titulo mt-3">Boas Práticas em Salões de Beleza</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · certificado em PDF</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Boas Práticas em Salões de Beleza</p>
-                  <p class="bio-desc mt-2">Rotina de boas práticas do salão: higienização de bancadas e utensílios, organização dos setores, descarte correto e cuidados que a vigilância sanitária observa.</p>
-                </div>
-                <a class="bio-btn" href="https://onlinecursosgratuitos.com.br/curso/estetica-e-beleza/boas-praticas-em-saloes-de-beleza" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div>
-        <h3 class="bio-grupo-titulo">Autoclave: manutenção e operação</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-                <p class="bio-titulo mt-3">Manutenção de Autoclave</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · 10 horas · curso livre</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Manutenção de Autoclave</p>
-                  <p class="bio-desc mt-2">Específico de manutenção: componentes da autoclave, procedimentos de limpeza, verificação do equipamento e cuidados que evitam falha de ciclo e queima de material.</p>
-                </div>
-                <a class="bio-btn" href="https://www.wreducacional.com.br/curso-gratis-de-nocoes-basicas-em-manutencao-de-autoclave" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-fire-flame-simple"></i></div>
-                <p class="bio-titulo mt-3">Esterilização e Medidas de Biossegurança</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac GO · 16 horas · presencial</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Esterilização e Medidas de Biossegurança</p>
-                  <p class="bio-desc mt-2">Capacita para operar autoclave com segurança e eficácia: o ciclo completo do material, da limpeza ao armazenamento, seguindo as melhores práticas.</p>
-                </div>
-                <a class="bio-btn" href="https://www.go.senac.br/cursos/esterilizacao-e-medidas-de-biosseguranca/" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-user-shield"></i></div>
-                <p class="bio-titulo mt-3">Biossegurança para Profissionais de Beleza</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac SP · 36 horas · certificado aceito no Brasil</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Biossegurança para Profissionais de Beleza</p>
-                  <p class="bio-desc mt-2">O mais completo para salão: legislação e órgãos de fiscalização (Anvisa, NRs, RDC, ABNT, Inmetro), riscos biológicos, químicos e físicos, uso de EPIs e classificação de itens por nível de desinfecção.</p>
-                </div>
-                <a class="bio-btn" href="https://www.sp.senac.br/cursos-livres/curso-de-biosseguranca-para-profissionais-de-beleza" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div>
-        <h3 class="bio-grupo-titulo">Cabeleireiro e reciclagem</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-scissors"></i></div>
-                <p class="bio-titulo mt-3">Cabeleireiro</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac SP · formação completa · certificado</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Cabeleireiro</p>
-                  <p class="bio-desc mt-2">Formação profissional completa: hidratação e reconstrução dos fios, coloração e descoloração, cortes e penteados, com conceitos de visagismo. Serve para quem está começando e para quem quer se reciclar.</p>
-                </div>
-                <a class="bio-btn" href="https://www.sp.senac.br/cursos-livres/curso-de-cabeleireiro" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-flask"></i></div>
-                <p class="bio-titulo mt-3">Aperfeiçoamento em Química Capilar</p>
-                <div><span class="bio-tag pago">Pago</span></div>
-                <p class="bio-meta mt-auto">Senac CE · para quem já atua</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Aperfeiçoamento em Química Capilar</p>
-                  <p class="bio-desc mt-2">Reciclagem para cabeleireiro que já trabalha: coloração e descoloração com métodos avançados, correção de cor e segurança química nos procedimentos capilares.</p>
-                </div>
-                <a class="bio-btn" href="https://cursos.ce.senac.br/produto/cabeleireiro-2/" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-graduation-cap"></i></div>
-                <p class="bio-titulo mt-3">Cabeleireiro Básico</p>
-                <div><span class="bio-tag gratis">Grátis</span></div>
-                <p class="bio-meta mt-auto">Gratuito · online · certificado digital</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Cabeleireiro Básico</p>
-                  <p class="bio-desc mt-2">Curso introdutório para quem está voltando ao mercado ou começando: conceitos básicos, técnicas de corte, escova e cuidados com os cabelos.</p>
-                </div>
-                <a class="bio-btn" href="https://www.ginead.com.br/curso/curso-online-gratis-cabeleireiro-basico" target="_blank" rel="noopener">Ir para o curso</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div>
-        <h3 class="bio-grupo-titulo">Normas oficiais da Anvisa — para consulta</h3>
-        <div class="bio-grid">
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-scale-balanced"></i></div>
-                <p class="bio-titulo mt-3">O que observar no Salão de Beleza</p>
-                <div><span class="bio-tag oficial">Oficial</span></div>
-                <p class="bio-meta mt-auto">Anvisa · leitura oficial</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">O que observar no Salão de Beleza</p>
-                  <p class="bio-desc mt-2">É aqui que a Anvisa orienta o uso da autoclave em vez da estufa — porque a estufa não elimina vírus. Explica também regularização, higiene, produtos e boas práticas dos profissionais.</p>
-                </div>
-                <a class="bio-btn" href="https://www.gov.br/anvisa/pt-br/assuntos/noticias-anvisa/2018/o-que-observar-no-salao-de-beleza" target="_blank" rel="noopener">Ler na Anvisa</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-circle-question"></i></div>
-                <p class="bio-titulo mt-3">Perguntas e Respostas: Serviços de Embelezamento</p>
-                <div><span class="bio-tag oficial">Oficial</span></div>
-                <p class="bio-meta mt-auto">Anvisa · documento em PDF</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Perguntas e Respostas: Serviços de Embelezamento</p>
-                  <p class="bio-desc mt-2">As dúvidas mais comuns sobre serviços de embelezamento já respondidas pela própria Anvisa. Vale ter à mão no dia de uma inspeção sanitária.</p>
-                </div>
-                <a class="bio-btn" href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/perguntas-e-respostas-servicos-de-embelezamento" target="_blank" rel="noopener">Ler na Anvisa</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="bio-card" tabindex="0">
-            <div class="bio-inner">
-              <div class="bio-face">
-                <div class="bio-icone"><i class="fa-solid fa-file-shield"></i></div>
-                <p class="bio-titulo mt-3">Nota Técnica nº 2/2024 <span class="text-amber-400">(suspensa em 23/09/2026)</span></p>
-                <div><span class="bio-tag oficial">Oficial</span></div>
-                <p class="bio-meta mt-auto">Anvisa · o documento mais recente</p>
-              </div>
-              <div class="bio-face bio-costas">
-                <div>
-                  <p class="bio-titulo">Nota Técnica nº 2/2024</p>
-                  <p class="bio-desc mt-2">Esclarece quais normas sanitárias valem hoje para serviços de estética. É o documento mais atualizado da lista — leia antes de mudar qualquer processo do salão.</p>
-                </div>
-                <a class="bio-btn" href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/notas-tecnicas/notas-tecnicas-vigentes/nota-tecnica-no-2-2024-sei-ggtes-dire3-anvisa-esclarecimentos-sobre-os-servicos-de-estetica-e-atendimento-as-normas-sanitarias-aplicaveis-a-esses-servicos/%40%40download/file" target="_blank" rel="noopener">Ler na Anvisa</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-<p class="text-[10px] text-zinc-500 border-t border-white/10 pt-4">Os cursos gratuitos têm certificado válido como capacitação, mas não conferem habilitação técnica. Para o salão se proteger numa fiscalização, prefira os cursos do Senac.</p>
-  </div>
-</details>
-
-
-    <!-- CHAT INTERATIVO DO PROFISSIONAL COM O ESTABELECIMENTO -->
-    <div class="p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
-      <h3 class="text-xs font-bold text-white uppercase flex items-center gap-2">
-        <i class="fa-solid fa-comments text-brand-500"></i> Chat com o Estabelecimento
+    <!-- ============ CHAT ============ -->
+    <div class="hc-prof-chat">
+      <h3 class="hc-prof-chat-titulo">
+        <i class="fa-solid fa-comments"></i> Falar com o salão
       </h3>
-      <div id="chat-historico-prof" class="space-y-2.5 max-h-52 overflow-y-auto pr-2 flex flex-col text-xs">
-        <p class="text-zinc-500 text-center py-2">Carregando conversa...</p>
-      </div>
-      <div class="flex gap-2 pt-2 border-t border-white/10">
-        <input type="text" id="prof-recado-input" placeholder="Escreva uma mensagem para o salão..." class="flex-grow glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRecadoEstabelecimento()">
-        <button onclick="App.enviarRecadoEstabelecimento()" class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition shrink-0">
+      <div id="chat-historico-prof" class="hc-prof-chat-historico"></div>
+      <div class="hc-prof-chat-envio">
+        <input type="text" id="prof-recado-input" placeholder="Escreva para o salão..." class="hc-prof-chat-input" onkeypress="if(event.key === 'Enter') App.enviarRecadoEstabelecimento()">
+        <button type="button" onclick="App.enviarRecadoEstabelecimento()" class="hc-prof-chat-btn" title="Enviar">
           <i class="fa-solid fa-paper-plane"></i>
         </button>
       </div>
     </div>
+
   </div>
 
-  <!-- CAIXA DE MENSAGENS / RECADOS RECEBIDOS (Visível para o Admin) -->
-  <div class="admin-only glass-water p-5 rounded-2xl border border-white/10 space-y-3">
-    <div class="flex items-center justify-between">
-      <h3 class="text-xs font-bold text-white uppercase flex items-center gap-2">
-        <i class="fa-solid fa-inbox text-brand-500"></i> Mensagens e Recados Recebidos da Equipe
-      </h3>
-      <span class="text-[10px] text-zinc-400">Comunicação interna</span>
-    </div>
-    <div id="lista-recados-estab" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-      <p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>
-    </div>
-    <div class="pt-3 border-t border-white/10 flex gap-2">
-      <input type="text" id="admin-resposta-input" placeholder="Escrever resposta ou aviso para a equipe..." class="flex-grow glass-input rounded-xl px-3.5 py-2 text-xs text-white" onkeypress="if(event.key === 'Enter') App.enviarRespostaAdmin()">
-      <button onclick="App.enviarRespostaAdmin()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition shrink-0">
-        <i class="fa-solid fa-paper-plane mr-1"></i> Responder
-      </button>
-    </div>
-  </div>
-
-  <!-- CONTROLE DE CALENDÁRIO & NAVEGAÇÃO -->
-  <div class="glass-water p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500 mr-1.5"></i> Data:</span>
-      <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-left"></i></button>
-      <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
-      <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-right"></i></button>
-      <button onclick="App.irParaHoje()" class="px-3 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-xs font-bold text-brand-400 hover:bg-brand-500/30 transition">Hoje</button>
-      <span class="hidden sm:inline-block w-px h-5 bg-white/10 mx-1"></span>
-      <button id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="modo-btn ativo">Dia</button>
-      <button id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="modo-btn">Semana</button>
-    </div>
-    <div class="flex items-center gap-3">
-      <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
-        <option value="" disabled selected>Saltar para Mês...</option>
-        <option value="9">Outubro 2026</option>
-        <option value="10">Novembro 2026</option>
-        <option value="11">Dezembro 2026</option>
-        <option value="0">Janeiro 2027</option>
-      </select>
-      <button onclick="App.abrirMarcar()" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
-    </div>
-  </div>
-
-  <!-- BARRA DE PROFISSIONAIS (mobile) -->
-  <button onclick="document.getElementById('ag-lateral').classList.toggle('aberta')" class="ag-lateral-toggle lg:hidden w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white uppercase items-center justify-between">
-    <span><i class="fa-solid fa-users text-brand-500 mr-2"></i> Profissionais</span>
-    <i class="fa-solid fa-chevron-down text-zinc-500"></i>
-  </button>
-
-  <!-- MENU DO DIA (≡) -->
-  <div id="menu-dia-pop" class="hidden">
-    <p id="menu-dia-rotulo" class="md-rot">Dia</p>
-
-    <label>Motivo</label>
-    <select id="menu-dia-motivo">
-      <option value="Fechado">Fechado</option>
-      <option value="Folga">Folga</option>
-      <option value="Feriado">Feriado</option>
-      <option value="Almoço">Almoço</option>
-      <option value="Manutenção">Manutenção</option>
-      <option value="Curso">Curso</option>
-    </select>
-
-    <div class="md-check">
-      <input type="checkbox" id="menu-dia-todos">
-      <label for="menu-dia-todos" style="margin:0;">Só o profissional selecionado</label>
-    </div>
-
-    <button type="button" class="md-btn principal" onclick="App.fecharAgendaDia()"><i class="fa-solid fa-lock mr-1"></i> Fechar o dia</button>
-
-    <label>Fechar um intervalo</label>
-    <div class="md-linha">
-      <div><input type="time" id="menu-dia-de" value="12:00"></div>
-      <div><input type="time" id="menu-dia-ate" value="13:00"></div>
-    </div>
-    <button type="button" class="md-btn neutro" onclick="App.fecharAgendaIntervalo()"><i class="fa-solid fa-clock mr-1"></i> Fechar intervalo</button>
-
-    <button type="button" class="md-btn neutro" onclick="App.trocarModoAgenda('dia')"><i class="fa-solid fa-list mr-1"></i> Ver este dia</button>
-  </div>
-
-  <!-- AGENDA: LATERAL + GRADE -->
-  <div class="ag-layout ag-modo-dia" id="agenda-modos">
-    <aside id="ag-lateral" class="ag-lateral">
-      <p class="ag-lateral-titulo">Profissionais</p>
-      <input type="text" id="ag-busca-prof" class="ag-busca" placeholder="Buscar..." oninput="App.filtrarLateralProfs(this.value)">
-      <div id="ag-lista-profs"></div>
-    </aside>
-
-    <div class="space-y-6">
-      <!-- MODO DIA: a agenda de sempre -->
-      <div id="agenda-modo-dia" class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
-        <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
-          <thead>
-            <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
-              <th class="py-3 px-4 w-24">Horário</th>
-            </tr>
-          </thead>
-          <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
-        </table>
-      </div>
-
-      <!-- MODO SEMANA: a visão nova -->
-      <div id="agenda-modo-semana" class="hidden">
-        <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 shadow-2xl">
-          <div class="semana-scroll">
-            <table class="semana-tabela">
-              <thead><tr id="semana-cabecalho" class="bg-zinc-950/90 border-b border-white/10"></tr></thead>
-              <tbody id="semana-corpo" class="semana-corpo"></tbody>
-            </table>
-          </div>
-        </div>
-        <p class="text-[10px] text-zinc-500 mt-3"><i class="fa-solid fa-circle-info mr-1"></i> Toque no <strong class="text-zinc-300">≡</strong> de cada dia para fechar o dia, fechar um intervalo ou abrir a agenda detalhada. No celular, a semana mostra um dia por vez.</p>
-      </div>
-    </div>
-  </div>
-</section>
+  </section>
 
 <!-- AGENDAR -->
 <div id="modal-marcar" class="modal-overlay flex">
@@ -1291,6 +900,7 @@ tailwind.config = {
     <button id="btn-espaco-produtos" onclick="UI.trocarEspaco('produtos')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-boxes-stacked"></i> Estoque</button>
     <button id="btn-espaco-avaliacoes" onclick="UI.trocarEspaco('avaliacoes-nova')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-star"></i> Avaliação de Profissional</button>
     <button id="btn-espaco-config-salao" onclick="UI.trocarEspaco('config-salao')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-store"></i> Configuração do Salão</button>
+    <button id="btn-espaco-cursos" onclick="UI.trocarEspaco('cursos')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-graduation-cap"></i> Cursos</button>
     <button id="btn-espaco-notas" onclick="UI.trocarEspaco('notas')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-file-invoice-dollar"></i> Notas e Comissões</button>
   </div>
 
@@ -1504,7 +1114,54 @@ v>
   </div>
 </section>
 
-<section id="aba-notas" class="espaco-painel hidden space-y-6">
+<section   <!-- ================= ESPACO: CURSOS ================= -->
+  <div id="aba-cursos" class="tab-content hidden space-y-5">
+
+    <div class="glass-water rounded-3xl p-6 border border-white/10 space-y-4">
+      <div>
+        <h3 class="text-sm font-bold uppercase text-white flex items-center gap-2">
+          <i class="fa-solid fa-graduation-cap text-brand-500"></i> Cursos para a equipe
+        </h3>
+        <p class="text-[11px] text-zinc-400 mt-1">
+          Indique cursos, vídeos e materiais. Eles aparecem na área de cada profissional, em "Cursos para fazer".
+        </p>
+      </div>
+
+      <form onsubmit="App.salvarCurso(event)" class="grid grid-cols-1 sm:grid-cols-6 gap-3">
+        <div class="sm:col-span-2">
+          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Título *</label>
+          <input id="curso-titulo" type="text" required placeholder="Ex: Coloração avançada" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div class="sm:col-span-3">
+          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Link *</label>
+          <input id="curso-link" type="url" required placeholder="https://..." class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div class="sm:col-span-1">
+          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Tipo</label>
+          <select id="curso-tipo" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+            <option value="Curso">Curso</option>
+            <option value="Video">Vídeo</option>
+            <option value="Artigo">Artigo</option>
+            <option value="PDF">PDF</option>
+            <option value="Site">Site</option>
+          </select>
+        </div>
+        <div class="sm:col-span-5">
+          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Descrição (opcional)</label>
+          <input id="curso-descricao" type="text" placeholder="Ex: para quem atende coloração" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div class="sm:col-span-1 flex items-end">
+          <button type="submit" class="w-full px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold uppercase transition">
+            Indicar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div id="lista-cursos" class="space-y-2"></div>
+  </div>
+
+id="aba-notas" class="espaco-painel hidden space-y-6">
   <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
     <div class="border-b border-white/10 pb-4">
       <h2 class="text-xl font-bold uppercase text-white">Dados Fiscais</h2>
