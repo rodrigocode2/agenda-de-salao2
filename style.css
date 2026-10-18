@@ -48,14 +48,13 @@
 }
 
 /* Canvas de rastro */
-#mouse-trail-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+.hc-trail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 1;
 }
 
 /* Agenda Grid Cell Effects */
@@ -1022,4 +1021,19 @@ body.hc-abertura-ativa { overflow: hidden; }
   .ag-lateral { display: none; }
   .ag-lateral.aberta { display: block; max-height: 60vh; }
   .ag-lateral-toggle { display: flex; }
+}
+
+/* =====================================================================
+   OBSERVACAO NO BLOCO DA AGENDA
+   ===================================================================== */
+.semana-ag-obs {
+  display: block;
+  font-size: 8px;
+  opacity: 0.75;
+  font-style: italic;
+  line-height: 1.1;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
