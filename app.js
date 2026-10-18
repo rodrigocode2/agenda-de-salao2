@@ -39,6 +39,40 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
     }
 }) : null;
 
+// ============================================================
+// QUEM ESTA LOGADO — a unica fonte de verdade.
+// Antes o sistema inferia o papel pelo 'prof_dados' guardado, o que
+// fazia o dono do salao cair na area do profissional. Agora o login
+// grava 'salao' ou 'profissional' aqui, e so isso decide a tela.
+// ============================================================
+window.hcSessao = {
+    get papel() {
+        try { return localStorage.getItem('hairconcept_sessao') || ''; }
+        catch (e) { return ''; }
+    },
+    definir(papel) {
+        try {
+            if (papel) localStorage.setItem('hairconcept_sessao', String(papel));
+            else localStorage.removeItem('hairconcept_sessao');
+        } catch (e) { /* silencioso */ }
+    },
+    ehSalao() { return this.papel === 'salao'; },
+    ehProfissional() { return this.papel === 'profissional'; },
+    // Entrou o salao: esquece TUDO de profissional. E vice-versa.
+    limparResiduo(manter) {
+        try {
+            if (manter === 'salao') {
+                localStorage.removeItem('hairconcept_prof_dados');
+                localStorage.removeItem('hairconcept_prof_id');
+                localStorage.removeItem('hairconcept_prof_token');
+                localStorage.removeItem('hairconcept_prof_selecionado');
+            } else if (manter === 'profissional') {
+                localStorage.removeItem('hairconcept_estab_id');
+            }
+        } catch (e) { /* silencioso */ }
+    }
+};
+
 // Foto padrão (o site via.placeholder.com saiu do ar)
 const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
 
@@ -179,6 +213,8 @@ window.RastroMouse = RastroMouse;
 
 const Auth = {
     logout() {
+        // Sai de vez: nao sobra papel nenhum para o proximo login confundir.
+        window.hcSessao.definir(null);
         localStorage.removeItem('hairconcept_estab_id');
         localStorage.removeItem('hairconcept_prof_id');
         localStorage.removeItem('hairconcept_plan');
@@ -747,15 +783,9 @@ const Auth = {
                     console.error('Erro no login do admin:', error);
                     UI.showToast(mensagemAmigavel(error), 'error');
                 } else {
-                    // O salao entrou: apaga QUALQUER rastro de sessao de profissional.
-                    // Sem isto, o init() lia o prof_dados antigo e abria a area
-                    // do profissional para o dono do salao.
-                    try {
-                        localStorage.removeItem('hairconcept_prof_dados');
-                        localStorage.removeItem('hairconcept_prof_id');
-                        localStorage.removeItem('hairconcept_prof_token');
-                        localStorage.removeItem('hairconcept_prof_selecionado');
-                    } catch (e) {}
+                    // O salao entrou: grava o papel e esquece o profissional.
+                    window.hcSessao.definir('salao');
+                    window.hcSessao.limparResiduo('salao');
                     App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
                     App.finishLogin('Bem-vindo ao Painel!');
                 }
@@ -794,7 +824,12 @@ const App = {
         if (dataInput && !dataInput.value) {
             dataInput.value = dataLocalISO();
         }
-        const ehProfissional = this.user.role === 'profissional';
+        // Quem manda na tela e a sessao gravada no login. Se por algum
+        // motivo ela faltar, cai no papel do usuario.
+        const papelSessao = window.hcSessao ? window.hcSessao.papel : '';
+        const ehProfissional = papelSessao
+            ? (papelSessao === 'profissional')
+            : (this.user.role === 'profissional');
 
         // Todo mundo precisa da agenda e das notas
         this.renderAgendaGrid();
@@ -1080,6 +1115,8 @@ const App = {
                 nome_salao: data.nome_salao || nomeEstabelecimento
             };
             localStorage.setItem('hairconcept_prof_dados', JSON.stringify(dadosProf));
+            // Grava o papel: e isso que decide a tela daqui para a frente.
+            window.hcSessao.definir('profissional');
 
             this.user = { loggedIn: true, role: 'profissional', name: dadosProf.nome, id: dadosProf.id };
 
@@ -5429,6 +5466,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     // profissional e saia pelo 'return' - sem nunca olhar a sessao do
     // salao. Era isso que jogava o dono na area do profissional.
     // ============================================================
+    // Duas checagens, nesta ordem, e nada mais:
+    //   1) existe sessao do Supabase?  -> e o SALAO
+    //   2) senao, a sessao gravada diz 'profissional'? -> e o PROFISSIONAL
+    // Antes o sistema perguntava "tem prof_dados na gaveta?" antes de
+    // "quem entrou?", e o residuo vencia. Agora o papel gravado manda.
     let temSessaoAdmin = false;
     try {
         const { data: { session } } = await supabaseClient.auth.getSession();
@@ -5436,17 +5478,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch (e) { temSessaoAdmin = false; }
 
     if (temSessaoAdmin) {
-        // Entrou o salao: limpa o rastro de profissional que sobrou.
-        try {
-            localStorage.removeItem('hairconcept_prof_dados');
-            localStorage.removeItem('hairconcept_prof_id');
-            localStorage.removeItem('hairconcept_prof_token');
-            localStorage.removeItem('hairconcept_prof_selecionado');
-        } catch (e) {}
+        // Entrou o salao: grava o papel e esquece tudo de profissional.
+        window.hcSessao.definir('salao');
+        window.hcSessao.limparResiduo('salao');
     }
 
-    // O profissional so restaura se NAO houver sessao de admin.
-    const profSalvo = temSessaoAdmin ? null : localStorage.getItem('hairconcept_prof_dados');
+    // O profissional so restaura se a sessao gravada for dele E nao houver
+    // sessao de salao ativa.
+    const podeProf = !temSessaoAdmin && window.hcSessao.ehProfissional();
+    const profSalvo = podeProf ? localStorage.getItem('hairconcept_prof_dados') : null;
     if (profSalvo) {
         try {
             const data = JSON.parse(profSalvo);
@@ -5501,20 +5541,18 @@ window.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         if (session && !App.user.loggedIn) {
-            // Sessao do Supabase ativa = e o salao. O rastro do profissional
-            // ja foi tratado e limpo no inicio deste mesmo bloco.
+            // Sessao do Supabase ativa = e o salao.
+            window.hcSessao.definir('salao');
+            window.hcSessao.limparResiduo('salao');
             const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
             App.user = { loggedIn: true, role: 'admin', name: name };
             App.finishLogin();
         }
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session && !App.user.loggedIn) {
-                // Entrou conta nova: e o salao. Limpa rastro de profissional.
-                try {
-                    localStorage.removeItem('hairconcept_prof_dados');
-                    localStorage.removeItem('hairconcept_prof_id');
-                    localStorage.removeItem('hairconcept_prof_token');
-                } catch (e) {}
+                // Entrou conta nova: e o salao.
+                window.hcSessao.definir('salao');
+                window.hcSessao.limparResiduo('salao');
                 const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
                 App.user = { loggedIn: true, role: 'admin', name: name };
                 App.finishLogin(`Bem-vindo, ${name}!`);
@@ -5525,18 +5563,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     // DECISAO DA ABERTURA, agora no fim: so aqui o sistema ja sabe se ha sessao.
     // Quem ja esta logado entra direto, sem passar pela tela de boas-vindas.
     try {
-        // Quem decide se esta logado e o PERFIL ATUAL (App.user), nunca o
-        // localStorage sozinho: um prof_dados antigo fazia o dono do salao
-        // cair na area do profissional.
-        const papel = (App.user && App.user.role) || '';
-        let temSessao = false;
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            temSessao = !!(session && session.user);
-        } catch (e) {}
-        // O profissional so conta se o papel for dele.
-        const temProf = papel === 'profissional' && !!localStorage.getItem('hairconcept_prof_dados');
-        const temAdmin = papel === 'admin' || (temSessao && papel !== 'profissional');
+        // A decisao da abertura usa a SESSAO GRAVADA no login, nunca o
+        // prof_dados: era ele que fazia o dono do salao cair na area errada.
+        const papelGravado = window.hcSessao ? window.hcSessao.papel : '';
+        const temProf = papelGravado === 'profissional';
+        const temAdmin = papelGravado === 'salao' || temSessaoAdmin;
         const logado = temProf || temAdmin || (App.user && App.user.loggedIn);
         if (logado) {
             localStorage.setItem('hairconcept_viu_abertura', 'sim');
