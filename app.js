@@ -747,6 +747,15 @@ const Auth = {
                     console.error('Erro no login do admin:', error);
                     UI.showToast(mensagemAmigavel(error), 'error');
                 } else {
+                    // O salao entrou: apaga QUALQUER rastro de sessao de profissional.
+                    // Sem isto, o init() lia o prof_dados antigo e abria a area
+                    // do profissional para o dono do salao.
+                    try {
+                        localStorage.removeItem('hairconcept_prof_dados');
+                        localStorage.removeItem('hairconcept_prof_id');
+                        localStorage.removeItem('hairconcept_prof_token');
+                        localStorage.removeItem('hairconcept_prof_selecionado');
+                    } catch (e) {}
                     App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
                     App.finishLogin('Bem-vindo ao Painel!');
                 }
@@ -5470,9 +5479,14 @@ window.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         if (session && !App.user.loggedIn) {
-            const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-            App.user = { loggedIn: true, role: 'admin', name: name };
-            App.finishLogin();
+            // Se ha um profissional logado no navegador, ele NAO pode ser
+            // trocado por admin so porque existe uma sessao do Supabase.
+            const temProfSalvo = !!localStorage.getItem('hairconcept_prof_dados');
+            if (!temProfSalvo) {
+                const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+                App.user = { loggedIn: true, role: 'admin', name: name };
+                App.finishLogin();
+            }
         }
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session && !App.user.loggedIn) {
@@ -5486,12 +5500,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     // DECISAO DA ABERTURA, agora no fim: so aqui o sistema ja sabe se ha sessao.
     // Quem ja esta logado entra direto, sem passar pela tela de boas-vindas.
     try {
-        const temProf = !!localStorage.getItem('hairconcept_prof_dados');
-        let temAdmin = false;
+        // Quem decide se esta logado e o PERFIL ATUAL (App.user), nunca o
+        // localStorage sozinho: um prof_dados antigo fazia o dono do salao
+        // cair na area do profissional.
+        const papel = (App.user && App.user.role) || '';
+        let temSessao = false;
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
-            temAdmin = !!(session && session.user);
+            temSessao = !!(session && session.user);
         } catch (e) {}
+        // O profissional so conta se o papel for dele.
+        const temProf = papel === 'profissional' && !!localStorage.getItem('hairconcept_prof_dados');
+        const temAdmin = papel === 'admin' || (temSessao && papel !== 'profissional');
         const logado = temProf || temAdmin || (App.user && App.user.loggedIn);
         if (logado) {
             localStorage.setItem('hairconcept_viu_abertura', 'sim');
