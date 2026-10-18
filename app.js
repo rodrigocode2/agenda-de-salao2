@@ -110,6 +110,73 @@ document.addEventListener('keydown', function (ev) {
     });
 });
 
+// ============================================================
+// RASTRO DO MOUSE — so na tela de apresentacao.
+// O canvas vive dentro da tela de abertura: quando ela sai, o
+// rastro para e nao pesa na agenda.
+// ============================================================
+const RastroMouse = {
+    ligado: false, canvas: null, ctx: null, pontos: [], raf: null,
+
+    iniciar() {
+        if (this.ligado) return;
+        const alvo = document.getElementById('tela-abertura');
+        const cv = document.getElementById('mouse-trail-canvas');
+        if (!alvo || !cv || !cv.getContext) return;
+        this.canvas = cv;
+        this.ctx = cv.getContext('2d');
+        this.ligado = true;
+
+        const ajustar = () => {
+            const r = alvo.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            cv.width = Math.max(1, Math.floor(r.width * dpr));
+            cv.height = Math.max(1, Math.floor(r.height * dpr));
+            cv.style.width = r.width + 'px';
+            cv.style.height = r.height + 'px';
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
+        ajustar();
+        this._ajustar = ajustar;
+        window.addEventListener('resize', ajustar);
+
+        const mover = (ev) => {
+            const r = alvo.getBoundingClientRect();
+            this.pontos.push({ x: ev.clientX - r.left, y: ev.clientY - r.top, vida: 1 });
+            if (this.pontos.length > 28) this.pontos.shift();
+        };
+        this._mover = mover;
+        window.addEventListener('mousemove', mover);
+
+        const desenhar = () => {
+            if (!this.ligado) return;
+            const c = this.ctx;
+            c.clearRect(0, 0, cv.width, cv.height);
+            this.pontos.forEach(function (p) {
+                p.vida -= 0.035;
+                if (p.vida <= 0) return;
+                c.beginPath();
+                c.arc(p.x, p.y, 1 + p.vida * 2.4, 0, Math.PI * 2);
+                c.fillStyle = 'rgba(236, 72, 153, ' + (p.vida * 0.55).toFixed(3) + ')';
+                c.fill();
+            });
+            this.pontos = this.pontos.filter(function (p) { return p.vida > 0; });
+            this.raf = requestAnimationFrame(desenhar);
+        };
+        this.raf = requestAnimationFrame(desenhar);
+    },
+
+    parar() {
+        this.ligado = false;
+        if (this.raf) { cancelAnimationFrame(this.raf); this.raf = null; }
+        if (this._mover) { window.removeEventListener('mousemove', this._mover); this._mover = null; }
+        if (this._ajustar) { window.removeEventListener('resize', this._ajustar); this._ajustar = null; }
+        this.pontos = [];
+        if (this.ctx && this.canvas) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+};
+window.RastroMouse = RastroMouse;
+
 const Auth = {
     logout() {
         localStorage.removeItem('hairconcept_estab_id');
@@ -181,10 +248,12 @@ const Auth = {
         // ABERTURA VISIVEL: o sistema fica bloqueado atras dela.
         // Sem isto o site carregava por baixo e a janela de agendar travava a tela.
         document.body.classList.add('hc-abertura-ativa');
+        try { RastroMouse.iniciar(); } catch (e) {}
     },
 
     // Tira a abertura e libera o sistema. Pode ser chamada mais de uma vez.
     liberarAbertura() {
+        try { RastroMouse.parar(); } catch (e) {}
         const tela = document.getElementById('tela-abertura');
         if (tela) tela.style.display = 'none';
         document.body.classList.remove('hc-abertura-ativa');
@@ -2266,7 +2335,8 @@ const App = {
     },
 
     // ---------- Editar profissional ----------
-    abrirEditarProfissional(id, nome, cargo, cpf) {
+    abrirEditarProfissional(id, nome, cargo, cpf, ev) {
+        if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
         const campoId = document.getElementById('editar-prof-id');
         if (campoId) campoId.value = id;
         const campoNome = document.getElementById('editar-prof-nome');
@@ -3768,6 +3838,15 @@ const App = {
                         const caixa = document.createElement('div');
                         caixa.className = 'semana-ag ' + App.classeEstado(ag.status);
                         caixa.style.height = (blocos * 26 - 4) + 'px';
+                        const corDoProf = (function () {
+                            const p = (profs || []).find(function (x) { return x.id === ag.profissional_id; });
+                            return p && p.cor_agenda ? p.cor_agenda : '';
+                        })();
+                        if (corDoProf) {
+                            caixa.style.borderLeftColor = corDoProf;
+                            caixa.style.borderLeftWidth = '3px';
+                            caixa.style.borderLeftStyle = 'solid';
+                        }
                         const cli = document.createElement('strong');
                         cli.className = 'semana-ag-cli';
                         cli.textContent = ag.cliente || '';
@@ -3789,6 +3868,12 @@ const App = {
                             st.className = 'semana-ag-status';
                             st.textContent = App.rotuloEstado(ag.status);
                             caixa.appendChild(st);
+                        }
+                        if (ag.observacao) {
+                            const ob = document.createElement('span');
+                            ob.className = 'semana-ag-obs';
+                            ob.textContent = ag.observacao;
+                            caixa.appendChild(ob);
                         }
                         caixa.title = (ag.cliente || '') + ' • ' + (ag.servico || '') + ' • R$ ' + parseFloat(ag.valor || 0).toFixed(2);
                         caixa.onclick = function (ev) { ev.stopPropagation(); App.abrirDiaDoAtendimento(iso, ag); };
@@ -4389,12 +4474,18 @@ const App = {
                 const btnEditar = document.createElement('button');
                 btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-xs font-bold uppercase transition cursor-pointer';
                 btnEditar.textContent = 'Editar';
-                btnEditar.onclick = () => this.abrirEditarProfissional(p.id, p.nome, p.cargo, p.cpf);
+                btnEditar.onclick = (ev) => {
+                    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+                    this.abrirEditarProfissional(p.id, p.nome, p.cargo, p.cpf);
+                };
 
                 const btnExcluir = document.createElement('button');
                 btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold uppercase transition cursor-pointer';
                 btnExcluir.textContent = 'Excluir';
-                btnExcluir.onclick = () => this.excluirProfissional(p.id);
+                btnExcluir.onclick = (ev) => {
+                    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+                    this.excluirProfissional(p.id);
+                };
 
                 acoes.appendChild(btnEditar);
                 acoes.appendChild(btnExcluir);
