@@ -1186,3 +1186,474 @@ body.hc-abertura-ativa { overflow: hidden; }
   .hc-side-abrir { display: flex; }
   header { padding-left: 62px; }
 }
+
+/* =====================================================================
+   AREA DO PROFISSIONAL — feita para o celular.
+   So visualizacao: a agenda do dia, os dias que passam e o chat.
+   ===================================================================== */
+
+#hc-area-prof { display: block; }
+
+/* Cabecalho: quem esta logado */
+.hc-prof-topo {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+}
+.hc-prof-quem { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.hc-prof-foto {
+  width: 52px; height: 52px; border-radius: 0.8rem; object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12); flex-shrink: 0;
+  background: rgba(236, 72, 153, 0.12);
+}
+.hc-prof-etiqueta {
+  display: inline-block; font-size: 9px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: #60a5fa; background: rgba(96, 165, 250, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  padding: 2px 7px; border-radius: 0.4rem;
+}
+.hc-prof-nome {
+  font-size: 16px; font-weight: 800; color: #fff;
+  text-transform: uppercase; line-height: 1.15; margin: 4px 0 0;
+}
+.hc-prof-cargo { font-size: 11px; color: #a1a1aa; margin: 0; }
+.hc-prof-sair {
+  width: 38px; height: 38px; border-radius: 0.7rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(9, 9, 11, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #a1a1aa; cursor: pointer;
+}
+.hc-prof-sair:hover { color: #fff; border-color: rgba(255, 255, 255, 0.25); }
+
+/* Navegacao dos dias */
+.hc-prof-dias {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px;
+  background: rgba(24, 24, 27, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+}
+.hc-prof-dia-btn {
+  width: 42px; height: 42px; border-radius: 0.7rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.35);
+  color: #ec4899; cursor: pointer; transition: all 0.15s;
+}
+.hc-prof-dia-btn:hover { background: rgba(236, 72, 153, 0.25); color: #fff; }
+.hc-prof-dia-hoje {
+  padding: 8px 14px; border-radius: 0.7rem; flex-shrink: 0;
+  background: rgba(9, 9, 11, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e4e7; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; cursor: pointer;
+}
+.hc-prof-dia-texto { flex-grow: 1; text-align: center; min-width: 0; }
+.hc-prof-dia-texto strong {
+  display: block; font-size: 14px; font-weight: 800;
+  color: #fff; text-transform: uppercase;
+}
+.hc-prof-dia-texto span { display: block; font-size: 11px; color: #ec4899; font-weight: 700; }
+
+/* Numeros do dia */
+.hc-prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hc-prof-stat {
+  padding: 14px; text-align: center;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+}
+.hc-prof-stat span {
+  display: block; font-size: 9px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.06em; color: #a1a1aa;
+}
+.hc-prof-stat strong { display: block; font-size: 22px; font-weight: 800; color: #ec4899; margin-top: 4px; }
+.hc-prof-verde { color: #4ade80 !important; }
+
+/* Lista dos atendimentos */
+.hc-prof-lista { display: flex; flex-direction: column; gap: 8px; }
+.hc-prof-vazio {
+  text-align: center; padding: 28px 16px; margin: 0;
+  font-size: 12px; color: #71717a;
+  background: rgba(24, 24, 27, 0.4);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+}
+.hc-prof-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border-radius: 1rem;
+  background: rgba(24, 24, 27, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #ec4899;
+}
+.hc-prof-card.ok { border-left-color: #4ade80; }
+.hc-prof-card.falta { border-left-color: #ef4444; }
+.hc-prof-card-hora {
+  flex-shrink: 0; text-align: center; min-width: 52px;
+  font-size: 17px; font-weight: 800; color: #fff; line-height: 1;
+}
+.hc-prof-card-hora span { display: block; font-size: 10px; color: #71717a; font-weight: 600; margin-top: 3px; }
+.hc-prof-card-info { flex-grow: 1; min-width: 0; }
+.hc-prof-card-info strong {
+  display: block; font-size: 13px; font-weight: 700; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hc-prof-card-info span { display: block; font-size: 11px; color: #a1a1aa; }
+.hc-prof-card-info em { display: block; font-size: 10px; color: #71717a; font-style: italic; margin-top: 2px; }
+.hc-prof-card-estado {
+  flex-shrink: 0; font-size: 9px; font-weight: 800;
+  text-transform: uppercase; color: #a1a1aa; text-align: right; max-width: 74px;
+}
+
+/* Aviso de que marcar e pelo chat */
+.hc-prof-aviso {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 11px; color: #a1a1aa; line-height: 1.5;
+  padding: 12px; margin: 0;
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 1rem;
+}
+.hc-prof-aviso i { color: #60a5fa; margin-top: 2px; flex-shrink: 0; }
+
+/* Chat */
+.hc-prof-chat {
+  padding: 14px; border-radius: 1rem;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hc-prof-chat-titulo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  color: #fff; margin: 0 0 12px;
+}
+.hc-prof-chat-titulo i { color: #ec4899; }
+.hc-prof-chat-historico { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
+.hc-prof-chat-envio { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.hc-prof-chat-input {
+  flex-grow: 1; min-width: 0; padding: 11px 13px; border-radius: 0.8rem;
+  background: rgba(9, 9, 11, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff; font-size: 13px;
+}
+.hc-prof-chat-input:focus { outline: none; border-color: rgba(236, 72, 153, 0.5); }
+.hc-prof-chat-btn {
+  width: 46px; height: 46px; border-radius: 0.8rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #ec4899; border: 0; color: #fff; cursor: pointer;
+}
+.hc-prof-chat-btn:hover { background: #db2777; }
+
+/* No celular os botoes ficam maiores, para o dedo */
+@media (max-width: 640px) {
+  .hc-prof-dia-btn { width: 48px; height: 48px; }
+  .hc-prof-stat strong { font-size: 24px; }
+  .hc-prof-card { padding: 14px 12px; }
+  .hc-prof-chat-input { font-size: 16px; }
+}
+
+
+/* ============================================================
+   AREA DO PROFISSIONAL  (usa --pc = cor escolhida por ele)
+   ============================================================ */
+#hc-area-prof { --pc: #ec4899; }
+
+/* Cabecalho */
+.hc-prof-topo {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid color-mix(in srgb, var(--pc) 28%, rgba(255,255,255,0.08));
+  border-radius: 1rem;
+}
+.hc-prof-quem { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.hc-prof-foto-wrap { position: relative; flex-shrink: 0; }
+.hc-prof-foto {
+  width: 54px; height: 54px; border-radius: 0.85rem; object-fit: cover;
+  border: 2px solid color-mix(in srgb, var(--pc) 55%, transparent);
+  background: color-mix(in srgb, var(--pc) 14%, #18181b);
+  display: block;
+}
+.hc-prof-foto-troca {
+  position: absolute; right: -4px; bottom: -4px;
+  width: 24px; height: 24px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--pc); color: #fff; font-size: 10px;
+  border: 2px solid #09090b; cursor: pointer;
+}
+.hc-prof-ident { min-width: 0; }
+.hc-prof-etiqueta {
+  display: inline-block; font-size: 9px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--pc);
+  background: color-mix(in srgb, var(--pc) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc) 32%, transparent);
+  padding: 2px 7px; border-radius: 0.4rem;
+}
+.hc-prof-nome {
+  font-size: 16px; font-weight: 800; color: #fff;
+  text-transform: uppercase; line-height: 1.15; margin: 4px 0 0;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+#hc-prof-selo .fa-graduation-cap { color: #fbbf24; font-size: 14px; }
+#hc-prof-selo span { color: #fbbf24; }
+.hc-prof-cargo { font-size: 11px; color: #a1a1aa; margin: 2px 0 0; }
+.hc-prof-sair {
+  width: 38px; height: 38px; border-radius: 0.7rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(9, 9, 11, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #a1a1aa; cursor: pointer;
+}
+.hc-prof-sair:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+
+/* Dias */
+.hc-prof-dias {
+  display: flex; align-items: center; gap: 10px; padding: 12px;
+  background: rgba(24, 24, 27, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+}
+.hc-prof-dia-btn {
+  width: 42px; height: 42px; border-radius: 0.7rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--pc) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc) 38%, transparent);
+  color: var(--pc); cursor: pointer; transition: all 0.15s;
+}
+.hc-prof-dia-btn:hover { background: color-mix(in srgb, var(--pc) 28%, transparent); color: #fff; }
+.hc-prof-dia-hoje {
+  padding: 8px 14px; border-radius: 0.7rem; flex-shrink: 0;
+  background: rgba(9, 9, 11, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e4e7; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; cursor: pointer;
+}
+.hc-prof-dia-texto { flex-grow: 1; text-align: center; min-width: 0; }
+.hc-prof-dia-texto strong {
+  display: block; font-size: 14px; font-weight: 800;
+  color: #fff; text-transform: uppercase;
+}
+.hc-prof-dia-texto span { display: block; font-size: 11px; color: var(--pc); font-weight: 700; }
+
+/* Numeros */
+.hc-prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hc-prof-stat {
+  padding: 12px; border-radius: 0.9rem; text-align: center;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hc-prof-stat span {
+  display: block; font-size: 9px; color: #a1a1aa;
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
+}
+.hc-prof-stat strong { font-size: 18px; font-weight: 800; color: var(--pc); }
+.hc-prof-stat .hc-prof-verde, .hc-prof-verde { color: #34d399 !important; }
+.hc-prof-amarelo { color: #fbbf24 !important; }
+.hc-prof-rosa { color: var(--pc) !important; }
+
+/* Lista do dia */
+.hc-prof-lista { display: flex; flex-direction: column; gap: 10px; }
+.hc-prof-vazio {
+  font-size: 12px; color: #71717a; text-align: center;
+  padding: 28px 12px; border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: 1rem;
+}
+
+/* Aviso */
+.hc-prof-aviso {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: #a1a1aa;
+  padding: 10px 12px; border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--pc) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc) 20%, transparent);
+}
+.hc-prof-aviso i { color: var(--pc); }
+
+/* Secoes */
+.hc-prof-secao { margin-top: 8px; }
+.hc-prof-secao-titulo {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.08em; color: #a1a1aa;
+  margin: 0 0 10px; display: flex; align-items: center; gap: 8px;
+}
+.hc-prof-secao-titulo i { color: var(--pc); }
+.hc-prof-grid { display: flex; flex-direction: column; gap: 12px; }
+
+/* Cards */
+.hc-prof-card {
+  padding: 14px; border-radius: 1rem;
+  background: rgba(9, 9, 11, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hc-prof-card h4 {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  color: #fff; margin: 0 0 10px; display: flex; align-items: center; gap: 7px;
+}
+.hc-prof-card-topo {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.hc-prof-card-topo h4 { margin: 0; }
+.hc-prof-card-acoes { display: flex; gap: 6px; }
+.hc-prof-dica { font-size: 10px; color: #71717a; margin: -4px 0 10px; }
+
+/* Botoes pequenos */
+.hc-prof-mini {
+  padding: 5px 10px; border-radius: 0.6rem; cursor: pointer;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  color: #d4d4d8; font-size: 10px; font-weight: 800; text-transform: uppercase;
+}
+.hc-prof-mini:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.hc-prof-mini-mais { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.12); }
+.hc-prof-botao {
+  padding: 10px 16px; border-radius: 0.8rem; cursor: pointer;
+  background: var(--pc); color: #fff;
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  border: none; transition: opacity 0.15s;
+}
+.hc-prof-botao:hover { opacity: 0.88; }
+.hc-prof-botao-verde { background: #10b981; }
+
+/* Inputs */
+.hc-prof-input {
+  width: 100%; padding: 9px 12px; border-radius: 0.7rem;
+  background: rgba(24, 24, 27, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff; font-size: 12px; outline: none;
+}
+.hc-prof-input:focus { border-color: color-mix(in srgb, var(--pc) 55%, transparent); }
+.hc-prof-input::placeholder { color: #52525b; }
+
+/* Notas */
+.hc-prof-notas { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
+
+/* Calculadora */
+.hc-prof-calc { display: flex; flex-direction: column; gap: 8px; }
+.hc-prof-calc label { font-size: 9px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em; }
+.hc-prof-calc-res {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: 0.7rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+.hc-prof-calc-res span { font-size: 10px; color: #a1a1aa; text-transform: uppercase; }
+.hc-prof-calc-res strong { font-size: 16px; font-weight: 800; color: #34d399; }
+
+/* Cores */
+.hc-prof-cores { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.hc-prof-cor {
+  width: 32px; height: 32px; border-radius: 999px; cursor: pointer;
+  background: var(--c); border: 2px solid rgba(255,255,255,0.15);
+  transition: transform 0.12s;
+}
+.hc-prof-cor:hover { transform: scale(1.12); border-color: #fff; }
+.hc-prof-bio-lbl {
+  display: block; font-size: 9px; color: #a1a1aa;
+  text-transform: uppercase; margin-bottom: 5px;
+}
+
+/* Cursos */
+.hc-prof-cursos { display: flex; flex-direction: column; gap: 8px; }
+.hc-prof-curso {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: 0.8rem;
+  background: rgba(24, 24, 27, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.hc-prof-curso-icone {
+  width: 34px; height: 34px; border-radius: 0.6rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--pc) 16%, transparent);
+  color: var(--pc); font-size: 13px;
+}
+.hc-prof-curso-info { flex-grow: 1; min-width: 0; }
+.hc-prof-curso-info strong {
+  display: block; font-size: 12px; font-weight: 700; color: #fff;
+}
+.hc-prof-curso-info span { display: block; font-size: 10px; color: #71717a; }
+.hc-prof-curso-link {
+  padding: 7px 11px; border-radius: 0.6rem; flex-shrink: 0;
+  background: var(--pc); color: #fff; text-decoration: none;
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+}
+
+/* Certificados */
+.hc-prof-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.hc-prof-form .hc-prof-arquivo { grid-column: span 2; }
+.hc-prof-form .hc-prof-botao { grid-column: span 2; }
+.hc-prof-arquivo {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px; border-radius: 0.8rem; cursor: pointer;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  font-size: 10px; color: #71717a; text-transform: uppercase;
+}
+.hc-prof-arquivo img { width: 54px; height: 54px; border-radius: 0.5rem; object-fit: cover; }
+.hc-prof-certs { display: flex; flex-direction: column; gap: 8px; }
+.hc-prof-certs .cert-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: 0.8rem;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+}
+.hc-prof-selo-info {
+  font-size: 9px; color: #fbbf24; text-transform: uppercase;
+  display: flex; align-items: center; gap: 5px;
+}
+
+/* Fechamento */
+.hc-prof-fechamento {
+  padding: 14px; border-radius: 1rem;
+  background: rgba(9, 9, 11, 0.55);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.hc-prof-fech-resumo { display: flex; flex-direction: column; gap: 8px; }
+
+/* Chat */
+.hc-prof-chat {
+  margin-top: 8px; padding: 14px; border-radius: 1rem;
+  background: rgba(9, 9, 11, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hc-prof-chat-titulo {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  color: #fff; margin: 0 0 12px; display: flex; align-items: center; gap: 8px;
+}
+.hc-prof-chat-titulo i { color: var(--pc); }
+.hc-prof-chat-historico { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; margin-bottom: 12px; }
+.hc-prof-chat-envio { display: flex; gap: 8px; }
+.hc-prof-chat-input {
+  flex-grow: 1; padding: 11px 14px; border-radius: 0.8rem;
+  background: rgba(24, 24, 27, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff; font-size: 13px; outline: none;
+}
+.hc-prof-chat-input:focus { border-color: color-mix(in srgb, var(--pc) 55%, transparent); }
+.hc-prof-chat-btn {
+  width: 44px; height: 44px; border-radius: 0.8rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--pc); color: #fff; border: none; cursor: pointer;
+}
+
+/* Selo do certificado na agenda do cliente */
+.selo-cert { color: #fbbf24; font-size: 10px; margin-left: 4px; }
+.ag-item-nome { display: inline-flex; align-items: center; }
+
+/* No celular o form de certificado vira uma coluna */
+@media (max-width: 640px) {
+  .hc-prof-form { grid-template-columns: 1fr; }
+  .hc-prof-form .hc-prof-arquivo,
+  .hc-prof-form .hc-prof-botao { grid-column: span 1; }
+}
+
+/* Dois cards lado a lado em tela grande */
+@media (min-width: 900px) {
+  .hc-prof-grid { flex-direction: row; flex-wrap: wrap; }
+  .hc-prof-card { flex: 1 1 280px; }
+  .hc-prof-card-largo { flex-basis: 100%; }
+}
