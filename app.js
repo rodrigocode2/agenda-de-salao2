@@ -5423,8 +5423,30 @@ const UI = {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
-    // Profissional: restaura o login salvo no navegador
-    const profSalvo = localStorage.getItem('hairconcept_prof_dados');
+    // ============================================================
+    // ORDEM CERTA: o ADMIN vem PRIMEIRO.
+    // Havia um 'prof_dados' antigo no navegador que assumia o papel de
+    // profissional e saia pelo 'return' - sem nunca olhar a sessao do
+    // salao. Era isso que jogava o dono na area do profissional.
+    // ============================================================
+    let temSessaoAdmin = false;
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        temSessaoAdmin = !!(session && session.user);
+    } catch (e) { temSessaoAdmin = false; }
+
+    if (temSessaoAdmin) {
+        // Entrou o salao: limpa o rastro de profissional que sobrou.
+        try {
+            localStorage.removeItem('hairconcept_prof_dados');
+            localStorage.removeItem('hairconcept_prof_id');
+            localStorage.removeItem('hairconcept_prof_token');
+            localStorage.removeItem('hairconcept_prof_selecionado');
+        } catch (e) {}
+    }
+
+    // O profissional so restaura se NAO houver sessao de admin.
+    const profSalvo = temSessaoAdmin ? null : localStorage.getItem('hairconcept_prof_dados');
     if (profSalvo) {
         try {
             const data = JSON.parse(profSalvo);
@@ -5479,17 +5501,20 @@ window.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         if (session && !App.user.loggedIn) {
-            // Se ha um profissional logado no navegador, ele NAO pode ser
-            // trocado por admin so porque existe uma sessao do Supabase.
-            const temProfSalvo = !!localStorage.getItem('hairconcept_prof_dados');
-            if (!temProfSalvo) {
-                const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                App.user = { loggedIn: true, role: 'admin', name: name };
-                App.finishLogin();
-            }
+            // Sessao do Supabase ativa = e o salao. O rastro do profissional
+            // ja foi tratado e limpo no inicio deste mesmo bloco.
+            const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+            App.user = { loggedIn: true, role: 'admin', name: name };
+            App.finishLogin();
         }
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session && !App.user.loggedIn) {
+                // Entrou conta nova: e o salao. Limpa rastro de profissional.
+                try {
+                    localStorage.removeItem('hairconcept_prof_dados');
+                    localStorage.removeItem('hairconcept_prof_id');
+                    localStorage.removeItem('hairconcept_prof_token');
+                } catch (e) {}
                 const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
                 App.user = { loggedIn: true, role: 'admin', name: name };
                 App.finishLogin(`Bem-vindo, ${name}!`);
