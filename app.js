@@ -215,6 +215,7 @@ const Auth = {
             document.querySelectorAll('.modal-overlay').forEach(function (m) { m.classList.add('hidden'); });
         } catch (e) {}
         try { UI.switchTab('aba-login'); } catch (e) {}
+        try { UI.marcarLateral('aba-agenda'); } catch (e) {}
         // Segunda passada, caso algo tenha reaberto a tela
         setTimeout(function () {
             const t2 = document.getElementById('tela-abertura');
@@ -1745,6 +1746,7 @@ const App = {
             const { error } = await supabaseClient.rpc('registrar_ponto', {
                 p_profissional_id: profissionalId,
                 p_cliente_id: null,
+                p_nota: tipo === 'menos' ? -1 : 1,
                 p_tipo: tipo,
                 p_obs: motivo || null
             });
@@ -5017,8 +5019,7 @@ const UI = {
     // A aba PLANOS mostra qual plano o salao tem AGORA.
     // O plano vem do BANCO, nao do navegador: assim nunca diverge.
     toggleMobileMenu(forceState) {
-        const menu = document.getElementById('mobile-nav-menu');
-        if (!menu) return;
+                if (!menu) return;
         if (typeof forceState === 'boolean') {
             if (forceState) menu.classList.remove('hidden');
             else menu.classList.add('hidden');
