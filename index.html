@@ -47,7 +47,7 @@ tailwind.config = {
 </head>
 <body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
 <!-- ============ SIDEBAR DE NAVEGACAO ============ -->
-<aside id="hc-sidebar" class="hc-sidebar">
+<aside id="hc-sidebar" class="hc-sidebar hidden">
   <div class="hc-side-topo">
     <div class="hc-side-logo"><i class="fa-solid fa-scissors"></i></div>
     <div class="hc-side-marca">
@@ -100,8 +100,8 @@ tailwind.config = {
     </button>
   </nav>
 </aside>
-<div id="hc-side-fundo" class="hc-side-fundo" onclick="UI.toggleSidebar(false)"></div>
-<button type="button" id="hc-side-abrir" class="hc-side-abrir" onclick="UI.toggleSidebar()" title="Menu">
+<div id="hc-side-fundo" class="hc-side-fundo hidden" onclick="UI.toggleSidebar(false)"></div>
+<button type="button" id="hc-side-abrir" class="hc-side-abrir hidden" onclick="UI.toggleSidebar()" title="Menu">
   <i class="fa-solid fa-bars"></i>
 </button>
 
