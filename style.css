@@ -1037,3 +1037,152 @@ body.hc-abertura-ativa { overflow: hidden; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* =====================================================================
+   SIDEBAR DE NAVEGACAO — grupos, icone + nome, fixa no desktop
+   e gaveta no celular. Padrao das referencias (Simples Agenda / XD).
+   ===================================================================== */
+
+.hc-sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 232px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: rgba(9, 9, 11, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  transform: translateX(0);
+  transition: transform 0.25s ease;
+}
+
+.hc-side-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.hc-side-logo {
+  width: 34px; height: 34px;
+  border-radius: 0.7rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  color: #ec4899;
+  flex-shrink: 0;
+}
+
+.hc-side-marca { display: flex; flex-direction: column; min-width: 0; }
+.hc-side-nome { font-size: 13px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.02em; }
+.hc-side-sub { font-size: 9px; color: #71717a; text-transform: uppercase; letter-spacing: 0.08em; }
+.hc-side-fechar {
+  display: none;
+  margin-left: auto;
+  padding: 6px;
+  border-radius: 0.5rem;
+  background: transparent;
+  border: 0;
+  color: #71717a;
+  cursor: pointer;
+}
+.hc-side-fechar:hover { color: #fff; }
+
+.hc-side-nav {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 10px 8px 20px;
+}
+
+.hc-side-grupo {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #52525b;
+  padding: 14px 8px 6px;
+}
+
+.hc-side-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  margin-bottom: 2px;
+  border-radius: 0.7rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.hc-side-item i { width: 16px; text-align: center; font-size: 13px; flex-shrink: 0; }
+.hc-side-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc-side-item:hover { background: rgba(255, 255, 255, 0.05); color: #e4e4e7; }
+
+.hc-side-item.ativo {
+  background: rgba(236, 72, 153, 0.15);
+  border-color: rgba(236, 72, 153, 0.45);
+  color: #ec4899;
+}
+
+.hc-side-badge {
+  margin-left: auto;
+  background: #ec4899;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 9999px;
+}
+
+.hc-side-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 89;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.hc-side-fundo.mostrando { opacity: 1; pointer-events: auto; }
+
+.hc-side-abrir {
+  position: fixed;
+  top: 14px; left: 14px;
+  z-index: 95;
+  width: 40px; height: 40px;
+  border-radius: 0.7rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 24, 27, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e4e7;
+  cursor: pointer;
+}
+
+/* Desktop: a lateral fica fixa e o conteudo abre espaco */
+@media (min-width: 1024px) {
+  body { padding-left: 232px; }
+  .hc-sidebar { transform: translateX(0); }
+  .hc-side-abrir { display: none !important; }
+}
+
+/* Celular: a lateral vira gaveta */
+@media (max-width: 1023px) {
+  .hc-sidebar { transform: translateX(-100%); }
+  .hc-sidebar.aberta { transform: translateX(0); }
+  .hc-side-fechar { display: block; }
+  .hc-side-abrir { display: flex; }
+  header { padding-left: 62px; }
+}
