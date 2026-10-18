@@ -813,6 +813,13 @@ const App = {
         if (ehProfissional) {
             // O painel antigo saiu: a area nova ja tem tudo dentro dela.
             document.getElementById('painel-profissional-extra')?.classList.add('hidden');
+            // O profissional nao usa a barra do salao: ele tem a area dele
+            document.getElementById('hc-sidebar')?.classList.add('hidden');
+            document.getElementById('hc-side-abrir')?.classList.add('hidden');
+            document.getElementById('hc-side-fundo')?.classList.add('hidden');
+            document.querySelectorAll('.hc-side-item').forEach(function (b) {
+                b.classList.add('admin-only', 'hidden');
+            });
             // O selo do certificado precisa estar carregado ANTES de desenhar
             // a area, senao o chapeu nao aparece no nome.
             try { await this.carregarSeloCertificados(); } catch (e) {}
@@ -826,6 +833,10 @@ const App = {
             document.getElementById('hc-area-prof')?.classList.add('hidden');
             document.getElementById('painel-profissional-extra')?.classList.add('hidden');
             document.getElementById('bloco-minha-barra')?.classList.add('hidden');
+            // A barra e a gaveta do salao voltam ao lugar
+            document.getElementById('hc-sidebar')?.classList.remove('hidden');
+            document.getElementById('hc-side-abrir')?.classList.remove('hidden');
+            document.getElementById('hc-side-fundo')?.classList.remove('hidden');
             document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
         }
     },
