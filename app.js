@@ -234,6 +234,45 @@ const Auth = {
         try { UI.switchTab('aba-login'); } catch (e) {}
     },
 
+    // ---------- Lateral de navegacao ----------
+    // Abre e fecha a gaveta no celular. No desktop a lateral fica fixa.
+    toggleSidebar(forcar) {
+        const side = document.getElementById('hc-sidebar');
+        const fundo = document.getElementById('hc-side-fundo');
+        if (!side) return;
+        const abrir = (typeof forcar === 'boolean') ? forcar : !side.classList.contains('aberta');
+        side.classList.toggle('aberta', abrir);
+        if (fundo) fundo.classList.toggle('mostrando', abrir);
+        document.body.style.overflow = abrir && window.innerWidth < 1024 ? 'hidden' : '';
+    },
+
+    // Marca qual item da lateral esta ativo
+    marcarLateral(aba, espaco) {
+        document.querySelectorAll('.hc-side-item').forEach(function (b) {
+            const bateAba = b.getAttribute('data-aba') === aba;
+            const bateEspaco = espaco ? b.getAttribute('data-espaco') === espaco : !b.getAttribute('data-espaco');
+            b.classList.toggle('ativo', bateAba && bateEspaco);
+        });
+    },
+
+    // Navegacao pela lateral: troca de aba
+    irPara(aba) {
+        try { this.switchTab(aba); } catch (e) { console.warn(e); }
+        this.marcarLateral(aba);
+        if (window.innerWidth < 1024) this.toggleSidebar(false);
+    },
+
+    // Navegacao pela lateral: abre a Gestao num painel
+    irParaGestao(espaco) {
+        try {
+            this.switchTab('aba-gestao');
+            if (this.trocarEspaco) this.trocarEspaco(espaco);
+            if (espaco === 'config-salao' && Auth.carregarConfigSalao) Auth.carregarConfigSalao();
+        } catch (e) { console.warn(e); }
+        this.marcarLateral('aba-gestao', espaco);
+        if (window.innerWidth < 1024) this.toggleSidebar(false);
+    },
+
     // Chamada no inicio: mostra ou pula a abertura
     prepararAbertura() {
         const tela = document.getElementById('tela-abertura');
@@ -1366,7 +1405,9 @@ const App = {
     async salvarVoto(event) {
         event.preventDefault();
         const clienteId = document.getElementById('voto-cliente-id')?.value;
-        const tipo = document.getElementById('voto-tipo')?.value || 'mais';
+        const notaBruta = document.getElementById('voto-tipo')?.value || '1';
+        const nota = Math.max(-1, Math.min(5, Number(notaBruta)));
+        const tipo = nota < 0 ? 'menos' : 'mais';
         const profId = document.getElementById('voto-profissional')?.value || null;
         const obs = document.getElementById('voto-obs')?.value.trim() || null;
 
@@ -1378,6 +1419,7 @@ const App = {
             const { error } = await supabaseClient.rpc('registrar_ponto', {
                 p_profissional_id: profId || null,
                 p_cliente_id: clienteId,
+                p_nota: nota,
                 p_tipo: tipo,
                 p_obs: obs
             });
@@ -1387,7 +1429,7 @@ const App = {
                 return;
             }
             Auth.fecharModal('modal-voto');
-            UI.showToast(tipo === 'mais' ? 'Ponto registrado!' : 'Alerta registrado.');
+            UI.showToast('Nota ' + (nota > 0 ? '+' + nota : nota) + ' registrada!');
             this.renderClientes();
             this.popularClientesAgenda();
             this.renderRanking();
@@ -1527,16 +1569,42 @@ const App = {
             const pontosMap = {};
             try {
                 const { data: votos } = await supabaseClient
-                    .from('avaliacoes_cliente').select('profissional_id, cliente_id, tipo')
+                    .from('avaliacoes_cliente').select('profissional_id, cliente_id, tipo, nota')
                     .eq('estabelecimento_id', estabId);
                 (votos || []).forEach(v => {
                     const chave = (tipo === 'prof') ? v.profissional_id : v.cliente_id;
                     if (!chave) return;
-                    pontosMap[chave] = (pontosMap[chave] || 0) + (v.tipo === 'mais' ? 1 : -1);
+                    // Profissional: +1 elogio / -1 alerta. Cliente: a propria nota (-1 a 5).
+                    const valor = (tipo === 'prof')
+                        ? (v.tipo === 'mais' ? 1 : -1)
+                        : (v.nota !== null && v.nota !== undefined ? Number(v.nota) : (v.tipo === 'mais' ? 1 : -1));
+                    pontosMap[chave] = (pontosMap[chave] || 0) + valor;
                 });
             } catch (e) { console.warn('Erro ao somar os pontos:', e); }
 
-            const ordenada = lista.slice().sort((a, b) => (pontosMap[b.id] || 0) - (pontosMap[a.id] || 0));
+            // Filtro fino: faixa de nota e ordem escolhidas pelo salao
+            const faixa = (document.getElementById('aval-faixa')?.value || 'todos');
+            const ordem = (document.getElementById('aval-ordem')?.value || 'maior');
+
+            let ordenada = lista.slice();
+            if (faixa !== 'todos') {
+                ordenada = ordenada.filter(function (i) {
+                    const n = pontosMap[i.id] || 0;
+                    if (faixa === 'positivo') return n > 0;
+                    if (faixa === 'negativo') return n < 0;
+                    if (faixa === 'zero') return n === 0;
+                    if (faixa === 'top') return n >= 4;
+                    return true;
+                });
+            }
+            ordenada.sort(function (a, b) {
+                const na = pontosMap[a.id] || 0, nb = pontosMap[b.id] || 0;
+                if (ordem === 'maior') return nb - na;
+                if (ordem === 'menor') return na - nb;
+                if (ordem === 'az') return String(a.nome).localeCompare(String(b.nome), 'pt-BR');
+                if (ordem === 'za') return String(b.nome).localeCompare(String(a.nome), 'pt-BR');
+                return 0;
+            });
 
             container.innerHTML = '';
             if (ordenada.length === 0) {
@@ -1824,23 +1892,23 @@ const App = {
     // Um toque e o voto entra. Nao abre modal: quem tem pressa nao
     // pode parar para escolher opcao no meio do movimento.
     // Votar de novo SUBSTITUI o voto anterior (regra do voto unico).
-    async registrarPontoCliente(clienteId, tipo, nomeCliente) {
+    // Voto da cliente: nota de -1 ate 5. Cada registro SOMA na nota dela.
+    async registrarPontoCliente(clienteId, nota, nomeCliente) {
         if (!clienteId) { UI.showToast('Cliente nao identificada.', 'error'); return; }
+        const n = Math.max(-1, Math.min(5, Number(nota)));
+        if (isNaN(n)) { UI.showToast('Nota invalida.', 'error'); return; }
         const estabId = await this.obterEstabId();
         if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
         try {
             const { error } = await supabaseClient.rpc('registrar_ponto', {
                 p_profissional_id: null,
                 p_cliente_id: clienteId,
-                p_tipo: tipo,
-                p_obs: tipo === 'mais' ? 'Cliente boa' : 'Cliente deu trabalho'
+                p_nota: n,
+                p_tipo: n < 0 ? 'menos' : 'mais',
+                p_obs: n < 0 ? 'Cliente deu trabalho' : (n >= 4 ? 'Cliente elogiada' : 'Cliente boa')
             });
             if (error) throw error;
-            UI.showToast(
-                tipo === 'mais'
-                    ? (nomeCliente || 'Cliente') + ': ponto positivo registrado.'
-                    : (nomeCliente || 'Cliente') + ': alerta registrado.'
-            );
+            UI.showToast((nomeCliente || 'Cliente') + ': nota ' + (n > 0 ? '+' + n : n) + ' registrada.');
             this.renderClientes();
             this.popularClientesAgenda();
             this.renderAvaliacao();
@@ -1921,6 +1989,11 @@ const App = {
                     return nomeOk || telOk || cpfOk || emailOk;
                 });
             }
+
+            // Filtro fino: ordenar a lista de clientes
+            const ordemCli = (document.getElementById('clientes-ordem')?.value || 'az');
+            if (ordemCli === 'za') clientes.sort(function (a, b) { return String(b.nome || '').localeCompare(String(a.nome || ''), 'pt-BR'); });
+            else if (ordemCli === 'recentes') clientes.sort(function (a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); });
 
             if (total) {
                 total.textContent = clientes.length === 1 ? '1 cliente' : clientes.length + ' clientes';
@@ -2012,14 +2085,7 @@ const App = {
                 const btnMais = document.createElement('button');
                 btnMais.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
                 btnMais.textContent = '+1';
-                btnMais.onclick = () => this.registrarPontoCliente(c.id, 'mais', c.nome);
-                acoes.appendChild(btnMais);
-
-                const btnMenos = document.createElement('button');
-                btnMenos.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
-                btnMenos.textContent = '-1';
-                btnMenos.onclick = () => this.registrarPontoCliente(c.id, 'menos', c.nome);
-                acoes.appendChild(btnMenos);
+                
 
                 const btnEditar = document.createElement('button');
                 btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-[10px] font-bold uppercase transition cursor-pointer';
