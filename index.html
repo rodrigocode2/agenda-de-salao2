@@ -46,6 +46,65 @@ tailwind.config = {
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
+<!-- ============ SIDEBAR DE NAVEGACAO ============ -->
+<aside id="hc-sidebar" class="hc-sidebar">
+  <div class="hc-side-topo">
+    <div class="hc-side-logo"><i class="fa-solid fa-scissors"></i></div>
+    <div class="hc-side-marca">
+      <span class="hc-side-nome">HairConcept</span>
+      <span class="hc-side-sub">Gestão Integrada</span>
+    </div>
+    <button type="button" class="hc-side-fechar" onclick="UI.toggleSidebar(false)" title="Fechar menu">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+
+  <nav class="hc-side-nav">
+    <p class="hc-side-grupo">Agenda</p>
+    <button type="button" class="hc-side-item" data-aba="aba-agenda" onclick="UI.irPara('aba-agenda')">
+      <i class="fa-solid fa-calendar-days"></i><span>Agenda</span>
+    </button>
+    <button type="button" class="hc-side-item" data-aba="aba-avisos" onclick="UI.irPara('aba-avisos')">
+      <i class="fa-solid fa-bell"></i><span>Avisos</span>
+      <span id="badge-avisos" class="hc-side-badge hidden">0</span>
+    </button>
+
+    <p class="hc-side-grupo">Cadastros</p>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-equipe" onclick="UI.irPara('aba-equipe')">
+      <i class="fa-solid fa-users"></i><span>Equipe</span>
+    </button>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-clientes" onclick="UI.irPara('aba-clientes')">
+      <i class="fa-solid fa-address-book"></i><span>Clientes</span>
+    </button>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="servicos" onclick="UI.irParaGestao('servicos')">
+      <i class="fa-solid fa-list-check"></i><span>Serviços e Estoque</span>
+    </button>
+
+    <p class="hc-side-grupo">Gestão</p>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-relatorios" onclick="UI.irPara('aba-relatorios')">
+      <i class="fa-solid fa-chart-line"></i><span>Relatórios</span>
+    </button>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-planos" onclick="UI.irPara('aba-planos')">
+      <i class="fa-solid fa-crown"></i><span>Planos</span>
+    </button>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="avaliacao" onclick="UI.irParaGestao('avaliacao')">
+      <i class="fa-solid fa-star"></i><span>Avaliação</span>
+    </button>
+
+    <p class="hc-side-grupo">Sistema</p>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="config-salao" onclick="UI.irParaGestao('config-salao')">
+      <i class="fa-solid fa-gear"></i><span>Configurações</span>
+    </button>
+    <button type="button" class="hc-side-item" onclick="Auth.logout()">
+      <i class="fa-solid fa-right-from-bracket"></i><span>Sair</span>
+    </button>
+  </nav>
+</aside>
+<div id="hc-side-fundo" class="hc-side-fundo" onclick="UI.toggleSidebar(false)"></div>
+<button type="button" id="hc-side-abrir" class="hc-side-abrir" onclick="UI.toggleSidebar()" title="Menu">
+  <i class="fa-solid fa-bars"></i>
+</button>
+
 
 <!-- Toast Container -->
 <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
@@ -63,23 +122,7 @@ tailwind.config = {
             <span id="header-assinatura" class="hidden block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
     </div>
   </div>
-  <nav id="nav-menu" class="hidden lg:flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
-    <button onclick="UI.switchTab('aba-agenda')" title="Agenda" class="px-4 py-2 bg-brand-500/15 text-brand-500 hover:text-white cursor-pointer text-xs font-bold uppercase rounded-xl transition"><i class="fa-solid fa-calendar-days mr-1"></i> Agenda</button>
-    
-    <button onclick="UI.switchTab('aba-equipe')" title="Equipe" aria-label="Equipe" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-users text-sm"></i></button>
-    <button onclick="UI.switchTab('aba-clientes')" title="Clientes" aria-label="Clientes" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-address-book text-sm"></i></button>
-
-    <button onclick="UI.switchTab('aba-planos')" title="Planos" aria-label="Planos" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-crown text-sm"></i></button>
-
-    <button onclick="UI.switchTab('aba-relatorios')" title="Relatórios" aria-label="Relatórios" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition"><i class="fa-solid fa-chart-line text-sm"></i></button>
-    <button onclick="UI.switchTab('aba-gestao'); UI.trocarEspaco('config-salao'); Auth.carregarConfigSalao()" title="Configurações" aria-label="Configurações" class="admin-only px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
-            <i class="fa-solid fa-gear text-sm"></i>
-          </button>
-          <button onclick="UI.switchTab('aba-avisos')" title="Avisos" aria-label="Avisos" class="admin-only relative px-2.5 py-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl transition">
-            <i class="fa-solid fa-bell text-sm"></i>
-            <span id="badge-avisos" class="hidden absolute -top-0.5 -right-0.5 bg-brand-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">0</span>
-          </button>
-  </nav>
+  
   <div class="flex items-center gap-3 shrink-0">
     <button onclick="UI.toggleMobileMenu()" class="lg:hidden p-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition">
       <i class="fa-solid fa-bars text-base"></i>
@@ -91,19 +134,6 @@ tailwind.config = {
     <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition flex items-center gap-2">
       <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden md:inline">Sair</span>
     </button>
-  </div>
-</div>
-<!-- Menu Mobile Dropdown -->
-<div id="mobile-nav-menu" class="hidden lg:hidden glass-water border-t border-white/10 px-4 py-3">
-  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-    <button onclick="UI.switchTab('aba-agenda'); UI.toggleMobileMenu(false);" class="p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Agenda</button>
-    <button onclick="UI.switchTab('aba-equipe'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Equipe</button>
-    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Serviços, Estoque e Avaliação</button>
-    <button onclick="UI.switchTab('aba-clientes'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Clientes</button>
-    <button onclick="UI.switchTab('aba-planos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Planos</button>
-    <button onclick="UI.switchTab('aba-relatorios'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Relatórios</button>
-    <button onclick="UI.abrirGestao('servicos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Configurações</button>
-    <button onclick="UI.switchTab('aba-avisos'); UI.toggleMobileMenu(false);" class="admin-only p-2.5 bg-zinc-900/90 rounded-xl border border-white/10 text-zinc-300 hover:text-white text-left font-bold uppercase">Avisos</button>
   </div>
 </div>
 </header>
@@ -358,8 +388,12 @@ tailwind.config = {
         <div>
           <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">O que aconteceu</label>
           <select id="voto-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="mais">👍 Cliente boa — elogiou, é fácil de atender</option>
-            <option value="menos">👎 Cliente difícil — deu trabalho, atrasou, reclamou</option>
+            <option value="5">⭐⭐⭐⭐⭐  +5 — Excelente</option>
+            <option value="4">⭐⭐⭐⭐  +4 — Muito boa</option>
+            <option value="3" selected>⭐⭐⭐  +3 — Boa</option>
+            <option value="2">⭐⭐  +2 — Razoável</option>
+            <option value="1">⭐  +1 — Difícil</option>
+            <option value="-1">👎  −1 — Deu trabalho</option>
           </select>
         </div>
 
@@ -1344,7 +1378,20 @@ tailwind.config = {
     </div>
     <div class="relative">
       <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-      <input type="text" id="aval-busca" oninput="App.renderAvaliacao()" placeholder="Pesquisar por nome, telefone ou cargo..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
+      <select id="aval-faixa" class="glass-input rounded-xl px-3 py-2 text-xs text-white" onchange="App.renderAvaliacao()">
+              <option value="todos">Todas as notas</option>
+              <option value="positivo">Só positivas</option>
+              <option value="negativo">Só negativas</option>
+              <option value="zero">Sem nota</option>
+              <option value="top">Nota 4 ou mais</option>
+            </select>
+            <select id="aval-ordem" class="glass-input rounded-xl px-3 py-2 text-xs text-white" onchange="App.renderAvaliacao()">
+              <option value="maior">Maior nota</option>
+              <option value="menor">Menor nota</option>
+              <option value="az">Nome A-Z</option>
+              <option value="za">Nome Z-A</option>
+            </select>
+            <input type="text" id="aval-busca" oninput="App.renderAvaliacao()" placeholder="Pesquisar por nome, telefone ou cargo..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
     </div>
     <div id="aval-lista" class="space-y-3"></div>
     <div class="pt-2 border-t border-white/10">
@@ -1809,7 +1856,12 @@ v>
       <div class="flex items-center gap-3 flex-wrap">
         <div class="relative flex-grow min-w-[200px]">
           <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-          <input type="text" id="busca-clientes" oninput="App.renderClientes()" placeholder="Buscar por telefone, nome ou CPF..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
+          <select id="clientes-ordem" class="glass-input rounded-xl px-3 py-2 text-xs text-white" onchange="App.renderClientes()">
+              <option value="az">Nome A-Z</option>
+              <option value="za">Nome Z-A</option>
+              <option value="recentes">Mais recentes</option>
+            </select>
+            <input type="text" id="busca-clientes" oninput="App.renderClientes()" placeholder="Buscar por telefone, nome ou CPF..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
         </div>
         <span class="text-[10px] text-zinc-500 uppercase font-bold">Sem duplicar contatos</span>
       </div>
