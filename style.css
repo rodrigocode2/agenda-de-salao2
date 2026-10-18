@@ -1696,10 +1696,8 @@ body.hc-sem-login .hc-side-abrir {
 }
 
 /* O painel antigo nao existe mais: se algum resto aparecer, fica fora */
-#painel-profissional-extra,
-#bloco-minha-barra {
-  display: none !important;
-}
+/* (regra removida: escondia o #bloco-minha-barra, que fica DENTRO da aba-agenda
+   e por isso apagava a pagina inteira. A area do profissional ja e controlada pelo JS.) */
 
 /* A barra lateral so existe quando o JS tira o hidden dela */
 #hc-sidebar.hidden,
