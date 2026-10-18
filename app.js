@@ -1362,7 +1362,8 @@ const App = {
                     .update({ foto_url: base64 })
                     .eq('id', profId);
                 if (error) throw error;
-                document.getElementById('prof-header-foto').src = base64;
+                var elFotoP = document.getElementById('prof-header-foto');
+            if (elFotoP) elFotoP.src = base64;
                 UI.showToast('Foto de perfil atualizada e salva com sucesso!');
                 this.renderListaProfissionais();
             } catch (err) {
@@ -4820,8 +4821,10 @@ const App = {
             });
 
             if (this.user.role === 'profissional') {
-                document.getElementById('prof-stat-atendimentos').textContent = atendimentoCount;
-                document.getElementById('prof-stat-comissao').textContent = `R$ ${totalGanhos.toFixed(2)}`;
+                var elAt = document.getElementById('prof-stat-atendimentos');
+            if (elAt) elAt.textContent = atendimentoCount;
+                var elCom = document.getElementById('prof-stat-comissao');
+            if (elCom) elCom.textContent = `R$ ${totalGanhos.toFixed(2)}`;
             }
         } catch (e) {
             console.error(e);
@@ -5147,7 +5150,10 @@ const App = {
             "Um dia produtivo começa com um sorriso e foco."
         ];
         const aleatoria = frases[Math.floor(Math.random() * frases.length)];
-        document.getElementById('frase-motivacional').textContent = `"${aleatoria}"`;
+        // O elemento pode nao existir: antes esta linha dava TypeError e
+        // MATAVA o init() inteiro, deixando a pagina em branco.
+        const elFrase = document.getElementById('frase-motivacional');
+        if (elFrase) elFrase.textContent = `"${aleatoria}"`;
     },
     // Links de pagamento do Mercado Pago (PIX, QR Code, boleto e cartao).
     // Sao pagamentos AVULSOS: PIX nao existe em assinatura recorrente,
