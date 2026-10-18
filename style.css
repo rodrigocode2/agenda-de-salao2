@@ -1657,3 +1657,27 @@ body.hc-abertura-ativa { overflow: hidden; }
   .hc-prof-card { flex: 1 1 280px; }
   .hc-prof-card-largo { flex-basis: 100%; }
 }
+
+
+/* ============================================================
+   BARRA LATERAL: so aparece depois do login.
+   O 'hidden' do Tailwind vem de CDN e pode demorar um instante,
+   o que fazia a barra piscar na tela de login. Esta regra e local
+   e vale desde o primeiro desenho da pagina.
+   ============================================================ */
+.hc-sidebar.hidden,
+#hc-sidebar.hidden,
+.hc-side-abrir.hidden,
+#hc-side-abrir.hidden,
+.hc-side-fundo.hidden,
+#hc-side-fundo.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Sem login, a barra nao ocupa espaco nenhum na tela */
+body.hc-sem-login .hc-sidebar,
+body.hc-sem-login .hc-side-abrir {
+  display: none !important;
+}
