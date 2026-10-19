@@ -54,45 +54,45 @@ tailwind.config = {
       <span class="hc-side-nome">HairConcept</span>
       <span class="hc-side-sub">Gestão Integrada</span>
     </div>
-    <button type="button" class="hc-side-fechar" onclick="UI.toggleSidebar(false)" title="Fechar menu">
+    <button type="button" class="hc-side-fechar" onclick="fecharGaveta()" title="Fechar menu">
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
 
   <nav class="hc-side-nav">
     <p class="hc-side-grupo">Agenda</p>
-    <button type="button" class="hc-side-item" data-aba="aba-agenda" onclick="UI.irPara('aba-agenda')">
+    <button type="button" class="hc-side-item" data-aba="aba-agenda" onclick="irAba('aba-agenda')">
       <i class="fa-solid fa-calendar-days"></i><span>Agenda</span>
     </button>
-    <button type="button" class="hc-side-item" data-aba="aba-avisos" onclick="UI.irPara('aba-avisos')">
+    <button type="button" class="hc-side-item" data-aba="aba-avisos" onclick="irAba('aba-avisos')">
       <i class="fa-solid fa-bell"></i><span>Avisos</span>
       <span id="badge-avisos" class="hc-side-badge hidden">0</span>
     </button>
 
     <p class="hc-side-grupo">Cadastros</p>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-equipe" onclick="UI.irPara('aba-equipe')">
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-equipe" onclick="irAba('aba-equipe')">
       <i class="fa-solid fa-users"></i><span>Equipe</span>
     </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-clientes" onclick="UI.irPara('aba-clientes')">
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-clientes" onclick="irAba('aba-clientes')">
       <i class="fa-solid fa-address-book"></i><span>Clientes</span>
     </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="servicos" onclick="UI.irParaGestao('servicos')">
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="servicos" onclick="irGestao('servicos')">
       <i class="fa-solid fa-list-check"></i><span>Serviços e Estoque</span>
     </button>
 
     <p class="hc-side-grupo">Gestão</p>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-relatorios" onclick="UI.irPara('aba-relatorios')">
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-relatorios" onclick="irAba('aba-relatorios')">
       <i class="fa-solid fa-chart-line"></i><span>Relatórios</span>
     </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-planos" onclick="UI.irPara('aba-planos')">
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-planos" onclick="irAba('aba-planos')">
       <i class="fa-solid fa-crown"></i><span>Planos</span>
     </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="avaliacao" onclick="UI.irParaGestao('avaliacao')">
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="avaliacao" onclick="irGestao('avaliacao')">
       <i class="fa-solid fa-star"></i><span>Avaliação</span>
     </button>
 
     <p class="hc-side-grupo">Sistema</p>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="config-salao" onclick="UI.irParaGestao('config-salao')">
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="config-salao" onclick="irGestao('config-salao')">
       <i class="fa-solid fa-gear"></i><span>Configurações</span>
     </button>
     <button type="button" class="hc-side-item" onclick="Auth.logout()">
@@ -100,8 +100,8 @@ tailwind.config = {
     </button>
   </nav>
 </aside>
-<div id="hc-side-fundo" class="hc-side-fundo hidden" onclick="UI.toggleSidebar(false)"></div>
-<button type="button" id="hc-side-abrir" class="hc-side-abrir hidden" onclick="UI.toggleSidebar()" title="Menu">
+<div id="hc-side-fundo" class="hc-side-fundo hidden" onclick="fecharGaveta()"></div>
+<button type="button" id="hc-side-abrir" class="hc-side-abrir hidden" onclick="abrirGaveta()" title="Menu">
   <i class="fa-solid fa-bars"></i>
 </button>
 
@@ -553,7 +553,48 @@ tailwind.config = {
 
 <!-- AGENDA PAINEL PRINCIPAL -->
 <section id="aba-agenda" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 glass-water">
-  <!-- ===== AREA DO PROFISSIONAL (mobile-first) ===== -->
+  <!-- ===== ALTERNADOR DIA / SEMANA ===== -->
+  <div class="flex items-center gap-2 mb-3">
+    <div id="agenda-modos" class="flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
+      <button type="button" id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer ativo"><i class="fa-solid fa-calendar-day mr-1.5"></i> Dia</button>
+      <button type="button" id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer"><i class="fa-solid fa-calendar-week mr-1.5"></i> Semana</button>
+    </div>
+  </div>
+
+  <!-- ===== VISAO DO DIA ===== -->
+  <div id="agenda-modo-dia">
+<!-- TABELA DA AGENDA -->
+  <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
+    <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
+      <thead>
+        <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
+          <th class="py-3 px-4 w-24">Horário</th>
+        </tr>
+      </thead>
+      <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
+    </table>
+  </div>
+  </div>
+
+  <!-- ===== VISAO DA SEMANA ===== -->
+  <div id="agenda-modo-semana" class="hidden">
+    <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+      <div class="semana-scroll">
+        <table class="semana-tabela">
+          <thead>
+            <tr id="semana-cabecalho"></tr>
+          </thead>
+          <tbody id="semana-corpo" class="semana-corpo"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ===== ABA DO PROFISSIONAL (separada da agenda do salao) ===== -->
+<section id="aba-prof" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+<!-- ===== AREA DO PROFISSIONAL (mobile-first) ===== -->
   <div id="hc-area-prof" class="hidden space-y-4" style="--pc: #ec4899;">
 
     <!-- Cabecalho -->
@@ -774,45 +815,8 @@ tailwind.config = {
       <button onclick="App.abrirMarcar()" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
     </div>
   </div>
-
-    <!-- ===== ALTERNADOR DIA / SEMANA ===== -->
-  <div class="flex items-center gap-2 mb-3">
-    <div id="agenda-modos" class="flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
-      <button type="button" id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer ativo"><i class="fa-solid fa-calendar-day mr-1.5"></i> Dia</button>
-      <button type="button" id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer"><i class="fa-solid fa-calendar-week mr-1.5"></i> Semana</button>
-    </div>
-  </div>
-
-  <!-- ===== VISAO DO DIA ===== -->
-  <div id="agenda-modo-dia">
-<!-- TABELA DA AGENDA -->
-  <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
-    <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
-      <thead>
-        <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
-          <th class="py-3 px-4 w-24">Horário</th>
-        </tr>
-      </thead>
-      <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
-    </table>
-  </div>
-  </div>
-
-  <!-- ===== VISAO DA SEMANA ===== -->
-  <div id="agenda-modo-semana" class="hidden">
-    <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-      <div class="semana-scroll">
-        <table class="semana-tabela">
-          <thead>
-            <tr id="semana-cabecalho"></tr>
-          </thead>
-          <tbody id="semana-corpo" class="semana-corpo"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
 </section>
+
 
 <!-- AGENDAR -->
 <div id="modal-marcar" class="modal-overlay flex">
