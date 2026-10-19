@@ -74,6 +74,20 @@ window.hcSessao = {
 };
 
 
+
+// ============================================================
+// NOTA SOBRE IDs ANTIGOS (prof-header-*, prof-stat-*, painel-profissional-extra)
+//
+// A área do profissional foi refeita e agora usa os ids hc-prof-*.
+// Os ids prof-header-* e prof-stat-* continuam aparecendo no código
+// como PRIMEIRA tentativa, com um "|| document.getElementById('hc-prof-*')"
+// logo depois — então sempre funcionam, apontando para o elemento que existe.
+//
+// São, portanto, compatibilidade, não defeito. Se um dia quiser limpar,
+// basta trocar cada "getElementById('prof-header-nome') || getElementById('hc-prof-nome')"
+// por só "getElementById('hc-prof-nome')".
+// ============================================================
+
 // ============================================================
 // FUNCOES DA BARRA LATERAL — existem desde a primeira linha.
 //
@@ -1285,9 +1299,10 @@ const App = {
                 this.carregarIdentidadeDoSalao(dadosProf.estabelecimento_id);
             }
 
-            const elNome = document.getElementById('prof-header-nome');
-            const elCargo = document.getElementById('prof-header-cargo');
-            const elFoto = document.getElementById('prof-header-foto');
+            // A area nova usa hc-prof-*; os prof-header-* eram do painel antigo.
+            const elNome = document.getElementById('prof-header-nome') || document.getElementById('hc-prof-nome');
+            const elCargo = document.getElementById('prof-header-cargo') || document.getElementById('hc-prof-cargo');
+            const elFoto = document.getElementById('prof-header-foto') || document.getElementById('hc-prof-foto');
             if (elNome) elNome.textContent = dadosProf.nome;
             if (elCargo) elCargo.textContent = dadosProf.cargo;
             if (elFoto && dadosProf.foto_url) elFoto.src = dadosProf.foto_url;
@@ -1521,8 +1536,15 @@ const App = {
                     .update({ foto_url: base64 })
                     .eq('id', profId);
                 if (error) throw error;
-                var elFotoP = document.getElementById('prof-header-foto');
+                // A area nova usa hc-prof-foto. O prof-header-foto era do painel antigo.
+            var elFotoP = document.getElementById('prof-header-foto') || document.getElementById('hc-prof-foto');
             if (elFotoP) elFotoP.src = base64;
+
+            // Atualiza tambem a bolinha do profissional na agenda
+            try {
+                if (typeof App !== 'undefined' && App.renderListaProfissionais) App.renderListaProfissionais();
+                if (typeof App !== 'undefined' && App.montarLateralProfs) App.montarLateralProfs();
+            } catch (e) { console.warn('[HairConcept] atualizar agenda:', e && e.message); }
                 UI.showToast('Foto de perfil atualizada e salva com sucesso!');
                 this.renderListaProfissionais();
             } catch (err) {
@@ -4980,9 +5002,10 @@ const App = {
             });
 
             if (this.user.role === 'profissional') {
-                var elAt = document.getElementById('prof-stat-atendimentos');
+                // A area nova usa hc-prof-total; o prof-stat-* era do painel antigo.
+            var elAt = document.getElementById('prof-stat-atendimentos') || document.getElementById('hc-prof-total');
             if (elAt) elAt.textContent = atendimentoCount;
-                var elCom = document.getElementById('prof-stat-comissao');
+                var elCom = document.getElementById('prof-stat-comissao') || document.getElementById('hc-prof-comissao');
             if (elCom) elCom.textContent = `R$ ${totalGanhos.toFixed(2)}`;
             }
         } catch (e) {
@@ -5678,9 +5701,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             App.user = { loggedIn: true, role: 'profissional', name: data.nome || '', id: data.id };
             App.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
             if (data.estabelecimento_id) App.carregarIdentidadeDoSalao(data.estabelecimento_id);
-            const nomeEl = document.getElementById('prof-header-nome');
-            const cargoEl = document.getElementById('prof-header-cargo');
-            const fotoEl = document.getElementById('prof-header-foto');
+            // A area nova usa hc-prof-*; os prof-header-* eram do painel antigo.
+            const nomeEl = document.getElementById('prof-header-nome') || document.getElementById('hc-prof-nome');
+            const cargoEl = document.getElementById('prof-header-cargo') || document.getElementById('hc-prof-cargo');
+            const fotoEl = document.getElementById('prof-header-foto') || document.getElementById('hc-prof-foto');
             if (nomeEl) nomeEl.textContent = data.nome || '';
             if (cargoEl) cargoEl.textContent = data.cargo || '';
             if (fotoEl && data.foto_url) fotoEl.src = data.foto_url;
