@@ -1684,26 +1684,30 @@ body.hc-sem-login .hc-side-abrir {
 
 
 /* ============================================================
-   QUEM VÊ O QUE — o CSS nao pode desfazer o que o JS decide.
-   Havia '#hc-area-prof { display: block; }' logo acima, e uma
-   regra de ID vence a classe 'hidden' do Tailwind. Resultado: a
-   area do profissional reaparecia mesmo depois de o JS esconder.
-   Estas regras fazem o 'hidden' valer sempre.
+   A BARRA LATERAL PRECISA FICAR ACIMA DO CABECALHO.
+   O <header> e sticky, ocupa a largura toda e tem z-index 97.
+   A barra tinha z-index 90 — entao o header passava POR CIMA
+   da faixa da esquerda e engolia o clique dos botoes.
+   Voce via a barra, mas clicar nela nao fazia nada.
    ============================================================ */
-#hc-area-prof.hidden,
-#hc-area-prof.hidden * {
-  display: none !important;
+.hc-sidebar {
+  z-index: 98 !important;
 }
 
-/* O painel antigo nao existe mais: se algum resto aparecer, fica fora */
-/* (regra removida: escondia o #bloco-minha-barra, que fica DENTRO da aba-agenda
-   e por isso apagava a pagina inteira. A area do profissional ja e controlada pelo JS.) */
+/* O cabecalho comeca DEPOIS da barra: nao cobre mais a area dela */
+@media (min-width: 1024px) {
+  #main-header {
+    margin-left: 232px;
+    width: calc(100% - 232px);
+  }
+  main {
+    margin-left: 232px;
+    max-width: calc(100% - 232px);
+  }
+}
 
-/* A barra lateral so existe quando o JS tira o hidden dela */
-#hc-sidebar.hidden,
-#hc-sidebar.hidden *,
-#hc-side-abrir.hidden,
-#hc-side-fundo.hidden {
-  display: none !important;
-  pointer-events: none !important;
+/* No celular a barra vira gaveta e tem de ficar acima de TUDO */
+@media (max-width: 1023px) {
+  .hc-sidebar { z-index: 98 !important; }
+  .hc-side-abrir { z-index: 99 !important; }
 }
