@@ -553,7 +553,25 @@ tailwind.config = {
 
 <!-- AGENDA PAINEL PRINCIPAL -->
 <section id="aba-agenda" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 glass-water">
-  <!-- ===== ALTERNADOR DIA / SEMANA ===== -->
+  
+  <!-- ===== LATERAL DE PROFISSIONAIS ===== -->
+  <button type="button" class="ag-lateral-toggle" onclick="toggleLateralProfs()">
+    <i class="fa-solid fa-users"></i> Profissionais
+  </button>
+
+  <div class="ag-layout">
+
+    <aside id="ag-lateral" class="ag-lateral">
+      <p class="ag-lateral-titulo">Profissionais</p>
+      <input type="text" id="ag-filtro-profs" placeholder="Buscar profissional..."
+        oninput="App.filtrarLateralProfs(this.value)"
+        class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white mb-2">
+      <div id="ag-lista-profs"></div>
+    </aside>
+
+    <div>
+
+<!-- ===== ALTERNADOR DIA / SEMANA ===== -->
   <div class="flex items-center gap-2 mb-3">
     <div id="agenda-modos" class="flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
       <button type="button" id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer ativo"><i class="fa-solid fa-calendar-day mr-1.5"></i> Dia</button>
@@ -587,6 +605,10 @@ tailwind.config = {
           <tbody id="semana-corpo" class="semana-corpo"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+
     </div>
   </div>
 
