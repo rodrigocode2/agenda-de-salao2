@@ -73,6 +73,119 @@ window.hcSessao = {
     }
 };
 
+
+// ============================================================
+// FUNCOES DA BARRA LATERAL — existem desde a primeira linha.
+//
+// Os botoes chamam irAba / irGestao / abrirGaveta / fecharGaveta.
+// Cada uma procura a UI de verdade no momento do clique, entao
+// funciona mesmo que o script ainda esteja carregando.
+// ============================================================
+function _hcUI() {
+    // Procura o objeto UI de verdade (registrado no fim do arquivo)
+    if (window.hcUI) return window.hcUI;
+    if (typeof UI !== 'undefined' && UI && UI.switchTab) return UI;
+    return null;
+}
+
+function irAba(aba) {
+    var u = _hcUI();
+    if (u && typeof u.irPara === 'function') { u.irPara(aba); return; }
+    // Reserva: troca a aba na mao, sem depender do UI
+    try {
+        var alvo = document.getElementById(aba);
+        if (!alvo) { console.warn('[HairConcept] aba nao existe: ' + aba); return; }
+        document.querySelectorAll('.tab-content').forEach(function (el) { el.classList.add('hidden'); });
+        alvo.classList.remove('hidden');
+        document.querySelectorAll('.hc-side-item').forEach(function (b) {
+            b.classList.toggle('ativo', b.getAttribute('data-aba') === aba);
+        });
+        if (aba === 'aba-agenda' && typeof App !== 'undefined') {
+            try { App.renderAgendaGrid(); } catch (e) {}
+        }
+        if (aba === 'aba-gestao') { try { irGestao('servicos'); } catch (e) {} }
+    } catch (e) { console.warn('[HairConcept] nao consegui abrir ' + aba + ':', e && e.message); }
+}
+
+function irGestao(espaco) {
+    var u = _hcUI();
+    if (u && typeof u.irParaGestao === 'function') { u.irParaGestao(espaco); return; }
+    // Reserva: abre a Gestao e troca o painel na mao
+    try {
+        irAba('aba-gestao');
+        if (u && typeof u.trocarEspaco === 'function') { u.trocarEspaco(espaco); return; }
+        var paineis = ['servicos', 'produtos', 'avaliacoes-nova', 'config-salao', 'cursos', 'notas'];
+        paineis.forEach(function (p) {
+            var painel = document.getElementById('aba-' + p);
+            var botao = document.getElementById('btn-espaco-' + p);
+            var ativo = (p === espaco);
+            if (painel) painel.classList.toggle('hidden', !ativo);
+            if (botao) {
+                botao.classList.toggle('bg-brand-500/15', ativo);
+                botao.classList.toggle('text-brand-500', ativo);
+                botao.classList.toggle('bg-zinc-900', !ativo);
+                botao.classList.toggle('text-zinc-400', !ativo);
+            }
+        });
+    } catch (e) { console.warn('[HairConcept] nao consegui abrir a gestao:', e && e.message); }
+}
+
+function abrirGaveta() {
+    var u = _hcUI();
+    if (u && typeof u.toggleSidebar === 'function') { u.toggleSidebar(); return; }
+    var side = document.getElementById('hc-sidebar');
+    if (side) side.classList.toggle('aberta');
+    var fundo = document.getElementById('hc-side-fundo');
+    if (fundo) fundo.classList.toggle('mostrando', !!(side && side.classList.contains('aberta')));
+}
+
+function fecharGaveta() {
+    var u = _hcUI();
+    if (u && typeof u.toggleSidebar === 'function') { u.toggleSidebar(false); return; }
+    var side = document.getElementById('hc-sidebar');
+    if (side) side.classList.remove('aberta');
+    var fundo = document.getElementById('hc-side-fundo');
+    if (fundo) fundo.classList.remove('mostrando');
+}
+
+window.irAba = irAba;
+window.irGestao = irGestao;
+window.abrirGaveta = abrirGaveta;
+window.fecharGaveta = fecharGaveta;
+
+// ============================================================
+// ATALHO DA INTERFACE — existe desde a PRIMEIRA linha do arquivo.
+//
+// Os botoes da barra chamam UI.irPara(...) no onclick. Mas o objeto
+// UI de verdade so nasce no fim do arquivo (depende de Auth e App).
+// Se o clique chega antes disso, ou se algo falha no meio do caminho,
+// o navegador diz "UI.irPara is not a function" e a barra nao responde.
+//
+// Este atalho resolve: ele existe sempre, e quando chamado repassa
+// para a funcao de verdade. Se ela ainda nao existir, ele avisa no
+// Console em vez de morrer calado.
+// ============================================================
+window.UI = (function () {
+    var real = null;
+    var marcar = function (nome) {
+        return function () {
+            // Procura a UI de verdade na hora da chamada
+            if (!real && typeof window.hcUI === 'object' && window.hcUI) real = window.hcUI;
+            if (real && typeof real[nome] === 'function') {
+                return real[nome].apply(real, arguments);
+            }
+            console.warn('[HairConcept] UI ainda nao carregou: ' + nome);
+        };
+    };
+    var api = {};
+    ['switchTab','irPara','irParaGestao','marcarLateral','toggleSidebar','toggleMobileMenu',
+     'showToast','abrirGestao','trocarEspaco','trocarTipoAvaliacao','carregarPlanos',
+     'abrirModal','fecharModal','exportarDados'].forEach(function (m) { api[m] = marcar(m); });
+    // Quando o objeto real carregar, ele se registra aqui
+    api._registrar = function (obj) { real = obj; };
+    return api;
+})();
+
 // Foto padrão (o site via.placeholder.com saiu do ar)
 const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
 
@@ -5474,6 +5587,11 @@ const UI = {
     }
 };
 
+// Registra o objeto real no atalho: a partir daqui, os botoes da barra
+// chamam as funcoes de verdade.
+window.hcUI = UI;
+try { if (window.UI && window.UI._registrar) window.UI._registrar(UI); } catch (e) {}
+
 window.addEventListener('DOMContentLoaded', async () => {
     // ============================================================
     // ORDEM CERTA: o ADMIN vem PRIMEIRO.
@@ -5486,22 +5604,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     //   2) senao, a sessao gravada diz 'profissional'? -> e o PROFISSIONAL
     // Antes o sistema perguntava "tem prof_dados na gaveta?" antes de
     // "quem entrou?", e o residuo vencia. Agora o papel gravado manda.
+    // ============================================================
+    // QUEM MANDA E O PAPEL GRAVADO NO LOGIN.
+    // O Supabase apenas CONFIRMA — ele e assincrono e, na primeira
+    // volta da pagina, as vezes ainda nao respondeu. Quando isso
+    // acontecia, o prof_dados antigo vencia e o dono do salao caia
+    // na area do profissional. Agora nao ha mais essa brecha.
+    // ============================================================
+    const papelGravado = window.hcSessao.papel;   // 'salao' | 'profissional' | ''
+
+    // Sessao do Supabase: serve para CONFIRMAR, nunca para decidir sozinha.
     let temSessaoAdmin = false;
     try {
         const { data: { session } } = await supabaseClient.auth.getSession();
         temSessaoAdmin = !!(session && session.user);
     } catch (e) { temSessaoAdmin = false; }
-
-    if (temSessaoAdmin) {
-        // Entrou o salao: grava o papel e esquece tudo de profissional.
+    // Se ha sessao do salao e o papel gravado nao e de profissional, ele e salao.
+    if (temSessaoAdmin && papelGravado !== 'profissional') {
         window.hcSessao.definir('salao');
+    }
+
+    // O profissional SO restaura se o papel gravado for dele, sem excecao.
+    const podeProf = (papelGravado === 'profissional');
+    const profSalvo = podeProf ? localStorage.getItem('hairconcept_prof_dados') : null;
+
+    // Se ha rastro de profissional mas o papel nao e dele, limpa agora.
+    if (!podeProf && localStorage.getItem('hairconcept_prof_dados')) {
         window.hcSessao.limparResiduo('salao');
     }
 
-    // O profissional so restaura se a sessao gravada for dele E nao houver
-    // sessao de salao ativa.
-    const podeProf = !temSessaoAdmin && window.hcSessao.ehProfissional();
-    const profSalvo = podeProf ? localStorage.getItem('hairconcept_prof_dados') : null;
     if (profSalvo) {
         try {
             const data = JSON.parse(profSalvo);
