@@ -709,7 +709,8 @@ tailwind.config = {
               <span id="cert-arquivo-nome"><i class="fa-solid fa-camera"></i> Foto do certificado</span>
               <input type="file" accept="image/*" onchange="App.handleFotoCertificado(event)" class="hidden">
             </label>
-            <button type="submit" class="hc-prof-botao">Salvar certificado</button>
+
+          <p class="hc-prof-dica" style="margin-top:10px;"><span id="frase-motivacional" class="text-[11px] text-zinc-300 italic">"O sucesso é a soma de pequenos esforços."</span></p>            <button type="submit" class="hc-prof-botao">Salvar certificado</button>
           </form>
 
           <div id="lista-certificados" class="hc-prof-certs"></div>
@@ -751,7 +752,42 @@ tailwind.config = {
 
   </div>
 
-  </section>
+  
+  <!-- ===== AGENDA DO SALAO (trazida do index 17) ===== -->
+<!-- CONTROLE DE CALENDÁRIO & NAVEGAÇÃO -->
+  <div class="glass-water p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500 mr-1.5"></i> Data:</span>
+      <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-left"></i></button>
+      <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
+      <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-right"></i></button>
+      <button onclick="App.irParaHoje()" class="px-3 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-xs font-bold text-brand-400 hover:bg-brand-500/30 transition">Hoje</button>
+    </div>
+    <div class="flex items-center gap-3">
+      <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
+        <option value="" disabled selected>Saltar para Mês...</option>
+        <option value="9">Outubro 2026</option>
+        <option value="10">Novembro 2026</option>
+        <option value="11">Dezembro 2026</option>
+        <option value="0">Janeiro 2027</option>
+      </select>
+      <button onclick="App.abrirMarcar()" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
+    </div>
+  </div>
+
+  <!-- TABELA DA AGENDA -->
+  <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
+    <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
+      <thead>
+        <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
+          <th class="py-3 px-4 w-24">Horário</th>
+        </tr>
+      </thead>
+      <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
+    </table>
+  </div>
+
+</section>
 
 <!-- AGENDAR -->
 <div id="modal-marcar" class="modal-overlay flex">
