@@ -1684,30 +1684,120 @@ body.hc-sem-login .hc-side-abrir {
 
 
 /* ============================================================
-   A BARRA LATERAL PRECISA FICAR ACIMA DO CABECALHO.
-   O <header> e sticky, ocupa a largura toda e tem z-index 97.
-   A barra tinha z-index 90 — entao o header passava POR CIMA
-   da faixa da esquerda e engolia o clique dos botoes.
-   Voce via a barra, mas clicar nela nao fazia nada.
+   ACESSIBILIDADE — vale nos DOIS perfis (salão e profissional).
+   O botão e o painel não têm classe admin-only: aparecem sempre.
    ============================================================ */
-.hc-sidebar {
-  z-index: 98 !important;
+
+/* Botão flutuante */
+#hc-acess-btn {
+  position: fixed; bottom: 20px; right: 20px; z-index: 100;
+  width: 48px; height: 48px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: #ec4899; color: #fff; font-size: 20px;
+  border: 2px solid rgba(255,255,255,0.25); cursor: pointer;
+  box-shadow: 0 6px 20px rgba(236,72,153,0.4);
+  transition: transform 0.15s;
+}
+#hc-acess-btn:hover { transform: scale(1.08); }
+
+/* Painel */
+.hc-acess-painel {
+  position: fixed; bottom: 80px; right: 20px; z-index: 101;
+  width: 310px; max-height: 78vh; overflow-y: auto;
+  padding: 16px; border-radius: 1.1rem;
+  background: rgba(9, 9, 11, 0.97);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+}
+.hc-acess-topo {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.hc-acess-topo h3 {
+  font-size: 13px; font-weight: 800; text-transform: uppercase;
+  color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;
+}
+.hc-acess-topo h3 i { color: #ec4899; }
+.hc-acess-x {
+  background: none; border: none; color: #a1a1aa; font-size: 22px;
+  line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.hc-acess-x:hover { color: #fff; }
+
+.hc-acess-grupo {
+  font-size: 9px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #ec4899;
+  margin: 12px 0 6px;
+}
+.hc-acess-linha { display: flex; gap: 6px; margin-bottom: 6px; }
+.hc-acess-linha button {
+  flex: 1; display: flex; align-items: center; gap: 7px;
+  padding: 9px 10px; border-radius: 0.7rem; cursor: pointer;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e4e4e7; font-size: 11px; font-weight: 600; text-align: left;
+  transition: all 0.15s;
+}
+.hc-acess-linha button:hover {
+  background: rgba(236,72,153,0.15); border-color: rgba(236,72,153,0.4); color: #fff;
+}
+.hc-acess-linha button i { color: #ec4899; font-size: 12px; flex-shrink: 0; }
+.hc-acess-reset {
+  width: 100%; margin-top: 14px; padding: 10px; border-radius: 0.7rem;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  color: #a1a1aa; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  cursor: pointer;
+}
+.hc-acess-reset:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+/* ---- Fonte: 4 níveis para cima e 2 para baixo ---- */
+body.hc-f1 { font-size: 106%; }
+body.hc-f2 { font-size: 113%; }
+body.hc-f3 { font-size: 121%; }
+body.hc-f4 { font-size: 130%; }
+body.hc-fonte-menor { font-size: 94%; }
+
+/* ---- Espaçamento do texto ---- */
+body.hc-espaco * { letter-spacing: 0.06em !important; word-spacing: 0.16em !important; }
+body.hc-espaco p, body.hc-espaco span, body.hc-espaco label, body.hc-espaco button { line-height: 1.9 !important; }
+
+/* ---- Altura da linha ---- */
+body.hc-linha p, body.hc-linha span, body.hc-linha li,
+body.hc-linha label, body.hc-linha td, body.hc-linha th { line-height: 2.1 !important; }
+
+/* ---- Sublinhar links ---- */
+body.hc-links a, body.hc-links button { text-decoration: underline !important; text-underline-offset: 3px; }
+
+/* ---- Cursor grande ---- */
+body.hc-cursor, body.hc-cursor * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M8 4 L8 32 L15 26 L20 36 L25 34 L20 24 L30 24 Z' fill='%23fff' stroke='%23000' stroke-width='2.5'/%3E%3C/svg%3E") 8 4, auto !important;
 }
 
-/* O cabecalho comeca DEPOIS da barra: nao cobre mais a area dela */
-@media (min-width: 1024px) {
-  #main-header {
-    margin-left: 232px;
-    width: calc(100% - 232px);
-  }
-  main {
-    margin-left: 232px;
-    max-width: calc(100% - 232px);
-  }
+/* ---- Desligar animações ---- */
+body.hc-sem-anim *, body.hc-sem-anim *::before, body.hc-sem-anim *::after {
+  animation: none !important; transition: none !important;
 }
 
-/* No celular a barra vira gaveta e tem de ficar acima de TUDO */
-@media (max-width: 1023px) {
-  .hc-sidebar { z-index: 98 !important; }
-  .hc-side-abrir { z-index: 99 !important; }
+/* ---- Guia de leitura: faixa que segue o mouse ---- */
+.hc-guia-leitura {
+  position: fixed; left: 0; right: 0; height: 34px;
+  background: rgba(236,72,153,0.16);
+  border-top: 2px solid rgba(236,72,153,0.55);
+  border-bottom: 2px solid rgba(236,72,153,0.55);
+  pointer-events: none; z-index: 9998;
+}
+
+/* ---- Escala de cinza ---- */
+body.hc-cinza { filter: grayscale(1) !important; }
+
+/* ---- Inverter cores (fundo claro, texto escuro) ---- */
+body.hc-claro { filter: invert(1) hue-rotate(180deg); }
+body.hc-claro img, body.hc-claro video, body.hc-claro #hc-acess-btn i,
+body.hc-claro .hc-side-logo, body.hc-claro canvas { filter: invert(1) hue-rotate(180deg); }
+
+/* No celular, o painel ocupa a largura toda */
+@media (max-width: 640px) {
+  .hc-acess-painel { right: 10px; left: 10px; width: auto; bottom: 76px; }
+  #hc-acess-btn { bottom: 14px; right: 14px; }
 }
