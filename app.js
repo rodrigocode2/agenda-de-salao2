@@ -1,1682 +1,5732 @@
-<!DOCTYPE html>
-<html lang="pt-BR" class="dark scroll-smooth">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="HairConcept — gestão completa para salão de beleza: agenda, equipe, clientes, comissões e avaliação. Sistema interno do salão.">
-  <meta name="theme-color" content="#ec4899">
-  <meta property="og:title" content="HairConcept Gestão Integrada">
-  <meta property="og:description" content="Agenda, equipe, clientes e comissões do seu salão em um só lugar.">
-  <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
-<title>HairConcept Gestão Integrada</title>
-<!-- Tailwind CSS CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Supabase JS SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="text/javascript">
-tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        brand: {
-          500: '#ec4899',
-          600: '#db2777'
-        },
-        darkbg: {
-          300: '#030303'
-        }
-      },
-      fontFamily: {
-        sans: ['Space Grotesk', 'sans-serif'],
-        syne: ['Syne', 'sans-serif']
-      }
+const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
+
+// O site manda o CODIGO DO SALAO em toda chamada, num cabecalho proprio.
+// Assim o banco encontra o salao mesmo que a conta de login mude.
+const CODIGO_SALAO_PADRAO = 'deconcept2';
+window.hcSalao = {
+    get codigo() {
+        try { return localStorage.getItem('hairconcept_codigo_salao') || CODIGO_SALAO_PADRAO; }
+        catch (e) { return CODIGO_SALAO_PADRAO; }
+    },
+    definir(codigo) {
+        try { localStorage.setItem('hairconcept_codigo_salao', String(codigo || '').trim().toLowerCase()); }
+        catch (e) { /* silencioso */ }
     }
-  }
+};
+
+// Token da sessao do profissional. O banco cria no login (tabela sessoes_profissional)
+// e exige de volta para saber quem esta pedindo. Sem isto, o profissional nao ve nada.
+window.hcProf = {
+    get token() {
+        try { return localStorage.getItem('hairconcept_prof_token') || ''; }
+        catch (e) { return ''; }
+    },
+    definir(t) {
+        try {
+            if (t) localStorage.setItem('hairconcept_prof_token', String(t));
+            else localStorage.removeItem('hairconcept_prof_token');
+        } catch (e) { /* silencioso */ }
+    }
+};
+
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+        headers: {
+            get 'x-salao-codigo'() { return window.hcSalao.codigo; },
+            get 'x-prof-token'() { return window.hcProf.token; }
+        }
+    }
+}) : null;
+
+// ============================================================
+// QUEM ESTA LOGADO — a unica fonte de verdade.
+// Antes o sistema inferia o papel pelo 'prof_dados' guardado, o que
+// fazia o dono do salao cair na area do profissional. Agora o login
+// grava 'salao' ou 'profissional' aqui, e so isso decide a tela.
+// ============================================================
+window.hcSessao = {
+    get papel() {
+        try { return localStorage.getItem('hairconcept_sessao') || ''; }
+        catch (e) { return ''; }
+    },
+    definir(papel) {
+        try {
+            if (papel) localStorage.setItem('hairconcept_sessao', String(papel));
+            else localStorage.removeItem('hairconcept_sessao');
+        } catch (e) { /* silencioso */ }
+    },
+    ehSalao() { return this.papel === 'salao'; },
+    ehProfissional() { return this.papel === 'profissional'; },
+    // Entrou o salao: esquece TUDO de profissional. E vice-versa.
+    limparResiduo(manter) {
+        try {
+            if (manter === 'salao') {
+                localStorage.removeItem('hairconcept_prof_dados');
+                localStorage.removeItem('hairconcept_prof_id');
+                localStorage.removeItem('hairconcept_prof_token');
+                localStorage.removeItem('hairconcept_prof_selecionado');
+            } else if (manter === 'profissional') {
+                localStorage.removeItem('hairconcept_estab_id');
+            }
+        } catch (e) { /* silencioso */ }
+    }
+};
+
+
+// ============================================================
+// FUNCOES DA BARRA LATERAL — existem desde a primeira linha.
+//
+// Os botoes chamam irAba / irGestao / abrirGaveta / fecharGaveta.
+// Cada uma procura a UI de verdade no momento do clique, entao
+// funciona mesmo que o script ainda esteja carregando.
+// ============================================================
+function _hcUI() {
+    // Procura o objeto UI de verdade (registrado no fim do arquivo)
+    if (window.hcUI) return window.hcUI;
+    if (typeof UI !== 'undefined' && UI && UI.switchTab) return UI;
+    return null;
 }
-</script>
-<!-- Google Fonts (Space Grotesk + Syne, usadas no Tailwind) -->
-<link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syne:wght@700;800&display=swap)" rel="stylesheet">
 
-<style type="text/css"></style>
-<!-- FontAwesome CDN -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="style.css">
-</head>
-<body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
-<!-- ============ SIDEBAR DE NAVEGACAO ============ -->
-<aside id="hc-sidebar" class="hc-sidebar hidden">
-  <div class="hc-side-topo">
-    <div class="hc-side-logo"><i class="fa-solid fa-scissors"></i></div>
-    <div class="hc-side-marca">
-      <span class="hc-side-nome">HairConcept</span>
-      <span class="hc-side-sub">Gestão Integrada</span>
-    </div>
-    <button type="button" class="hc-side-fechar" onclick="fecharGaveta()" title="Fechar menu">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-  </div>
-
-  <nav class="hc-side-nav">
-    <p class="hc-side-grupo">Agenda</p>
-    <button type="button" class="hc-side-item" data-aba="aba-agenda" onclick="irAba('aba-agenda')">
-      <i class="fa-solid fa-calendar-days"></i><span>Agenda</span>
-    </button>
-    <button type="button" class="hc-side-item" data-aba="aba-avisos" onclick="irAba('aba-avisos')">
-      <i class="fa-solid fa-bell"></i><span>Avisos</span>
-      <span id="badge-avisos" class="hc-side-badge hidden">0</span>
-    </button>
-
-    <p class="hc-side-grupo">Cadastros</p>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-equipe" onclick="irAba('aba-equipe')">
-      <i class="fa-solid fa-users"></i><span>Equipe</span>
-    </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-clientes" onclick="irAba('aba-clientes')">
-      <i class="fa-solid fa-address-book"></i><span>Clientes</span>
-    </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="servicos" onclick="irGestao('servicos')">
-      <i class="fa-solid fa-list-check"></i><span>Serviços e Estoque</span>
-    </button>
-
-    <p class="hc-side-grupo">Gestão</p>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-relatorios" onclick="irAba('aba-relatorios')">
-      <i class="fa-solid fa-chart-line"></i><span>Relatórios</span>
-    </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-planos" onclick="irAba('aba-planos')">
-      <i class="fa-solid fa-crown"></i><span>Planos</span>
-    </button>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="avaliacao" onclick="irGestao('avaliacao')">
-      <i class="fa-solid fa-star"></i><span>Avaliação</span>
-    </button>
-
-    <p class="hc-side-grupo">Sistema</p>
-    <button type="button" class="hc-side-item admin-only" data-aba="aba-gestao" data-espaco="config-salao" onclick="irGestao('config-salao')">
-      <i class="fa-solid fa-gear"></i><span>Configurações</span>
-    </button>
-    <button type="button" class="hc-side-item" onclick="Auth.logout()">
-      <i class="fa-solid fa-right-from-bracket"></i><span>Sair</span>
-    </button>
-  </nav>
-</aside>
-<div id="hc-side-fundo" class="hc-side-fundo hidden" onclick="fecharGaveta()"></div>
-<button type="button" id="hc-side-abrir" class="hc-side-abrir hidden" onclick="abrirGaveta()" title="Menu">
-  <i class="fa-solid fa-bars"></i>
-</button>
-
-
-<!-- Toast Container -->
-<div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
-
-<!-- HEADER -->
-<header id="main-header" class="hidden sticky top-0 hc-z-header glass-water border-b border-white/10" style="z-index:97">
-<div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-2">
-  <div class="flex items-center gap-3 overflow-hidden">
-    <div id="header-logo-box" class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-500 shrink-0 overflow-hidden">
-      <i id="header-icon-scissors" class="fa-solid fa-scissors text-lg"></i>
-          <img id="header-logo-img" src="" alt="Logo do salao" class="w-full h-full object-cover hidden">
-    </div>
-    <div class="overflow-hidden">
-      <span id="saloon-name-header" class="block font-syne text-lg md:text-xl font-extrabold text-white uppercase truncate leading-tight max-w-[22rem]">Bem-vindo</span>
-            <span id="header-assinatura" class="hidden block text-[9px] text-zinc-500 font-medium tracking-widest uppercase">HairConcept</span>
-    </div>
-  </div>
-  
-  <div class="flex items-center gap-3 shrink-0">
-    <button onclick="UI.toggleMobileMenu()" class="lg:hidden p-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition">
-      <i class="fa-solid fa-bars text-base"></i>
-    </button>
-    <div class="text-right hidden sm:block">
-      <span id="user-name-display" class="block text-xs font-bold text-white uppercase truncate max-w-[90px] sm:max-w-[200px]">Nome</span>
-      <span id="user-role-display" class="block text-[9px] text-brand-500 font-bold uppercase">Cargo</span>
-    </div>
-    <button onclick="Auth.logout()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold transition flex items-center gap-2">
-      <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden md:inline">Sair</span>
-    </button>
-  </div>
-</div>
-</header>
-
-<!-- CONTEÚDO PRINCIPAL -->
-<main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 py-8">
-
-<!-- TELA DE LOGIN -->
-<!-- ============ TELA DE ABERTURA ============ -->
-<div id="tela-abertura" style="z-index:99" class="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#07070a]">
-  <canvas id="mouse-trail-canvas" class="hc-trail"></canvas>
-  <div class="hc-brilho"></div>
-  <div class="hc-grao"></div>
-  <div class="relative z-10 text-center px-6">
-    <div class="hc-marca">
-      <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-500/15 border border-brand-500/40 flex items-center justify-center">
-        <i class="fa-solid fa-scissors text-brand-500 text-2xl"></i>
-      </div>
-    </div>
-    <p class="hc-frase hc-f1">Bem-vindo ao</p>
-    <h1 class="hc-nome hc-f2">HairConcept</h1>
-    <p class="hc-sub hc-f3">Sua agenda de gestão</p>
-    <button id="btn-entrar-abertura" type="button" onclick="Auth.entrarDoSistema()" class="hc-botao hc-f4">Entrar</button>
-  </div>
-</div>
-
-<section id="aba-login" class="tab-content relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 gota-agua border border-white/10 space-y-10 shadow-2xl">
-  <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-    <video id="hero-video" src="hero.mp4" autoplay muted loop playsinline class="w-full h-full object-cover opacity-20"></video>
-    <div class="absolute inset-0 bg-gradient-to-b from-darkbg-300/60 via-darkbg-300/40 to-darkbg-300"></div>
-  </div>
-  <div class="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-    <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight text-white"><span id="titulo-marca">HairConcept</span> <span class="text-brand-500">GESTÃO</span></h1>
-    <p class="text-zinc-300 text-sm">Acesse a sua conta para visualizar a agenda, comissões ou gerenciar o estabelecimento.</p>
-  </div>
-  <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-    <!-- Login Estabelecimento -->
-    <div class="glass-water p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center">
-          <i class="fa-solid fa-store"></i>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold uppercase text-white">Login Estabelecimento</h3>
-          <p class="text-[11px] text-zinc-400">Dono do Salão / Admin</p>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <button onclick="Auth.loginSocial('google')" type="button" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition">
-          <i class="fa-brands fa-google text-rose-500"></i> Google
-        </button>
-        <button onclick="Auth.loginSocial('facebook')" type="button" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition">
-          <i class="fa-brands fa-facebook text-blue-500"></i> Facebook
-        </button>
-      </div>
-      <div class="flex items-center gap-3 text-zinc-600 text-[10px] uppercase font-bold">
-        <div class="flex-grow border-t border-white/10"></div> Ou e-mail <div class="flex-grow border-t border-white/10"></div>
-      </div>
-      <form onsubmit="Auth.loginAdmin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail do Salão</label>
-          <input type="email" id="login-admin-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha</label>
-          <input type="password" id="login-admin-senha" required placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition shadow-lg shadow-brand-500/20">Entrar como Admin</button>
-        <div class="flex items-center justify-between pt-1">
-          <button type="button" onclick="Auth.abrirRecuperarSenha()" class="text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Esqueci minha senha</button>
-          <button type="button" onclick="Auth.abrirCadastro()" class="text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Criar conta</button>
-        </div>
-      </form>
-    </div>
-    <!-- Login Profissional -->
-    <div class="glass-water p-8 rounded-3xl border border-white/10 space-y-6 shadow-2xl">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-          <i class="fa-solid fa-user-tie"></i>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold uppercase text-white">Login Profissional</h3>
-          <p class="text-[11px] text-zinc-400">Cabeleireiros / Manicures / Esteticistas</p>
-        </div>
-      </div>
-      <form onsubmit="App.loginProfissional(event)" class="space-y-4 pt-2">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Salão</label>
-          <input type="text" id="login-prof-estabelecimento" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu nome</label>
-          <input type="text" id="login-prof-nome" required placeholder="Como o salão cadastrou você" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Chave de acesso (11 números)</label>
-          <input type="text" id="login-prof-id" required inputmode="numeric" maxlength="11" placeholder="00000000000" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          <p class="text-[10px] text-zinc-500 mt-1">Os 11 números que você combinou com o salão (pode ser o seu CPF ou outro número).</p>
-        </div>
-        <div>
-          <input type="hidden" id="login-prof-senha">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/20 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Entrar na Agenda</button>
-        <button type="button" onclick="Auth.abrirAjuda()" class="w-full text-[11px] text-zinc-400 hover:text-brand-500 transition underline underline-offset-2">Esqueci minha senha / Preciso de ajuda</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: CRIAR CONTA ============ -->
-  <div id="modal-cadastro" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Criar minha conta</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-cadastro')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="Auth.criarConta(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão</label>
-          <input type="text" id="cad-nome-salao" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-          <input type="email" id="cad-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha (mínimo 6 caracteres)</label>
-          <input type="password" id="cad-senha" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Confirmar senha</label>
-          <input type="password" id="cad-senha2" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Criar conta e entrar</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: RECUPERAR SENHA ============ -->
-  <div id="modal-recuperar" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Recuperar minha senha</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-recuperar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="Auth.enviarRecuperacao(event)" class="space-y-4">
-        <p class="text-[11px] text-zinc-400">Digite o e-mail que você usa para entrar. Vamos enviar um link para você criar uma senha nova.</p>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail do Salão</label>
-          <input type="email" id="rec-email" required placeholder="salao@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Enviar link</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: DEFINE NOVA SENHA (abre pelo link do e-mail) ============ -->
-  <div id="modal-nova-senha" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Criar senha nova</h3>
-      </div>
-      <form onsubmit="Auth.salvarNovaSenha(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nova senha (mínimo 6 caracteres)</label>
-          <input type="password" id="nova-senha" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Repetir a nova senha</label>
-          <input type="password" id="nova-senha2" required minlength="6" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar nova senha</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: EDITAR CLIENTE ============ -->
-  <div id="modal-editar-cliente" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 id="titulo-cliente" class="text-base font-bold uppercase text-white">Editar cliente</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-editar-cliente')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarEdicaoCliente(event)" class="space-y-4">
-        <input type="hidden" id="editar-cli-id">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
-          <input type="date" id="editar-cli-data" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional</label>
-          <select id="editar-cli-profissional" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo</label>
-          <input type="text" id="editar-cli-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
-          <input type="tel" id="editar-cli-telefone" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF</label>
-          <input type="text" id="editar-cli-cpf" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-          <input type="email" id="editar-cli-email" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar alterações</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: FECHAR CICLO ============ -->
-  <div id="modal-fechar" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Fechar ciclo</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-fechar')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="space-y-4">
-        <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
-          <p id="fechar-periodo" class="text-[11px] text-zinc-400"></p>
-          <p class="text-xs text-white font-bold"><span id="fechar-atend">0</span> atendimento(s)</p>
-          <p class="text-xs text-white font-bold">Valor: <span id="fechar-valor">R$ 0,00</span></p>
-          <p class="text-xs text-emerald-400 font-bold">Comissão: <span id="fechar-comissao">R$ 0,00</span></p>
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data em que recebi</label>
-          <input type="date" id="fechar-recebido" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <p class="text-[10px] text-zinc-500">Ao fechar, o sistema guarda este período e o próximo ciclo começa no dia seguinte.</p>
-        <button onclick="App.confirmarFechamento()" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition">Confirmar fechamento</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: EDITAR PROFISSIONAL (com mensagem) ============ -->
-  <div id="modal-editar-prof-extra" class="hidden"></div>
-
-  <!-- ============ MODAL: VOTAR NO CLIENTE ============ -->
-  <div id="modal-voto" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Avaliar cliente</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-voto')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarVoto(event)" class="space-y-4">
-        <input type="hidden" id="voto-cliente-id">
-        <p class="text-[11px] text-zinc-400">Avaliando <span id="voto-cliente-nome" class="text-white font-bold"></span>. Este registro é interno do salão.</p>
-
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">O que aconteceu</label>
-          <select id="voto-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="5">⭐⭐⭐⭐⭐  +5 — Excelente</option>
-            <option value="4">⭐⭐⭐⭐  +4 — Muito boa</option>
-            <option value="3" selected>⭐⭐⭐  +3 — Boa</option>
-            <option value="2">⭐⭐  +2 — Razoável</option>
-            <option value="1">⭐  +1 — Difícil</option>
-            <option value="-1">👎  −1 — Deu trabalho</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Qual profissional ela elogiou (opcional)</label>
-          <select id="voto-profissional" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-        </div>
-
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Observação (opcional)</label>
-          <textarea id="voto-obs" rows="2" placeholder="Ex: elogiou o corte da Antonia" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
-        </div>
-
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Registrar</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: TROCAR SENHA DO PROFISSIONAL ============ -->
-  <div id="modal-trocar-senha" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Trocar senha</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-trocar-senha')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarNovaSenhaProfissional(event)" class="space-y-4">
-        <input type="hidden" id="trocasenha-prof-id">
-        <input type="hidden" id="trocasenha-prof-cpf">
-        <p class="text-[11px] text-zinc-400">Definindo uma senha nova para <span id="trocasenha-prof-nome" class="text-white font-bold"></span>.</p>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Senha nova (mínimo 4 caracteres)</label>
-          <input type="password" id="trocasenha-senha" required minlength="4" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Repetir a senha nova</label>
-          <input type="password" id="trocasenha-senha2" required minlength="4" placeholder="........" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar senha nova</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: EDITAR PROFISSIONAL ============ -->
-  <div id="modal-editar-prof" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Editar profissional</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-editar-prof')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="App.salvarEdicaoProfissional(event)" class="space-y-4">
-        <input type="hidden" id="editar-prof-id">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo</label>
-          <input type="text" id="editar-prof-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Especialidade / Cargo</label>
-          <input type="text" id="editar-prof-cargo" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF (Chave de Acesso)</label>
-          <input type="text" id="editar-prof-cpf" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar alterações</button>
-      
-        <div class="pt-3 border-t border-white/10">
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Mensagem particular para ele (opcional)</label>
-          <input type="hidden" id="recado-prof-id">
-          <textarea id="recado-prof-texto" rows="2" placeholder="Ex: preciso falar com você sobre o horário de amanhã" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
-          <button type="button" onclick="App.enviarRecadoProfissional(event)" class="mt-2 w-full py-2.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-200 hover:text-white font-bold text-xs uppercase transition">Enviar mensagem</button>
-          <p class="text-[10px] text-zinc-500 mt-1">A mensagem aparece na aba do profissional.</p>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: PRECISO DE AJUDA (profissional) ============ -->
-  <div id="modal-ajuda" class="modal-overlay hidden">
-    <div class="modal-caixa">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-base font-bold uppercase text-white">Preciso de ajuda</h3>
-        <button type="button" onclick="Auth.fecharModal('modal-ajuda')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form onsubmit="Auth.enviarAjuda(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Salão</label>
-          <input type="text" id="ajuda-salao" required placeholder="Ex: Studio Bela" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu nome</label>
-          <input type="text" id="ajuda-nome" required placeholder="Seu nome completo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Seu CPF</label>
-          <input type="text" id="ajuda-cpf" required placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">O que aconteceu?</label>
-          <select id="ajuda-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="esqueci_senha">Esqueci minha senha</option>
-            <option value="reclamacao">Reclamação</option>
-            <option value="excluir_dados">Quero excluir meus dados</option>
-            <option value="outro">Outro assunto</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Mensagem</label>
-          <textarea id="ajuda-mensagem" rows="3" required placeholder="Escreva aqui o que você precisa" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Enviar pedido</button>
-      </form>
-    </div>
-  </div>
-</section>
-
-<!-- TELA DE BOAS-VINDAS (primeiro login) -->
-<section id="aba-boasvindas" class="tab-content hidden max-w-3xl mx-auto space-y-6">
-  <div class="glass-water p-8 md:p-12 rounded-3xl border border-white/10 space-y-8 shadow-2xl relative overflow-hidden gota-agua">
-    <div class="relative z-10 space-y-3 text-center">
-      <div class="w-16 h-16 mx-auto rounded-2xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center overflow-hidden">
-        <img id="welcome-logo-img" src="" alt="Logo do salão" class="w-full h-full object-cover hidden">
-        <i id="welcome-logo-icon" class="fa-solid fa-scissors text-2xl text-brand-500"></i>
-      </div>
-      <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Bem-vindo ao HairConcept</p>
-      <h1 id="welcome-nome-salao" class="text-2xl md:text-3xl font-black uppercase text-white">Seu Salão</h1>
-      <p class="text-xs text-zinc-400 max-w-lg mx-auto">Este é o painel do seu salão. Aqui você organiza a agenda, a equipe, os serviços e o estoque, tudo no mesmo lugar.</p>
-    </div>
-
-    <div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
-        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-user-plus"></i></div>
-        <h3 class="text-xs font-bold uppercase text-white">1. Monte a equipe</h3>
-        <p class="text-[11px] text-zinc-400">Cadastre seus profissionais na aba Equipe, com foto, cargo e uma senha de acesso.</p>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
-        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-scissors"></i></div>
-        <h3 class="text-xs font-bold uppercase text-white">2. Crie os serviços</h3>
-        <p class="text-[11px] text-zinc-400">Cadastre os procedimentos com preço e comissão, e monte o catálogo do salão.</p>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
-        <div class="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center text-brand-500"><i class="fa-solid fa-calendar-check"></i></div>
-        <h3 class="text-xs font-bold uppercase text-white">3. Comece a agendar</h3>
-        <p class="text-[11px] text-zinc-400">Marque os atendimentos na aba Agendar, em blocos de 30 minutos. A agenda aparece para todos.</p>
-      </div>
-    </div>
-
-    <div class="relative z-10 p-4 rounded-2xl bg-zinc-950/80 border border-white/10">
-      <p class="text-[11px] text-zinc-400"><i class="fa-solid fa-circle-info text-brand-500"></i> Dica: em <span class="text-white font-bold">Configurações</span> você define o nome do salão, a logo, o endereço e os horários de funcionamento. O nome e a logo aparecem no topo do sistema.</p>
-    </div>
-
-    <div class="relative z-10 flex flex-col md:flex-row items-center justify-center gap-3">
-      <button onclick="App.concluirBoasVindas()" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-brand-500/20">Começar agora</button>
-      <button onclick="UI.abrirGestao('servicos')" class="w-full md:w-auto px-8 py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider transition">Configurar o salão</button>
-    </div>
-  </div>
-</section>
-
-<!-- AGENDA PAINEL PRINCIPAL -->
-<section id="aba-agenda" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 glass-water">
-  <!-- ===== AREA DO PROFISSIONAL (mobile-first) ===== -->
-  <div id="hc-area-prof" class="hidden space-y-4" style="--pc: #ec4899;">
-
-    <!-- Cabecalho -->
-    <div class="hc-prof-topo">
-      <div class="hc-prof-quem">
-        <div class="hc-prof-foto-wrap">
-          <img id="hc-prof-foto" src="" alt="" class="hc-prof-foto">
-          <label class="hc-prof-foto-troca" title="Trocar foto">
-            <input type="file" accept="image/*" onchange="App.handleAtualizarMinhaFoto(event)" class="hidden">
-            <i class="fa-solid fa-camera"></i>
-          </label>
-        </div>
-        <div class="hc-prof-ident">
-          <span class="hc-prof-etiqueta">Profissional</span>
-          <h2 class="hc-prof-nome">
-            <span id="hc-prof-nome">Meu espaço</span>
-            <span id="hc-prof-selo"></span>
-          </h2>
-          <p id="hc-prof-cargo" class="hc-prof-cargo"></p>
-        </div>
-      </div>
-      <button type="button" class="hc-prof-sair" onclick="Auth.logout()" title="Sair">
-        <i class="fa-solid fa-right-from-bracket"></i>
-      </button>
-    </div>
-
-    <!-- Dias -->
-    <div class="hc-prof-dias">
-      <button type="button" class="hc-prof-dia-btn" onclick="App.irDiaProf(-1)" title="Dia anterior">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      <button type="button" class="hc-prof-dia-hoje" onclick="App.irDiaProf(0)">Hoje</button>
-      <div class="hc-prof-dia-texto">
-        <strong id="hc-prof-data-dia">—</strong>
-        <span id="hc-prof-data-num">—</span>
-      </div>
-      <button type="button" class="hc-prof-dia-btn" onclick="App.irDiaProf(1)" title="Próximo dia">
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
-    </div>
-
-    <!-- Numeros do dia -->
-    <div class="hc-prof-stats">
-      <div class="hc-prof-stat">
-        <span>Atendimentos hoje</span>
-        <strong id="hc-prof-total">0</strong>
-      </div>
-      <div class="hc-prof-stat">
-        <span>Minha comissão</span>
-        <strong id="hc-prof-comissao" class="hc-prof-verde">R$ 0,00</strong>
-      </div>
-    </div>
-
-    <!-- Lista do dia -->
-    <div class="hc-prof-lista" id="hc-prof-lista">
-      <p class="hc-prof-vazio">Carregando os seus atendimentos...</p>
-    </div>
-
-    <p class="hc-prof-aviso">
-      <i class="fa-solid fa-circle-info"></i>
-      Para marcar ou alterar um horário, envie uma mensagem no chat abaixo.
-    </p>
-
-    <!-- ============ MINHAS FERRAMENTAS ============ -->
-    <div class="hc-prof-secao">
-      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-toolbox"></i> Minhas ferramentas</h3>
-
-      <div class="hc-prof-grid">
-
-        <!-- Post-its -->
-        <div class="hc-prof-card">
-          <div class="hc-prof-card-topo">
-            <h4><i class="fa-solid fa-note-sticky hc-prof-amarelo"></i> Minhas notas</h4>
-            <div class="hc-prof-card-acoes">
-              <button type="button" onclick="App.exportarPostIts()" title="Baixar as notas" class="hc-prof-mini">
-                <i class="fa-solid fa-download"></i>
-              </button>
-              <button type="button" onclick="App.adicionarPostIt()" class="hc-prof-mini hc-prof-mini-mais">+ Nota</button>
-            </div>
-          </div>
-          <div id="lista-postits" class="hc-prof-notas"></div>
-        </div>
-
-        <!-- Calculadora -->
-        <div class="hc-prof-card">
-          <h4><i class="fa-solid fa-calculator hc-prof-rosa"></i> Calculadora de comissão</h4>
-          <div class="hc-prof-calc">
-            <label>Valor do serviço (R$)</label>
-            <input type="number" id="prof-calc-val" oninput="App.calcularGanhosPessoal()" placeholder="0.00" class="hc-prof-input">
-            <label>Minha comissão (%)</label>
-            <input type="number" id="prof-calc-porc" value="50" oninput="App.calcularGanhosPessoal()" class="hc-prof-input">
-            <div class="hc-prof-calc-res">
-              <span>Você recebe</span>
-              <strong id="prof-calc-result">R$ 0,00</strong>
-            </div>
-          </div>
-        </div>
-
-        <!-- Personalizar -->
-        <div class="hc-prof-card">
-          <h4><i class="fa-solid fa-palette hc-prof-rosa"></i> Meu jeito</h4>
-          <p class="hc-prof-dica">Escolha a cor do seu espaço. Fica salvo no seu perfil.</p>
-          <div class="hc-prof-cores">
-            <button type="button" class="hc-prof-cor" style="--c:#ec4899" onclick="App.escolherCorProf('#ec4899')" title="Rosa"></button>
-            <button type="button" class="hc-prof-cor" style="--c:#8b5cf6" onclick="App.escolherCorProf('#8b5cf6')" title="Roxo"></button>
-            <button type="button" class="hc-prof-cor" style="--c:#3b82f6" onclick="App.escolherCorProf('#3b82f6')" title="Azul"></button>
-            <button type="button" class="hc-prof-cor" style="--c:#10b981" onclick="App.escolherCorProf('#10b981')" title="Verde"></button>
-            <button type="button" class="hc-prof-cor" style="--c:#f59e0b" onclick="App.escolherCorProf('#f59e0b')" title="Âmbar"></button>
-            <button type="button" class="hc-prof-cor" style="--c:#ef4444" onclick="App.escolherCorProf('#ef4444')" title="Vermelho"></button>
-            <button type="button" class="hc-prof-cor" style="--c:#14b8a6" onclick="App.escolherCorProf('#14b8a6')" title="Turquesa"></button>
-            <button type="button" class="hc-prof-cor" style="--c:#6366f1" onclick="App.escolherCorProf('#6366f1')" title="Índigo"></button>
-          </div>
-          <label class="hc-prof-bio-lbl">Uma frase sobre você (aparece na agenda)</label>
-          <input type="text" id="prof-bio" maxlength="60" placeholder="Ex: especialista em coloração" class="hc-prof-input" onchange="App.salvarBio()">
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ============ MEU DESENVOLVIMENTO ============ -->
-    <div class="hc-prof-secao">
-      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-arrow-trend-up"></i> Meu desenvolvimento</h3>
-
-      <div class="hc-prof-grid">
-
-        <!-- Desempenho -->
-        <div class="hc-prof-card" id="bloco-minha-barra">
-          <h4><i class="fa-solid fa-star hc-prof-amarelo"></i> Meu desempenho</h4>
-          <div id="minha-barra-prof"></div>
-        </div>
-
-        <!-- Cursos -->
-        <div class="hc-prof-card">
-          <h4><i class="fa-solid fa-book-open hc-prof-rosa"></i> Cursos para fazer</h4>
-          <p class="hc-prof-dica">Cursos indicados pelo salão. Ao concluir, guarde o certificado.</p>
-          <div id="hc-prof-cursos" class="hc-prof-cursos"></div>
-        </div>
-
-        <!-- Certificados -->
-        <div class="hc-prof-card hc-prof-card-largo">
-          <div class="hc-prof-card-topo">
-            <h4><i class="fa-solid fa-award hc-prof-amarelo"></i> Meus certificados</h4>
-            <span class="hc-prof-selo-info"><i class="fa-solid fa-graduation-cap"></i> aparece na agenda</span>
-          </div>
-
-          <form onsubmit="App.salvarCertificado(event)" class="hc-prof-form">
-            <input id="cert-curso" type="text" required placeholder="Nome do curso *" class="hc-prof-input">
-            <input id="cert-instituicao" type="text" placeholder="Instituição" class="hc-prof-input">
-            <input id="cert-data" type="date" class="hc-prof-input">
-            <input id="cert-link" type="url" placeholder="Link do certificado" class="hc-prof-input">
-            <label class="hc-prof-arquivo">
-              <img id="cert-preview" class="hidden" alt="Certificado">
-              <span id="cert-arquivo-nome"><i class="fa-solid fa-camera"></i> Foto do certificado</span>
-              <input type="file" accept="image/*" onchange="App.handleFotoCertificado(event)" class="hidden">
-            </label>
-
-          <p class="hc-prof-dica" style="margin-top:10px;"><span id="frase-motivacional" class="text-[11px] text-zinc-300 italic">"O sucesso é a soma de pequenos esforços."</span></p>            <button type="submit" class="hc-prof-botao">Salvar certificado</button>
-          </form>
-
-          <div id="lista-certificados" class="hc-prof-certs"></div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ============ MEU FECHAMENTO ============ -->
-    <div class="hc-prof-secao">
-      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-sack-dollar"></i> Meu fechamento</h3>
-      <div id="painel-fechamento" class="hc-prof-fechamento">
-        <div class="hc-prof-card-topo">
-          <div>
-            <h4><i class="fa-solid fa-wallet hc-prof-verde"></i> Quanto tenho a receber</h4>
-            <p id="fech-periodo" class="hc-prof-dica">Carregando período...</p>
-          </div>
-          <button type="button" onclick="App.abrirFecharCiclo()" class="hc-prof-botao hc-prof-botao-verde">
-            Fechar ciclo
-          </button>
-        </div>
-        <div id="fech-resumo" class="hc-prof-fech-resumo"></div>
-      </div>
-    </div>
-
-    <!-- ============ CHAT ============ -->
-    <div class="hc-prof-chat">
-      <h3 class="hc-prof-chat-titulo">
-        <i class="fa-solid fa-comments"></i> Falar com o salão
-      </h3>
-      <div id="chat-historico-prof" class="hc-prof-chat-historico"></div>
-      <div class="hc-prof-chat-envio">
-        <input type="text" id="prof-recado-input" placeholder="Escreva para o salão..." class="hc-prof-chat-input" onkeypress="if(event.key === 'Enter') App.enviarRecadoEstabelecimento()">
-        <button type="button" onclick="App.enviarRecadoEstabelecimento()" class="hc-prof-chat-btn" title="Enviar">
-          <i class="fa-solid fa-paper-plane"></i>
-        </button>
-      </div>
-    </div>
-
-  </div>
-
-  
-  <!-- ===== AGENDA DO SALAO (trazida do index 17) ===== -->
-<!-- CONTROLE DE CALENDÁRIO & NAVEGAÇÃO -->
-  <div class="glass-water p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="text-xs font-bold text-white uppercase mr-2"><i class="fa-solid fa-calendar-days text-brand-500 mr-1.5"></i> Data:</span>
-      <button onclick="App.mudarDia(-1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-left"></i></button>
-      <input type="date" id="filtro-data-agenda" onchange="App.renderAgendaGrid()" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
-      <button onclick="App.mudarDia(1)" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition"><i class="fa-solid fa-chevron-right"></i></button>
-      <button onclick="App.irParaHoje()" class="px-3 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/40 text-xs font-bold text-brand-400 hover:bg-brand-500/30 transition">Hoje</button>
-    </div>
-    <div class="flex items-center gap-3">
-      <select id="filtro-mes-avancado" onchange="App.saltarParaMes(this.value)" class="glass-input rounded-xl px-3 py-1.5 text-xs text-white">
-        <option value="" disabled selected>Saltar para Mês...</option>
-        <option value="9">Outubro 2026</option>
-        <option value="10">Novembro 2026</option>
-        <option value="11">Dezembro 2026</option>
-        <option value="0">Janeiro 2027</option>
-      </select>
-      <button onclick="App.abrirMarcar()" class="admin-only px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">+ Marcar</button>
-    </div>
-  </div>
-
-    <!-- ===== ALTERNADOR DIA / SEMANA ===== -->
-  <div class="flex items-center gap-2 mb-3">
-    <div id="agenda-modos" class="flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
-      <button type="button" id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer ativo"><i class="fa-solid fa-calendar-day mr-1.5"></i> Dia</button>
-      <button type="button" id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer"><i class="fa-solid fa-calendar-week mr-1.5"></i> Semana</button>
-    </div>
-  </div>
-
-  <!-- ===== VISAO DO DIA ===== -->
-  <div id="agenda-modo-dia">
-<!-- TABELA DA AGENDA -->
-  <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
-    <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
-      <thead>
-        <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
-          <th class="py-3 px-4 w-24">Horário</th>
-        </tr>
-      </thead>
-      <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
-    </table>
-  </div>
-  </div>
-
-  <!-- ===== VISAO DA SEMANA ===== -->
-  <div id="agenda-modo-semana" class="hidden">
-    <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-      <div class="semana-scroll">
-        <table class="semana-tabela">
-          <thead>
-            <tr id="semana-cabecalho"></tr>
-          </thead>
-          <tbody id="semana-corpo" class="semana-corpo"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</section>
-
-<!-- AGENDAR -->
-<div id="modal-marcar" class="modal-overlay flex">
-  <div class="modal-caixa">
-    <div class="flex items-center justify-between mb-5">
-      <h3 class="text-base font-bold uppercase text-white">Marcar Atendimento</h3>
-      <button type="button" onclick="Auth.fecharModal('modal-marcar')" class="modal-x-fixo text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="App.handleCreateAgendamento(event)" class="space-y-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data</label>
-        <input id="agendamento-data" type="date" required onchange="App.aplicarHorariosLivres()" data-preencher-hoje class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Profissional *</label>
-        <select id="agendamento-profissional" required onchange="App.aplicarHorariosLivres()" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Serviço *</label>
-        <input id="cliente-servico" type="text" required placeholder="Ex: Corte de Cabelo / Barba" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Início *</label>
-        <input type="time" id="agendamento-horario" required step="1800" min="06:00" max="23:30" value="08:00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fim *</label>
-        <input type="time" id="agendamento-horario-fim" required step="1800" min="06:00" max="23:30" value="08:30" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <p id="aviso-encaixe" class="hidden text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-3 py-2">Colocando um serviço DENTRO do atendimento. O horário não será bloqueado.</p>
-      <div class="flex items-center gap-2 p-3 rounded-xl bg-zinc-950 border border-white/10">
-        <input type="checkbox" id="agendamento-encaixe" class="w-4 h-4">
-        <label for="agendamento-encaixe" class="text-[11px] text-zinc-300">Aceita encaixe dentro deste atendimento (ex: escova durante o notavel)</label>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Observação</label>
-        <textarea id="agendamento-observacao" rows="2" placeholder="Ex: cliente alérgica a henna / veio com a mãe" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"></textarea>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Repetir</label>
-        <div class="flex gap-2">
-          <select id="agendamento-repetir" class="flex-grow glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="nunca">Nunca</option>
-            <option value="semanal">Toda semana</option>
-            <option value="quinzenal">A cada 15 dias</option>
-          </select>
-          <select id="agendamento-repetir-vezes" class="w-24 glass-input rounded-xl px-3 py-2.5 text-xs text-white">
-            <option value="2">2x</option>
-            <option value="4" selected>4x</option>
-            <option value="8">8x</option>
-            <option value="12">12x</option>
-          </select>
-        </div>
-    </div>
-      </div>
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <label class="block text-xs uppercase font-bold text-zinc-400">Cliente *</label>
-          <button type="button" onclick="App.novoClienteDaAgenda()" class="text-[10px] font-bold uppercase text-brand-500 hover:text-white">+ Cadastrar cliente</button>
-        </div>
-        <input id="cliente-nome" type="text" required list="lista-clientes-agenda" placeholder="Nome completo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        <datalist id="lista-clientes-agenda"></datalist>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Valor Final (R$) *</label>
-        <input id="cliente-valor" type="number" step="0.01" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Confirmar Agendamento</button>
-    </form>
-  </div>
-
-<!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
-
-
-<!-- EQUIPE -->
-<section id="aba-equipe" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Gestão de Equipe e Turnos</h2>
-        <p class="text-xs text-zinc-400">Controle de fotos, credenciais de acesso por CPF e exclusão</p>
-      </div>
-    </div>
-    <form onsubmit="App.handleCreateProfissional(event)" class="space-y-4">
-            <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
-        <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center relative">
-          <img alt="Foto do profissional" id="preview-foto-prof" src="" class="w-full h-full object-cover hidden">
-          <i id="icon-foto-prof" class="fa-solid fa-user text-zinc-600 text-2xl"></i>
-        </div>
-        <div class="flex-grow space-y-1">
-          <label class="block text-xs uppercase font-bold text-zinc-400">Foto de Perfil</label>
-          <input type="file" id="prof-foto-file" accept="image/*" onchange="App.handleFotoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800">
-          <p class="text-[10px] text-zinc-500">Se não colocar agora, o profissional pode enviar depois na aba dele.</p>
-        </div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo *</label>
-          <input type="text" id="prof-nome" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Especialidade / Cargo *</label>
-          <input type="text" id="prof-cargo" placeholder="Ex: Master Colorista" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Chave de acesso (11 números) *</label>
-          <input type="text" id="prof-cpf" inputmode="numeric" maxlength="11" placeholder="11 números que o profissional escolheu" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          <p class="text-[10px] text-zinc-500 mt-1">Informativo: são 11 números livres. Pode ser o CPF ou qualquer número que o profissional escolher. É com ele + o nome que o profissional entra no salão.</p>
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cor na Agenda</label>
-          <input type="color" id="prof-cor" value="#ec4899" class="w-full h-11 glass-input rounded-xl px-2 py-1 cursor-pointer">
-          <input type="hidden" id="prof-senha">
-        </div>
-      </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg">Cadastrar Profissional</button>
-    </form>
-    <div class="border-t border-white/10 pt-6 space-y-4">
-      <h3 class="text-xs font-bold text-zinc-400 uppercase">Equipe Cadastrada</h3>
-      <div id="lista-profissionais" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-    </div>
-
-    <div class="border-t border-white/10 pt-6 space-y-4">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h3 class="text-xs font-bold text-zinc-400 uppercase"><i class="fa-solid fa-star text-yellow-400 mr-1"></i> Avaliação da Equipe</h3>
-          <p class="text-[10px] text-zinc-500">Pontos registrados pelo salão quando a cliente elogia. Uso interno.</p>
-        </div>
-        <span id="ranking-total-clientes" class="text-[10px] font-bold text-zinc-500 uppercase"></span>
-      </div>
-      <div id="ranking-profissionais" class="space-y-3"></div>
-    </div>
-  </div>
-</section>
-
-<!-- ESTOQUE / PRODUTOS -->
-
-
-<!-- GESTÃO DO SALÃO: Serviços, Estoque e Avaliação de Profissional -->
-<section id="aba-gestao" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-
-  <!-- Botões do espaço -->
-  <div class="glass-water rounded-3xl p-3 border border-white/10 flex flex-wrap gap-2">
-    <button id="btn-espaco-servicos" onclick="UI.trocarEspaco('servicos')" class="flex-1 min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2.5 rounded-2xl bg-brand-500/15 text-brand-500 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-scissors"></i> Serviços</button>
-    <button id="btn-espaco-produtos" onclick="UI.trocarEspaco('produtos')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-boxes-stacked"></i> Estoque</button>
-    <button id="btn-espaco-avaliacoes" onclick="UI.trocarEspaco('avaliacoes-nova')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-star"></i> Avaliação de Profissional</button>
-    <button id="btn-espaco-config-salao" onclick="UI.trocarEspaco('config-salao')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-store"></i> Configuração do Salão</button>
-    <button id="btn-espaco-cursos" onclick="UI.trocarEspaco('cursos')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-graduation-cap"></i> Cursos</button>
-    <button id="btn-espaco-notas" onclick="UI.trocarEspaco('notas')" class="flex-1 min-w-[140px] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-file-invoice-dollar"></i> Notas e Comissões</button>
-  </div>
-
-<section id="aba-servicos" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Catálogo de Serviços & Comissões</h2>
-        <p class="text-xs text-zinc-400">Cadastro de procedimentos e comissão percentual</p>
-      </div>
-    </div>
-    <form onsubmit="App.handleCreateServico(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="md:col-span-2">
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Serviço *</label>
-        <input type="text" id="serv-nome" required placeholder="Ex: Progressiva / Corte" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
-        <input type="number" step="0.01" id="serv-preco" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Comissão (%)</label>
-        <input type="number" id="serv-comissao" value="50" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="md:col-span-4 flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar Serviço</button>
-      </div>
-    </form>
-    <div id="lista-servicos" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-  </div>
-</section>
-
-<section id="aba-produtos" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Estoque e Alertas de Validade</h2>
-        <p class="text-xs text-zinc-400">Controle de inventário para venda e uso interno</p>
-      </div>
-      <span id="alerta-validade-badge" class="text-xs font-bold text-amber-400 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">Estoque Regular</span>
-    </div>
-    <form onsubmit="App.handleCreateProduto(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Produto *</label>
-        <input type="text" id="prod-nome" required placeholder="Ex: Máscara Hidratação" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Finalidade *</label>
-        <select id="prod-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          <option value="venda">Venda ao Cliente</option>
-          <option value="uso">Uso Interno</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Preço (R$) *</label>
-        <input type="number" step="0.01" id="prod-preco" required placeholder="0.00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Quantidade *</label>
-        <input type="number" id="prod-stock" required placeholder="0" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Data de Validade *</label>
-        <input type="date" id="prod-validade" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="md:col-span-5 flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition">Adicionar ao Estoque</button>
-      </div>
-    </form>
-    <div id="lista-produtos" class="grid grid-cols-1 gap-4"></div>
-  </div>
-</section>
-
-<section id="aba-avaliacoes-nova" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-6 sm:p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-start border-b border-white/10 pb-4 gap-3 flex-wrap">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white"><i class="fa-solid fa-star text-yellow-400 mr-2"></i>Avaliação</h2>
-        <p class="text-xs text-zinc-400">O salão registra o ponto. A barra tem o tamanho da base de clientes.</p>
-      </div>
-      <span id="aval-total-clientes" class="text-[10px] font-bold uppercase text-zinc-400 px-3 py-1.5 rounded-full bg-zinc-900 border border-white/10">0 cliente(s) na base</span>
-    </div>
-    <div class="flex gap-2">
-      <button id="btn-aval-prof" onclick="UI.trocarTipoAvaliacao('prof')" class="flex-1 px-4 py-3 rounded-2xl bg-brand-500/15 text-brand-500 text-xs font-bold uppercase transition flex items-center justify-center gap-2"><i class="fa-solid fa-user-tie"></i> Profissional</button>
-    </div>
-    <div class="relative">
-      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-      <select id="aval-faixa" class="glass-input rounded-xl px-3 py-2 text-xs text-white" onchange="App.renderAvaliacao()">
-              <option value="todos">Todas as notas</option>
-              <option value="positivo">Só positivas</option>
-              <option value="negativo">Só negativas</option>
-              <option value="zero">Sem nota</option>
-              <option value="top">Nota 4 ou mais</option>
-            </select>
-            <select id="aval-ordem" class="glass-input rounded-xl px-3 py-2 text-xs text-white" onchange="App.renderAvaliacao()">
-              <option value="maior">Maior nota</option>
-              <option value="menor">Menor nota</option>
-              <option value="az">Nome A-Z</option>
-              <option value="za">Nome Z-A</option>
-            </select>
-            <input type="text" id="aval-busca" oninput="App.renderAvaliacao()" placeholder="Pesquisar por nome, telefone ou cargo..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
-    </div>
-    <div id="aval-lista" class="space-y-3"></div>
-    <div class="pt-2 border-t border-white/10">
-      <p class="text-[10px] font-bold uppercase text-zinc-500 mb-3">Ranking do salão</p>
-      <div id="ranking-gestao" class="space-y-2"></div>
-    </div>
-  </div>
-</section>
-
-<!-- TELA DE BOAS-VINDAS (primeiro login) -->
-
-
-<!-- AGENDA PAINEL PRINCIPAL -->
-
-
-<!-- AGENDAR -->
-<!-- janela de agendamento duplicada removida -->
-
-<!-- CATÁLOGO DE SERVIÇOS & COMISSÕES -->
-
-
-<!-- EQUIPE -->
-
-
-<!-- ESTOQUE / PRODUTOS -->
-
-
-<!-- GESTÃO DO SALÃO: Serviços, Estoque e Avaliação de Profissional -->
-v>
-
-    <div class="pt-2 border-t border-white/10">
-      <p class="text-[10px] font-bold uppercase text-zinc-500 mb-3">Ranking do salão</p>
-      <!-- painel de ranking duplicado removido -->
-    </div>
-  </div>
-</section>
-
-
-<!-- PLANOS & MERCADO PAGO -->
-
-<section id="aba-config-salao" class="espaco-painel hidden">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="border-b border-white/10 pb-4">
-      <h2 class="text-xl font-bold uppercase text-white">Configuração do Salão</h2>
-      <p class="text-xs text-zinc-400">Nome, contato, endereço e horários de funcionamento</p>
-    </div>
-    <p class="text-xs text-zinc-400">Esta aba reúne o que o salão precisa para operar. Preencha e clique em Salvar.</p>
-    <form onsubmit="App.handleSalvarConfiguracoes(event)" class="space-y-5">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
-          <input type="text" id="cfg-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CNPJ</label>
-          <input type="text" id="cfg-cnpj" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="00.000.000/0001-00">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-          <input type="email" id="cfg-email" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">WhatsApp</label>
-          <input type="tel" id="cfg-whatsapp" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Logotipo do Salão</label>
-          <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
-            <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-              <img alt="Logo do salao" id="cfg-logo-preview" src="" class="w-full h-full object-cover hidden">
-              <i id="cfg-logo-icone" class="fa-solid fa-store text-zinc-600 text-2xl"></i>
-            </div>
-            <div class="flex-grow space-y-1">
-              <input type="file" id="cfg-logo-arquivo" accept="image/*" onchange="App.handleLogoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-500 file:text-white hover:file:bg-brand-600 cursor-pointer">
-              <p class="text-[10px] text-zinc-500">Aparece no topo do sistema. Sem logo, fica a tesoura.</p>
-            </div>
-          </div>
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Endereço</label>
-          <input type="text" id="cfg-endereco" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Cidade</label>
-          <input type="text" id="cfg-cidade" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">UF</label>
-          <input type="text" id="cfg-uf" maxlength="2" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="SP">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CEP</label>
-          <input type="text" id="cfg-cep" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Instagram</label>
-          <input type="text" id="cfg-instagram" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Abre às</label>
-          <input type="time" id="cfg-abertura" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Fecha às</label>
-          <input type="time" id="cfg-fechamento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-        </div>
-      </div>
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar configuração</button>
-    </form>
-  </div>
-</section>
-
-<section   <!-- ================= ESPACO: CURSOS ================= -->
-  <div id="aba-cursos" class="tab-content hidden space-y-5">
-
-    <div class="glass-water rounded-3xl p-6 border border-white/10 space-y-4">
-      <div>
-        <h3 class="text-sm font-bold uppercase text-white flex items-center gap-2">
-          <i class="fa-solid fa-graduation-cap text-brand-500"></i> Cursos para a equipe
-        </h3>
-        <p class="text-[11px] text-zinc-400 mt-1">
-          Indique cursos, vídeos e materiais. Eles aparecem na área de cada profissional, em "Cursos para fazer".
-        </p>
-      </div>
-
-      <form onsubmit="App.salvarCurso(event)" class="grid grid-cols-1 sm:grid-cols-6 gap-3">
-        <div class="sm:col-span-2">
-          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Título *</label>
-          <input id="curso-titulo" type="text" required placeholder="Ex: Coloração avançada" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-        </div>
-        <div class="sm:col-span-3">
-          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Link *</label>
-          <input id="curso-link" type="url" required placeholder="https://..." class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-        </div>
-        <div class="sm:col-span-1">
-          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Tipo</label>
-          <select id="curso-tipo" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-            <option value="Curso">Curso</option>
-            <option value="Video">Vídeo</option>
-            <option value="Artigo">Artigo</option>
-            <option value="PDF">PDF</option>
-            <option value="Site">Site</option>
-          </select>
-        </div>
-        <div class="sm:col-span-5">
-          <label class="block text-[10px] text-zinc-400 uppercase mb-1">Descrição (opcional)</label>
-          <input id="curso-descricao" type="text" placeholder="Ex: para quem atende coloração" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white">
-        </div>
-        <div class="sm:col-span-1 flex items-end">
-          <button type="submit" class="w-full px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold uppercase transition">
-            Indicar
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <div id="lista-cursos" class="space-y-2"></div>
-  </div>
-
-  <div id="aba-notas" class="espaco-painel hidden space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="border-b border-white/10 pb-4">
-      <h2 class="text-xl font-bold uppercase text-white">Dados Fiscais</h2>
-      <p class="text-xs text-zinc-400">Aparecem no cabeçalho do recibo e identificam o prestador</p>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Inscrição Municipal</label>
-        <input type="text" id="cfg-inscricao-municipal" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Código do serviço (prefeitura)</label>
-        <input type="text" id="cfg-codigo-servico" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Alíquota do ISS (%)</label>
-        <input type="number" id="cfg-aliquota" step="0.01" min="0" max="100" value="0" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-    </div>
-    <button onclick="App.salvarDadosFiscais()" class="w-full py-3.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-200 font-bold text-xs uppercase tracking-wider hover:text-white transition">Salvar dados fiscais</button>
-  </div>
-
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-5 shadow-2xl">
-    <div class="border-b border-white/10 pb-4">
-      <h2 class="text-xl font-bold uppercase text-white">Comissão por Tipo de Profissional</h2>
-      <p class="text-xs text-zinc-400">Percentual que o salão paga a cada tipo. De 0 a 100%.</p>
-    </div>
-    <div id="lista-comissoes-tipo" class="space-y-2"></div>
-    <button onclick="App.salvarComissoesTipo()" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar comissões</button>
-  </div>
-</section>
-
-<section id="aba-planos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="text-center space-y-2 mb-6">
-      <h2 class="text-xl font-bold uppercase text-white">Planos Oficiais do Salão</h2>
-      <p class="text-xs text-zinc-400">Escolha o plano ideal com integração direta ao Mercado Pago</p>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Plano Grátis -->
-      <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
-        <span class="px-3 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-bold uppercase rounded-full">Básico</span>
-        <h4 class="text-base font-bold text-white uppercase">Plano Grátis</h4>
-        <p class="text-2xl font-black text-brand-500">R$ 0</p>
-        <p class="text-xs text-zinc-400">Até 2 profissionais na equipe.</p>
-        <button onclick="App.setPlan('gratis')" class="w-full py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs hover:bg-zinc-800 transition">Selecionar Grátis</button>
-      </div>
-      <!-- Plano Mensal -->
-      <div class="glass-water p-6 rounded-3xl border border-brand-500/50 space-y-4 text-center relative">
-        <div class="absolute -right-3 -top-3 bg-brand-500 text-white text-[9px] font-bold uppercase px-3 py-1 rounded-full shadow-lg">Mais Popular</div>
-        <span class="px-3 py-1 bg-brand-500/20 text-brand-400 text-[10px] font-bold uppercase rounded-full">Profissional</span>
-        <h4 class="text-base font-bold text-white uppercase">Plano Mensal</h4>
-        <p class="text-2xl font-black text-white">R$ 30,00<span class="text-xs text-zinc-400">/mês</span></p>
-        <p class="text-[10px] font-bold uppercase text-emerald-400">PIX ou QR Code</p>
-        <p class="text-xs text-zinc-400">Até 10 profissionais na equipe.</p>
-        <button onclick="App.setPlan('mensal')" class="block w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase text-center transition shadow-lg shadow-brand-500/20">Assinar Mensal</button>
-        <button onclick="App.pagarComPix('mensal')" class="block w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase text-center transition cursor-pointer">PIX</button>
-      </div>
-      <!-- Plano Anual -->
-      <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4 text-center">
-        <span class="px-3 py-1 bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full">Enterprise</span>
-        <h4 class="text-base font-bold text-white uppercase">Plano Anual</h4>
-        <p class="text-2xl font-black text-blue-400">R$ 300,00<span class="text-xs text-zinc-400">/ano</span></p>
-        <p class="text-[10px] font-bold uppercase text-emerald-400">PIX ou QR Code</p>
-        <p class="text-xs text-zinc-400">Até 30 profissionais na equipe.</p>
-        <button onclick="App.setPlan('anual')" class="block w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase text-center transition shadow-lg">Assinar Anual</button>
-        <button onclick="App.pagarComPix('anual')" class="block w-full mt-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 font-bold text-xs uppercase text-center transition cursor-pointer">PIX</button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- AVALIAÇÕES -->
-
-
-<!-- RELATÓRIOS -->
-<section id="aba-relatorios" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Relatórios Gerenciais</h2>
-        <p class="text-xs text-zinc-400">Histórico de caixa e indicadores acumulados</p>
-      </div>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-        <span class="text-[10px] text-zinc-400 uppercase font-bold">Faturamento Total</span>
-        <h3 id="relatorio-faturamento" class="text-xl font-black text-emerald-400">R$ 0,00</h3>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-        <span class="text-[10px] text-zinc-400 uppercase font-bold">Atendimentos</span>
-        <h3 id="relatorio-atendimentos" class="text-xl font-black text-brand-500">0</h3>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
-        <span class="text-[10px] text-zinc-400 uppercase font-bold">Clientes Atendidos</span>
-        <h3 id="relatorio-clientes" class="text-xl font-black text-white">0</h3>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CONFIGURAÇÕES DO ESTABELECIMENTO -->
-<section id="aba-configuracoes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex justify-between items-center border-b border-white/10 pb-4">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white">Configurações do Estabelecimento</h2>
-        <p class="text-xs text-zinc-400">Gerencie todas as informações do seu negócio, endereço e identidade visual</p>
-      </div>
-    </div>
-
-    <form onsubmit="App.handleSalvarConfiguracoes(event)" class="space-y-6">
-      
-      <!-- Seção 1: Identidade Visual e Logotipo -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Identidade Visual</h3>
-        <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950 border border-white/10">
-          <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
-            <img alt="Foto do profissional" id="preview-logo-salao" src="" class="w-full h-full object-cover hidden">
-            <i id="icon-logo-salao" class="fa-solid fa-store text-zinc-600 text-2xl"></i>
-          </div>
-          <div class="flex-grow space-y-1">
-            <label class="block text-xs uppercase font-bold text-zinc-400">Logotipo do Salão</label>
-            <input type="file" id="config-logo-file" accept="image/*" onchange="App.handleLogoUpload(event)" class="text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-500 file:text-white hover:file:bg-brand-600 cursor-pointer">
-          </div>
-        </div>
-      </div>
-
-      <!-- Seção 2: Informações do Negócio -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Informações do Negócio</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome do Salão *</label>
-            <input type="text" id="config-nome-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="Ex: HairConcept Studio">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CNPJ</label>
-            <input type="text" id="config-cnpj" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="00.000.000/0001-00">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail de Contato *</label>
-            <input type="email" id="config-email-salao" required class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
-            <input type="text" id="config-whatsapp" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="(00) 90000-0000">
-          </div>
-        </div>
-      </div>
-
-      <!-- Seção 3: Endereço e Localização -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Endereço e Localização</h3>
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Endereço Físico Completo</label>
-          <input type="text" id="config-endereco" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="Ex: Rua das Flores, 123 - Centro - São Paulo/SP">
-        </div>
-      </div>
-
-      <!-- Seção 4: Redes Sociais -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Redes Sociais</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1"><i class="fa-brands fa-instagram text-rose-500 mr-1"></i> Instagram</label>
-            <input type="text" id="config-instagram" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="@seusalao">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1"><i class="fa-brands fa-facebook text-blue-500 mr-1"></i> Facebook</label>
-            <input type="text" id="config-facebook" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white" placeholder="facebook.com/seusalao">
-          </div>
-        </div>
-      </div>
-
-      <!-- Seção 5: Horários de Funcionamento -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Horários de Funcionamento Padrão</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Abertura</label>
-            <input type="time" id="config-horario-abertura" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Horário de Fechamento</label>
-            <input type="time" id="config-horario-fechamento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-          </div>
-        </div>
-      </div>
-
-      <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition-all shadow-lg shadow-brand-500/20">
-        Salvar Todas as Alterações
-      </button>
-    </form>
-
-    <!-- ===== MODELO DA AGENDA ===== -->
-    <div class="border-t border-white/10 pt-6 mt-6">
-      <h3 class="text-xs font-bold text-white uppercase mb-1"><i class="fa-solid fa-calendar-week text-brand-500 mr-1.5"></i> Modelo da Agenda</h3>
-      <p class="text-[11px] text-zinc-400 mb-3">Escolha como a agenda abre para o salão inteiro, em qualquer aparelho.</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Modelo padrão</label>
-          <select id="config-modelo-agenda" onchange="App.salvarModeloAgenda(this.value)" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-            <option value="semana">Semana do profissional (Seg a Sáb)</option>
-            <option value="dia">Agenda do dia (todos os profissionais)</option>
-          </select>
-        </div>
-        <div class="p-3 rounded-xl bg-zinc-900 border border-white/10">
-          <p class="text-[10px] text-zinc-400"><strong class="text-white">Semana</strong> mostra a semana de um profissional por vez — bom para planejar.<br><strong class="text-white">Dia</strong> mostra todos lado a lado — bom para o balcão.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== AVISO DE EXCLUSÃO ===== -->
-    <div id="aviso-exclusao" class="hidden border border-rose-500/40 bg-rose-500/10 rounded-2xl p-4 mt-6">
-      <p class="text-xs font-bold text-rose-300 uppercase"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Conta marcada para exclusão</p>
-      <p class="text-[11px] text-rose-200/90 mt-1">Seus dados serão apagados definitivamente em <strong id="aviso-exclusao-data">—</strong>. Você ainda pode voltar atrás.</p>
-      <button type="button" onclick="App.cancelarExclusaoConta()" class="mt-3 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 font-bold text-[10px] uppercase transition">
-        <i class="fa-solid fa-rotate-left mr-1"></i> Cancelar exclusão
-      </button>
-    </div>
-
-    <!-- ===== ZONA DE EXCLUSÃO ===== -->
-    <div id="zona-exclusao" class="border-t border-rose-500/20 pt-6 mt-6">
-      <h3 class="text-xs font-bold text-rose-400 uppercase mb-1"><i class="fa-solid fa-user-xmark mr-1.5"></i> Excluir minha conta</h3>
-      <p class="text-[11px] text-zinc-400">Ao excluir, seus dados ficam guardados por <strong class="text-white">7 dias</strong> e depois são apagados definitivamente — agenda, clientes, profissionais, comissões e histórico. Nesse prazo você pode entrar e cancelar.</p>
-      <button type="button" onclick="App.pedirExclusaoConta()" class="mt-3 px-4 py-2 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 font-bold text-[10px] uppercase transition">
-        <i class="fa-solid fa-trash mr-1"></i> Excluir minha conta
-      </button>
-    </div>
-  </div>
-</section>
-</main>
-
-<!-- AVISOS E PEDIDOS DOS CLIENTES -->
-<section id="aba-avisos" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4">
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-      <div>
-        <h2 class="text-lg font-bold uppercase text-white">Avisos e Pedidos</h2>
-        <p class="text-[11px] text-zinc-400">Pedidos de senha, reclamações e solicitações de exclusão enviados pelos clientes</p>
-      </div>
-      <button onclick="App.carregarAvisos()" class="px-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs font-bold text-white hover:bg-zinc-800 transition">
-        <i class="fa-solid fa-rotate"></i> Atualizar
-      </button>
-    </div>
-    <div id="lista-avisos" class="space-y-3"></div>
-  </div>
-
-  <!-- ===== DOCUMENTOS DO SALÃO (dono) ===== -->
-  <div class="glass-water p-6 rounded-3xl border border-white/10 space-y-4">
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-      <div>
-        <h2 class="text-lg font-bold uppercase text-white"><i class="fa-solid fa-shield-virus text-brand-500 mr-2"></i>Documentos do Salão</h2>
-        <p class="text-[11px] text-zinc-400">O que a fiscalização sanitária pede. Fica aqui, na área do estabelecimento — é documento do salão, não do profissional.</p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10">
-        <p class="text-[11px] font-bold text-white uppercase"><i class="fa-solid fa-file-lines text-brand-500 mr-1.5"></i> POP — Procedimento Operacional Padrão</p>
-        <p class="text-[10px] text-zinc-400 mt-1">Os cinco procedimentos essenciais e as fichas de registro do ciclo da autoclave.</p>
-        <a href="pop-biosseguranca-salao.pdf" download class="bio-btn mt-3"><i class="fa-solid fa-download mr-1"></i> Baixar PDF</a>
-      </div>
-      <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10">
-        <p class="text-[11px] font-bold text-white uppercase"><i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1.5"></i> Alvará e Licença Sanitária</p>
-        <p class="text-[10px] text-zinc-400 mt-1">Emitidos pela prefeitura e pela Vigilância do seu município. Procure "Vigilância Sanitária" no site da sua prefeitura para solicitar e renovar.</p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Sobre o salão em si</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Página oficial da Anvisa: como saber se o produto é autorizado, produtos irregulares e proibidos, e como relatar problemas.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/assuntos/campanhas/estetica/produtos-alisantes-e-ondulantes-para-cabelo" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Alisantes e o formol</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Formol e glutaraldeído não podem ser usados como alisantes. Adicionar formol a um produto pronto é infração sanitária e crime hediondo.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/perguntas-e-respostas-servicos-de-embelezamento" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Dúvidas sobre o seu serviço</p>
-          <p class="text-[10px] text-zinc-400 mt-1">Perguntas e respostas dos serviços de embelezamento. É onde a Anvisa explica se existe lei federal obrigando autoclave.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/rdc-222-de-marco-de-2018-comentada.pdf/view" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Descarte de resíduos</p>
-          <p class="text-[10px] text-zinc-400 mt-1">RDC 222/2018 comentada: a classificação dos resíduos e todas as etapas, da segregação ao destino final. Lâmina e agulha não vão no lixo comum.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir na Anvisa →</span>
-        </a>
-
-        <a href="https://sebrae.com.br/sites/PortalSebrae/artigos/conheca-as-boas-praticas-para-saloes-de-beleza,1d978041d13b2510VgnVCM1000004c00210aRCRD" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Manual de Boas Práticas</p>
-          <p class="text-[10px] text-zinc-400 mt-1">O Sebrae explica as boas práticas do salão e indica o guia da ABNT específico do setor, com o roteiro de instalações e rotinas.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Sebrae →</span>
-        </a>
-
-        <a href="https://www.gov.br/saude/pt-br/vacinacao" target="_blank" rel="noopener" class="p-3.5 rounded-xl bg-zinc-950 border border-white/10 hover:border-brand-500/40 transition block">
-          <p class="text-[11px] font-bold text-white uppercase">Vacinação do profissional</p>
-          <p class="text-[10px] text-zinc-400 mt-1">A fiscalização confere o calendário de vacinação, em especial Hepatite B e tétano. Veja como atualizar a caderneta.</p>
-          <span class="text-[10px] text-brand-500 font-bold mt-2 inline-block">Abrir no Gov.br →</span>
-        </a>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/25">
-        <p class="text-[10px] text-amber-200/90"><strong class="text-amber-400">Alvará e licença sanitária:</strong> são emitidos pela prefeitura e pela Vigilância Sanitária do seu município — não existe link nacional para isso. Procure "Vigilância Sanitária" no site da sua prefeitura para ver como solicitar e renovar.</p>
-      </div>
-  </div>
-</section>
-
-<!-- CLIENTES CADASTRADOS -->
-<section id="aba-clientes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
-  <div class="glass-water rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
-    <div class="flex items-center justify-between border-b border-white/10 pb-4 gap-4 flex-wrap">
-      <div>
-        <h2 class="text-xl font-bold uppercase text-white"><i class="fa-solid fa-address-book text-brand-500 mr-2"></i>Clientes</h2>
-        <p class="text-xs text-zinc-400">Contatos do salão. Busque por telefone, nome ou CPF e fale com o cliente.</p>
-      </div>
-      <span id="clientes-total" class="text-xs font-bold text-brand-500 uppercase"></span>
-    </div>
-
-    <form onsubmit="App.handleCreateCliente(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="sm:col-span-2">
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Nome Completo *</label>
-        <input type="text" id="cli-nome" required placeholder="Ex: Antonia Silva" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Telefone / WhatsApp</label>
-        <input type="tel" id="cli-telefone" placeholder="(11) 90000-0000" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div>
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF</label>
-        <input type="text" id="cli-cpf" placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="sm:col-span-2 lg:col-span-3">
-        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
-        <input type="email" id="cli-email" placeholder="cliente@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
-      </div>
-      <div class="flex items-end">
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg"><i class="fa-solid fa-plus mr-1"></i> Adicionar</button>
-      </div>
-    </form>
-
-    <div class="border-t border-white/10 pt-5 space-y-4">
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="relative flex-grow min-w-[200px]">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs"></i>
-          <select id="clientes-ordem" class="glass-input rounded-xl px-3 py-2 text-xs text-white" onchange="App.renderClientes()">
-              <option value="az">Nome A-Z</option>
-              <option value="za">Nome Z-A</option>
-              <option value="recentes">Mais recentes</option>
-            </select>
-            <input type="text" id="busca-clientes" oninput="App.renderClientes()" placeholder="Buscar por telefone, nome ou CPF..." class="w-full glass-input rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white">
-        </div>
-        <span class="text-[10px] text-zinc-500 uppercase font-bold">Sem duplicar contatos</span>
-      </div>
-      <div id="lista-clientes" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-    </div>
-  </div>
-</section>
-
-<!-- Rodapé com Créditos e Copyright -->
-<footer class="mt-12 py-6 text-center text-zinc-500 text-xs border-t border-white/10">
-    <p>Criado e desenvolvido por <span class="text-zinc-300 font-bold">rodrigocode2 / rodrigo-n-s@live.com</span> &copy; 2026. Todos os direitos reservados.</p>
-</footer>
-
-<!-- Script do Efeito de Rastro do Mouse -->
-<script>
-const canvas = document.getElementById('mouse-trail-canvas');
-const ctx = canvas.getContext('2d');
-let particles = [];
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-
-window.addEventListener('mousemove', (e) => {
-    for (let i = 0; i < 2; i++) {
-        particles.push({
-            x: e.clientX,
-            y: e.clientY,
-            size: Math.random() * 3 + 1,
-            speedX: (Math.random() - 0.5) * 1.5,
-            speedY: (Math.random() - 0.5) * 1.5,
-            life: 30
+function irAba(aba) {
+    var u = _hcUI();
+    if (u && typeof u.irPara === 'function') { u.irPara(aba); return; }
+    // Reserva: troca a aba na mao, sem depender do UI
+    try {
+        var alvo = document.getElementById(aba);
+        if (!alvo) { console.warn('[HairConcept] aba nao existe: ' + aba); return; }
+        document.querySelectorAll('.tab-content').forEach(function (el) { el.classList.add('hidden'); });
+        alvo.classList.remove('hidden');
+        document.querySelectorAll('.hc-side-item').forEach(function (b) {
+            b.classList.toggle('ativo', b.getAttribute('data-aba') === aba);
         });
+        if (aba === 'aba-agenda' && typeof App !== 'undefined') {
+            try { App.renderAgendaGrid(); } catch (e) {}
+        }
+        if (aba === 'aba-gestao') { try { irGestao('servicos'); } catch (e) {} }
+    } catch (e) { console.warn('[HairConcept] nao consegui abrir ' + aba + ':', e && e.message); }
+}
+
+function irGestao(espaco) {
+    var u = _hcUI();
+    if (u && typeof u.irParaGestao === 'function') { u.irParaGestao(espaco); return; }
+    // Reserva: abre a Gestao e troca o painel na mao
+    try {
+        irAba('aba-gestao');
+        if (u && typeof u.trocarEspaco === 'function') { u.trocarEspaco(espaco); return; }
+        var paineis = ['servicos', 'produtos', 'avaliacoes-nova', 'config-salao', 'cursos', 'notas'];
+        paineis.forEach(function (p) {
+            var painel = document.getElementById('aba-' + p);
+            var botao = document.getElementById('btn-espaco-' + p);
+            var ativo = (p === espaco);
+            if (painel) painel.classList.toggle('hidden', !ativo);
+            if (botao) {
+                botao.classList.toggle('bg-brand-500/15', ativo);
+                botao.classList.toggle('text-brand-500', ativo);
+                botao.classList.toggle('bg-zinc-900', !ativo);
+                botao.classList.toggle('text-zinc-400', !ativo);
+            }
+        });
+    } catch (e) { console.warn('[HairConcept] nao consegui abrir a gestao:', e && e.message); }
+}
+
+function abrirGaveta() {
+    var u = _hcUI();
+    if (u && typeof u.toggleSidebar === 'function') { u.toggleSidebar(); return; }
+    var side = document.getElementById('hc-sidebar');
+    if (side) side.classList.toggle('aberta');
+    var fundo = document.getElementById('hc-side-fundo');
+    if (fundo) fundo.classList.toggle('mostrando', !!(side && side.classList.contains('aberta')));
+}
+
+function fecharGaveta() {
+    var u = _hcUI();
+    if (u && typeof u.toggleSidebar === 'function') { u.toggleSidebar(false); return; }
+    var side = document.getElementById('hc-sidebar');
+    if (side) side.classList.remove('aberta');
+    var fundo = document.getElementById('hc-side-fundo');
+    if (fundo) fundo.classList.remove('mostrando');
+}
+
+window.irAba = irAba;
+window.irGestao = irGestao;
+window.abrirGaveta = abrirGaveta;
+window.fecharGaveta = fecharGaveta;
+
+// ============================================================
+// ATALHO DA INTERFACE — existe desde a PRIMEIRA linha do arquivo.
+//
+// Os botoes da barra chamam UI.irPara(...) no onclick. Mas o objeto
+// UI de verdade so nasce no fim do arquivo (depende de Auth e App).
+// Se o clique chega antes disso, ou se algo falha no meio do caminho,
+// o navegador diz "UI.irPara is not a function" e a barra nao responde.
+//
+// Este atalho resolve: ele existe sempre, e quando chamado repassa
+// para a funcao de verdade. Se ela ainda nao existir, ele avisa no
+// Console em vez de morrer calado.
+// ============================================================
+window.UI = (function () {
+    var real = null;
+    var marcar = function (nome) {
+        return function () {
+            // Procura a UI de verdade na hora da chamada
+            if (!real && typeof window.hcUI === 'object' && window.hcUI) real = window.hcUI;
+            if (real && typeof real[nome] === 'function') {
+                return real[nome].apply(real, arguments);
+            }
+            console.warn('[HairConcept] UI ainda nao carregou: ' + nome);
+        };
+    };
+    var api = {};
+    ['switchTab','irPara','irParaGestao','marcarLateral','toggleSidebar','toggleMobileMenu',
+     'showToast','abrirGestao','trocarEspaco','trocarTipoAvaliacao','carregarPlanos',
+     'abrirModal','fecharModal','exportarDados'].forEach(function (m) { api[m] = marcar(m); });
+    // Quando o objeto real carregar, ele se registra aqui
+    api._registrar = function (obj) { real = obj; };
+    return api;
+})();
+
+// Foto padrão (o site via.placeholder.com saiu do ar)
+const FOTO_PADRAO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%2327272a'/%3E%3Ccircle cx='75' cy='58' r='26' fill='%2352525b'/%3E%3Crect x='32' y='96' width='86' height='40' rx='20' fill='%2352525b'/%3E%3C/svg%3E";
+
+// Traduz erro tecnico para portugues claro. O erro original fica no Console.
+function mensagemAmigavel(err) {
+    const bruto = String((err && err.message) ? err.message : err || '');
+    const codigo = String((err && err.code) ? err.code : '');
+    const txt = (bruto + ' ' + codigo).toLowerCase();
+    console.warn('Erro tecnico:', bruto, codigo);
+    if (codigo === '429' || codigo === 'over_email_send_rate_limit' || codigo === 'over_request_rate_limit') {
+        return 'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
+    }
+    if (txt.indexOf('rate limit') >= 0 || txt.indexOf('too many') >= 0 || txt.indexOf('429') >= 0) {
+        return 'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.';
+    }
+    if (txt.indexOf('email address') >= 0 && txt.indexOf('invalid') >= 0) {
+        return 'O e-mail interno nao foi aceito pelo servidor. Avise o suporte.';
+    }
+    if (txt.indexOf('signup') >= 0 && txt.indexOf('disabled') >= 0) {
+        return 'O cadastro de novos acessos esta desligado no servidor. Avise o suporte.';
+    }
+    if (txt.indexOf('database error') >= 0 || txt.indexOf('saving new user') >= 0) {
+        return 'O servidor recusou gravar este cadastro. Tente de novo em instantes.';
+    }
+    if (codigo === '23505' || txt.indexOf('duplicate key') >= 0) return 'Este registro ja existe. Confira os dados e tente de novo.';
+    if (codigo === '23503' || txt.indexOf('foreign key') >= 0) return 'Este item tem historico ligado a ele e nao pode ser apagado.';
+    if (txt.indexOf('row-level security') >= 0) return 'Voce nao tem permissao para esta acao. Saia e entre de novo.';
+    if (txt.indexOf('jwt') >= 0 || txt.indexOf('session') >= 0) return 'Sua sessao expirou. Saia e entre de novo.';
+    if (txt.indexOf('failed to fetch') >= 0 || txt.indexOf('network') >= 0) return 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+    if (txt.indexOf('invalid login') >= 0 || txt.indexOf('credentials') >= 0) return 'E-mail ou senha incorretos.';
+    if (txt.indexOf('user already registered') >= 0) return 'Este e-mail ja tem uma conta. Use Esqueci minha senha.';
+    return 'Nao consegui concluir agora. Tente de novo em instantes.';
+}
+
+// Data local no formato AAAA-MM-DD (toISOString usa UTC e adianta o dia à noite)
+function dataLocalISO(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dia}`;
+}
+
+function parseValor(valorStr) {
+    if (!valorStr) return 0;
+    let limpo = String(valorStr).trim();
+    if (limpo.includes('.') && limpo.includes(',')) {
+        limpo = limpo.replace(/\./g, '').replace(',', '.');
+    } else if (limpo.includes(',')) {
+        limpo = limpo.replace(',', '.');
+    }
+    return parseFloat(limpo) || 0;
+}
+
+// Fecha o menu do dia ao clicar fora
+document.addEventListener('click', function (ev) {
+    const pop = document.getElementById('menu-dia-pop');
+    if (pop && !pop.classList.contains('hidden')) {
+        if (!pop.contains(ev.target) && !ev.target.closest || !ev.target.closest('.semana-menu-btn')) {
+            if (!pop.contains(ev.target)) pop.classList.add('hidden');
+        }
     }
 });
 
-function handleParticles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = particles.length - 1; i >= 0; i--) {
-        let p = particles[i];
-        p.x += p.speedX;
-        p.y += p.speedY;
-        p.life--;
-        ctx.fillStyle = `rgba(236, 72, 153, ${p.life / 30})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-        if (p.life <= 0) {
-            particles.splice(i, 1);
+// Fecha qualquer modal aberto com a tecla Esc
+document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    document.querySelectorAll('.modal-overlay').forEach(function (m) {
+        if (!m.classList.contains('hidden')) m.classList.add('hidden');
+    });
+});
+
+// ============================================================
+// RASTRO DO MOUSE — so na tela de apresentacao.
+// O canvas vive dentro da tela de abertura: quando ela sai, o
+// rastro para e nao pesa na agenda.
+// ============================================================
+const RastroMouse = {
+    ligado: false, canvas: null, ctx: null, pontos: [], raf: null,
+
+    iniciar() {
+        if (this.ligado) return;
+        const alvo = document.getElementById('tela-abertura');
+        const cv = document.getElementById('mouse-trail-canvas');
+        if (!alvo || !cv || !cv.getContext) return;
+        this.canvas = cv;
+        this.ctx = cv.getContext('2d');
+        this.ligado = true;
+
+        const ajustar = () => {
+            const r = alvo.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            cv.width = Math.max(1, Math.floor(r.width * dpr));
+            cv.height = Math.max(1, Math.floor(r.height * dpr));
+            cv.style.width = r.width + 'px';
+            cv.style.height = r.height + 'px';
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
+        ajustar();
+        this._ajustar = ajustar;
+        window.addEventListener('resize', ajustar);
+
+        const mover = (ev) => {
+            const r = alvo.getBoundingClientRect();
+            this.pontos.push({ x: ev.clientX - r.left, y: ev.clientY - r.top, vida: 1 });
+            if (this.pontos.length > 28) this.pontos.shift();
+        };
+        this._mover = mover;
+        window.addEventListener('mousemove', mover);
+
+        const desenhar = () => {
+            if (!this.ligado) return;
+            const c = this.ctx;
+            c.clearRect(0, 0, cv.width, cv.height);
+            this.pontos.forEach(function (p) {
+                p.vida -= 0.035;
+                if (p.vida <= 0) return;
+                c.beginPath();
+                c.arc(p.x, p.y, 1 + p.vida * 2.4, 0, Math.PI * 2);
+                c.fillStyle = 'rgba(236, 72, 153, ' + (p.vida * 0.55).toFixed(3) + ')';
+                c.fill();
+            });
+            this.pontos = this.pontos.filter(function (p) { return p.vida > 0; });
+            this.raf = requestAnimationFrame(desenhar);
+        };
+        this.raf = requestAnimationFrame(desenhar);
+    },
+
+    parar() {
+        this.ligado = false;
+        if (this.raf) { cancelAnimationFrame(this.raf); this.raf = null; }
+        if (this._mover) { window.removeEventListener('mousemove', this._mover); this._mover = null; }
+        if (this._ajustar) { window.removeEventListener('resize', this._ajustar); this._ajustar = null; }
+        this.pontos = [];
+        if (this.ctx && this.canvas) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+};
+window.RastroMouse = RastroMouse;
+
+const Auth = {
+    logout() {
+        // Sai de vez: nao sobra papel nenhum para o proximo login confundir.
+        window.hcSessao.definir(null);
+        // Ao sair, a tela de abertura volta: apaga a marca que a dispensava.
+        try { localStorage.removeItem('hairconcept_viu_abertura'); } catch (e) {}
+        localStorage.removeItem('hairconcept_estab_id');
+        localStorage.removeItem('hairconcept_prof_id');
+        localStorage.removeItem('hairconcept_plan');
+        localStorage.removeItem('hairconcept_prof_dados');
+        localStorage.removeItem('hairconcept_prof_token');
+        localStorage.removeItem('hairconcept_plan_pendente');
+        // Não apaga hairconcept_boasvindas_* : é para nunca mais aparecer
+        if (supabaseClient && supabaseClient.auth) {
+            supabaseClient.auth.signOut();
+        }
+        location.reload();
+    },
+    loginSocial(provider) {
+        UI.showToast('Redirecionando para autenticação...');
+        if (supabaseClient && supabaseClient.auth) {
+            supabaseClient.auth.signInWithOAuth({ provider: provider });
+        }
+    },
+    // ---------- Janelas (modais) ----------
+    // Tela de abertura: sai suave e leva ao login.
+    // Aparece UMA vez; quem ja entrou nao passa por ela de novo.
+    // Fecha a tela de abertura e libera o sistema. Chamada pelo botao ENTRAR.
+    // Nao depende de tempo: fecha na hora e ainda insiste uma vez depois.
+    entrarDoSistema() {
+        try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
+        const tela = document.getElementById('tela-abertura');
+        if (tela) {
+            tela.classList.add('hc-sai');
+            tela.style.display = 'none';
+        }
+        document.body.classList.remove('hc-abertura-ativa');
+        document.body.style.overflow = '';
+        try {
+            document.querySelectorAll('.modal-overlay').forEach(function (m) { m.classList.add('hidden'); });
+        } catch (e) {}
+        // Fecha a abertura e vai para o login SEM depender do UI:
+        // a funcao irAba existe desde a primeira linha do arquivo.
+        try { irAba('aba-login'); } catch (e) { console.warn('abrir login:', e && e.message); }
+        try { if (window.marcarLateral) window.marcarLateral('aba-agenda'); } catch (e) {}
+        // Segunda passada, caso algo tenha reaberto a tela
+        setTimeout(function () {
+            const t2 = document.getElementById('tela-abertura');
+            if (t2) { t2.style.display = 'none'; t2.classList.add('hc-sai'); }
+            document.body.classList.remove('hc-abertura-ativa');
+            document.body.style.overflow = '';
+        }, 400);
+    },
+
+    abrirLogin() {
+        const tela = document.getElementById('tela-abertura');
+        try { localStorage.setItem('hairconcept_viu_abertura', 'sim'); } catch (e) {}
+        if (tela) tela.classList.add('hc-sai');
+        // libera o sistema e fecha janelas abertas por baixo
+        const soltar = function () { try { Auth.liberarAbertura(); } catch (e) {} };
+        setTimeout(soltar, 700);
+        setTimeout(soltar, 1500); // rede de seguranca
+        try { irAba('aba-login'); } catch (e) {}
+    },
+
+    // ---------- Lateral de navegacao ----------
+    // Abre e fecha a gaveta no celular. No desktop a lateral fica fixa.
+    toggleSidebar(forcar) {
+        const side = document.getElementById('hc-sidebar');
+        const fundo = document.getElementById('hc-side-fundo');
+        if (!side) return;
+        const abrir = (typeof forcar === 'boolean') ? forcar : !side.classList.contains('aberta');
+        side.classList.toggle('aberta', abrir);
+        if (fundo) fundo.classList.toggle('mostrando', abrir);
+        document.body.style.overflow = abrir && window.innerWidth < 1024 ? 'hidden' : '';
+    },
+
+    // Marca qual item da lateral esta ativo
+    marcarLateral(aba, espaco) {
+        document.querySelectorAll('.hc-side-item').forEach(function (b) {
+            const bateAba = b.getAttribute('data-aba') === aba;
+            const bateEspaco = espaco ? b.getAttribute('data-espaco') === espaco : !b.getAttribute('data-espaco');
+            b.classList.toggle('ativo', bateAba && bateEspaco);
+        });
+    },
+
+    // Navegacao pela lateral: troca de aba
+    irPara(aba) {
+        try { this.switchTab(aba); } catch (e) { console.warn(e); }
+        this.marcarLateral(aba);
+        if (window.innerWidth < 1024) this.toggleSidebar(false);
+    },
+
+    // Navegacao pela lateral: abre a Gestao num painel
+    irParaGestao(espaco) {
+        try {
+            this.switchTab('aba-gestao');
+            if (this.trocarEspaco) this.trocarEspaco(espaco);
+            if (espaco === 'config-salao' && Auth.carregarConfigSalao) Auth.carregarConfigSalao();
+        } catch (e) { console.warn(e); }
+        this.marcarLateral('aba-gestao', espaco);
+        if (window.innerWidth < 1024) this.toggleSidebar(false);
+    },
+
+    // AREA DO PROFISSIONAL — dia a dia enxuto, so para consultar.
+    // Ele ve a agenda dele, avanca os dias e fala pelo chat.
+    // Nao marca: quem marca e o salao, por isso o aviso na tela.
+    // ============================================================
+    _diaProf: null,
+
+    abrirAreaProf() {
+        const area = document.getElementById('hc-area-prof');
+        if (area) area.classList.remove('hidden');
+        const p = (this.user && this.user.profDados) || {};
+        const el = function (id) { return document.getElementById(id); };
+        if (el('hc-prof-nome')) el('hc-prof-nome').textContent = (p.nome || this.user.name || 'Profissional');
+        if (el('hc-prof-cargo')) el('hc-prof-cargo').textContent = (p.cargo || '');
+        if (el('hc-prof-foto') && p.foto_url) { el('hc-prof-foto').src = p.foto_url; }
+        // Selo do certificado no nome
+        if (el('hc-prof-selo')) {
+            el('hc-prof-selo').innerHTML = (this.seloCertificado && p.id) ? this.seloCertificado(p.id) : '';
+        }
+        // Cor escolhida por ele
+        if (p.cor) this.aplicarCorProf(p.cor);
+        if (el('prof-bio') && p.bio) el('prof-bio').value = p.bio;
+        this._diaProf = dataLocalISO();
+        try { this.renderDiaProf(); } catch (e) { console.warn('[HairConcept] dia do prof falhou:', e && e.message); }
+        // Carrega as ferramentas dele
+        this.carregarCursosProf();
+        this.carregarMeusCertificados();
+        this.carregarPostIts();
+        this.carregarRecadosEstabelecimento();
+        try { if (this.renderMinhaBarra) this.renderMinhaBarra(); } catch (e) {}
+    },
+
+    // Volta ou avanca o dia. 0 = hoje.
+    irDiaProf(passo) {
+        if (passo === 0) { this._diaProf = dataLocalISO(); }
+        else {
+            const base = this._diaProf || dataLocalISO();
+            const d = new Date(base + 'T12:00:00');
+            d.setDate(d.getDate() + passo);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            this._diaProf = y + '-' + m + '-' + dd;
+        }
+        this.renderDiaProf();
+    },
+
+    async renderDiaProf() {
+        const lista = document.getElementById('hc-prof-lista');
+        if (!lista) return;
+        const dia = this._diaProf || dataLocalISO();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const meuId = localStorage.getItem('hairconcept_prof_id');
+        const nomes = ['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+        const d = new Date(dia + 'T12:00:00');
+        const el = function (id) { return document.getElementById(id); };
+        if (el('hc-prof-data-dia')) el('hc-prof-data-dia').textContent = nomes[d.getDay()];
+        if (el('hc-prof-data-num')) el('hc-prof-data-num').textContent = d.getDate() + '/' + String(d.getMonth() + 1).padStart(2, '0');
+        lista.innerHTML = '<p class="hc-prof-vazio">Carregando...</p>';
+        try {
+            const { data, error } = await supabaseClient
+                .from('agendamentos').select('*')
+                .eq('estabelecimento_id', estabId)
+                .eq('data', dia)
+                .eq('profissional_id', meuId);
+            if (error) throw error;
+            const meus = (data || []).slice().sort(function (a, b) {
+                return String(a.horario).localeCompare(String(b.horario));
+            });
+            const total = meus.length;
+            const soma = meus.reduce(function (s, a) { return s + (parseFloat(a.valor) || 0); }, 0);
+            const pct = Number(((this.user && this.user.profDados) || {}).comissao_pct) || 50;
+            if (el('hc-prof-total')) el('hc-prof-total').textContent = total;
+            if (el('hc-prof-comissao')) el('hc-prof-comissao').textContent = 'R$ ' + (soma * pct / 100).toFixed(2).replace('.', ',');
+            if (!meus.length) {
+                lista.innerHTML = '<p class="hc-prof-vazio">Nenhum atendimento neste dia.</p>';
+                return;
+            }
+            lista.innerHTML = meus.map(function (a) {
+                const ini = App.normalizarHora(a.horario);
+                const fim = App.normalizarHora(a.horario_fim || '');
+                const estado = App.rotuloEstado(a.status);
+                const classe = a.status === 'finalizado' ? 'ok' : (a.status === 'faltou' ? 'falta' : '');
+                return '<div class="hc-prof-card ' + classe + '">' +
+                    '<div class="hc-prof-card-hora">' + ini + (fim ? '<span>' + fim + '</span>' : '') + '</div>' +
+                    '<div class="hc-prof-card-info">' +
+                        '<strong>' + (a.cliente || 'Cliente') + '</strong>' +
+                        '<span>' + (a.servico || '') + '</span>' +
+                        (a.observacao ? '<em>' + a.observacao + '</em>' : '') +
+                    '</div>' +
+                    '<div class="hc-prof-card-estado">' + estado + '</div>' +
+                '</div>';
+            }).join('');
+        } catch (e) {
+            console.error('Erro ao carregar o dia do profissional:', e);
+            lista.innerHTML = '<p class="hc-prof-vazio">Nao consegui carregar agora.</p>';
+        }
+    },
+
+    // Chamada no inicio: mostra ou pula a abertura
+    prepararAbertura() {
+        const tela = document.getElementById('tela-abertura');
+        if (!tela) return;
+        let jaViu = false;
+        try { jaViu = localStorage.getItem('hairconcept_viu_abertura') === 'sim'; } catch (e) {}
+        // Quem ja entrou (ou ja viu a abertura) nao passa por ela
+        if (jaViu || (this.user && this.user.loggedIn)) {
+            this.liberarAbertura();
+            return;
+        }
+        // ABERTURA VISIVEL: o sistema fica bloqueado atras dela.
+        // Sem isto o site carregava por baixo e a janela de agendar travava a tela.
+        document.body.classList.add('hc-abertura-ativa');
+        try { RastroMouse.iniciar(); } catch (e) {}
+    },
+
+    // Tira a abertura e libera o sistema. Pode ser chamada mais de uma vez.
+    liberarAbertura() {
+        try { RastroMouse.parar(); } catch (e) {}
+        const tela = document.getElementById('tela-abertura');
+        if (tela) tela.style.display = 'none';
+        document.body.classList.remove('hc-abertura-ativa');
+        // Fecha qualquer janela que tenha aberto por baixo (a de agendar, por ex.)
+        document.querySelectorAll('.modal-overlay').forEach(function (m) {
+            m.classList.add('hidden');
+        });
+        document.body.style.overflow = '';
+    },
+
+
+    // ============ NOTAS E COMISSOES ============
+    // Tipos de profissional do mercado de beleza (referencia CBO).
+    TIPOS_PROFISSIONAL: [
+        { t: 'Cabeleireiro', p: 50 },
+        { t: 'Barbeiro', p: 50 },
+        { t: 'Colorista', p: 30 },
+        { t: 'Escovista', p: 50 },
+        { t: 'Manicure', p: 50 },
+        { t: 'Pedicure', p: 50 },
+        { t: 'Depiladora', p: 45 },
+        { t: 'Esteticista', p: 45 },
+        { t: 'Maquiador', p: 50 },
+        { t: 'Design de sobrancelha', p: 50 },
+        { t: 'Massoterapeuta', p: 45 },
+        { t: 'Auxiliar', p: 10 }
+    ],
+
+    // Monta a lista de comissoes por tipo, lendo o que o salao ja salvou
+    async carregarComissoesTipo() {
+        const caixa = document.getElementById('lista-comissoes-tipo');
+        if (!caixa) return;
+        const estabId = await this.obterEstabId();
+        const salvos = {};
+        if (estabId) {
+            try {
+                const { data } = await supabaseClient
+                    .from('comissoes_tipo').select('tipo, percentual')
+                    .eq('estabelecimento_id', estabId);
+                (data || []).forEach(function (r) { salvos[r.tipo] = Number(r.percentual); });
+            } catch (e) { console.warn('Nao carreguei as comissoes:', e); }
+        }
+        caixa.innerHTML = '';
+        this.TIPOS_PROFISSIONAL.forEach(function (tp) {
+            const valor = (salvos[tp.t] !== undefined) ? salvos[tp.t] : tp.p;
+            const linha = document.createElement('div');
+            linha.className = 'flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-950 border border-white/10';
+            linha.innerHTML = '<span class="text-xs text-zinc-200 font-bold uppercase">' + tp.t + '</span>' +
+                '<input type="number" min="0" max="100" step="1" value="' + valor + '" ' +
+                'data-tipo="' + tp.t + '" class="cfg-comissao w-24 glass-input rounded-xl px-3 py-2 text-xs text-white text-right">';
+            caixa.appendChild(linha);
+        });
+    },
+
+    async salvarComissoesTipo() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
+        const campos = document.querySelectorAll('.cfg-comissao');
+        const linhas = [];
+        campos.forEach(function (c) {
+            let v = Number(c.value);
+            if (isNaN(v)) v = 0;
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            linhas.push({ estabelecimento_id: estabId, tipo: c.getAttribute('data-tipo'), percentual: v });
+        });
+        if (!linhas.length) return;
+        try {
+            const { error } = await supabaseClient
+                .from('comissoes_tipo')
+                .upsert(linhas, { onConflict: 'estabelecimento_id,tipo' });
+            if (error) throw error;
+            UI.showToast('Comissões salvas!');
+        } catch (e) {
+            console.error('Erro ao salvar comissoes:', e);
+            UI.showToast('Não consegui salvar as comissões. Tente de novo.', 'error');
+        }
+    },
+
+    async salvarDadosFiscais() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
+        const val = function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        try {
+            const { error } = await supabaseClient.from('estabelecimentos').update({
+                inscricao_municipal: val('cfg-inscricao-municipal') || null,
+                codigo_servico: val('cfg-codigo-servico') || null,
+                aliquota_iss: Number(val('cfg-aliquota')) || 0
+            }).eq('id', estabId).select('id');
+            if (error) throw error;
+            UI.showToast('Dados fiscais salvos!');
+        } catch (e) {
+            console.error('Erro ao salvar dados fiscais:', e);
+            UI.showToast('Não consegui salvar os dados fiscais.', 'error');
+        }
+    },
+
+    // Carrega a aba CONFIGURACAO DO SALAO (a antiga config, agora dentro da gestao)
+    async carregarConfigSalao() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos')
+                .select('nome_salao, cnpj, email, whatsapp, endereco, cidade, uf, cep, instagram, horario_abertura, horario_fechamento, inscricao_municipal, codigo_servico, aliquota_iss')
+                .eq('id', estabId).maybeSingle();
+            if (!data) return;
+            const por = function (id, v) { const el = document.getElementById(id); if (el && v !== null && v !== undefined) el.value = v; };
+            por('cfg-nome-salao', data.nome_salao);
+            por('cfg-cnpj', data.cnpj);
+            por('cfg-email', data.email);
+            por('cfg-whatsapp', data.whatsapp);
+            por('cfg-endereco', data.endereco);
+            por('cfg-cidade', data.cidade);
+            por('cfg-uf', data.uf);
+            por('cfg-cep', data.cep);
+            por('cfg-instagram', data.instagram);
+            // Mostra a logo ja gravada na tela (preview)
+            if (data.logo_url) {
+                const prev = document.getElementById('cfg-logo-preview');
+                const ic = document.getElementById('cfg-logo-icone');
+                if (prev) { prev.src = data.logo_url; prev.classList.remove('hidden'); }
+                if (ic) ic.classList.add('hidden');
+            }
+            por('cfg-abertura', (data.horario_abertura || '').slice(0, 5));
+            por('cfg-fechamento', (data.horario_fechamento || '').slice(0, 5));
+            por('cfg-inscricao-municipal', data.inscricao_municipal);
+            por('cfg-codigo-servico', data.codigo_servico);
+            por('cfg-aliquota', data.aliquota_iss);
+        } catch (e) { console.warn('Erro ao carregar a configuração:', e); }
+    },
+
+    abrirModal(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // A janela de agendamento ja abre com o DIA DE HOJE escolhido
+        const dHoje = el.querySelector('[data-preencher-hoje]');
+        if (dHoje && !dHoje.value) {
+            const hj = new Date();
+            const iso = hj.getFullYear() + '-' + String(hj.getMonth() + 1).padStart(2, '0') + '-' + String(hj.getDate()).padStart(2, '0');
+            dHoje.value = iso;
+            try { if (App.aplicarHorariosLivres) App.aplicarHorariosLivres(); } catch (e) {}
+        }
+        // Garante a janela ACIMA do cabecalho, na marra: assim nao depende
+        // de qual CSS carrega primeiro nem de briga com o Tailwind.
+        el.classList.remove('hidden');
+        el.style.setProperty('position', 'fixed', 'important');
+        el.style.setProperty('inset', '0', 'important');
+        el.style.setProperty('z-index', '99999', 'important');
+        // Nao forcar o display: assim o fecharModal consegue esconder depois.
+        el.style.removeProperty('display');
+        // Alinha ao TOPO, nao ao centro: em tela pequena a janela ficava
+        // mais alta que a tela e o X (que fica no topo) saia da area visivel.
+        el.style.setProperty('align-items', 'flex-start', 'important');
+        el.style.setProperty('justify-content', 'center', 'important');
+        el.style.setProperty('overflow-y', 'auto', 'important');
+        el.style.setProperty('padding-top', '16px', 'important');
+        el.style.setProperty('padding-bottom', '16px', 'important');
+        el.scrollTop = 0;
+        // NAO forca largura/altura no fundo: quem esticava a janela era isso.
+        // A caixa de dentro mantem a largura dela (definida no style.css).
+        el.style.removeProperty('width');
+        el.style.removeProperty('height');
+        // trava a rolagem do fundo enquanto a janela estiver aberta
+        document.body.style.overflow = 'hidden';
+
+        // Janela de agendamento: garante a lista de profissionais preenchida.
+        // Sem isto o campo abria VAZIO e nao dava para marcar.
+        if (id === 'modal-marcar') {
+            const sel = document.getElementById('agendamento-profissional');
+            const vazio = !sel || !sel.options || sel.options.length === 0;
+            if (vazio) { try { App.popularSelectProfissionais(); } catch (e) { console.warn(e); } }
+        }
+    },
+    fecharModal(id) {
+        // Esconde a janela E o fundo dela. O abrirModal forca display:flex por
+        // JavaScript, e o display inline vence a classe 'hidden' — por isso a
+        // janela "fechava" no codigo e continuava na tela.
+        const esconder = function (el) {
+            el.classList.add('hidden');
+            el.style.setProperty('display', 'none', 'important');
+        };
+        document.querySelectorAll('[id="' + id + '"]').forEach(esconder);
+        // Fundo: qualquer overlay visivel volta a sumir
+        document.querySelectorAll('.modal-overlay').forEach(function (m) {
+            if (m.classList.contains('hidden') && m.style.display === 'none') return;
+            esconder(m);
+        });
+        document.body.style.overflow = '';
+    },
+    abrirCadastro() { this.abrirModal('modal-cadastro'); },
+    abrirRecuperarSenha() { this.abrirModal('modal-recuperar'); },
+    abrirAjuda() { this.abrirModal('modal-ajuda'); },
+
+    // ---------- Criar conta ----------
+    async criarConta(event) {
+        event.preventDefault();
+        const nomeSalao = document.getElementById('cad-nome-salao').value.trim();
+        const email = document.getElementById('cad-email').value.trim();
+        const senha = document.getElementById('cad-senha').value;
+        const senha2 = document.getElementById('cad-senha2').value;
+
+        if (senha !== senha2) {
+            UI.showToast('As duas senhas precisam ser iguais.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient.auth.signUp({ email, password: senha });
+            if (error) {
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            if (!data.user) {
+                UI.showToast('Não foi possível criar a conta. Tente novamente.', 'error');
+                return;
+            }
+
+            // Cria o salão já com o nome escolhido (se a sessão existir na hora)
+            if (data.session) {
+                const { error: erroEstab } = await supabaseClient
+                    .from('estabelecimentos')
+                    .insert([{ user_id: data.user.id, nome_salao: nomeSalao, email, plano: 'gratis' }]);
+                if (erroEstab) console.error('Erro ao criar salão:', erroEstab);
+            } else {
+                localStorage.setItem('hairconcept_nome_novo_salao', nomeSalao);
+                UI.showToast('Conta criada! Confirme o e-mail que enviamos e depois entre.');
+                this.fecharModal('modal-cadastro');
+                return;
+            }
+
+            this.fecharModal('modal-cadastro');
+            UI.showToast('Conta criada! Bem-vindo ao HairConcept.');
+            const nome = nomeSalao;
+            App.user = { loggedIn: true, role: 'admin', name: nome };
+            App.finishLogin();
+        } catch (e) {
+            console.error('Erro ao criar conta:', e);
+            UI.showToast('Erro inesperado ao criar a conta.', 'error');
+        }
+    },
+
+    // ---------- Esqueci minha senha ----------
+    async enviarRecuperacao(event) {
+        event.preventDefault();
+        const email = document.getElementById('rec-email').value.trim();
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + window.location.pathname
+            });
+            if (error) {
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            this.fecharModal('modal-recuperar');
+            UI.showToast('Se esse e-mail estiver cadastrado, o link de recuperação já foi enviado.');
+        } catch (e) {
+            console.error('Erro ao pedir recuperação:', e);
+            UI.showToast('Erro inesperado ao enviar o link.', 'error');
+        }
+    },
+
+    // ---------- Salvar a senha nova (abre pelo link do e-mail) ----------
+    async salvarNovaSenha(event) {
+        event.preventDefault();
+        const senha = document.getElementById('nova-senha').value;
+        const senha2 = document.getElementById('nova-senha2').value;
+        if (senha !== senha2) {
+            UI.showToast('As duas senhas precisam ser iguais.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.auth.updateUser({ password: senha });
+            if (error) {
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            this.fecharModal('modal-nova-senha');
+            // Limpa o link de recuperação da barra de endereços
+            window.history.replaceState({}, document.title, window.location.pathname);
+            UI.showToast('Senha alterada com sucesso!');
+            await App.verificarOuCriarEstabelecimento();
+        } catch (e) {
+            console.error('Erro ao salvar a senha:', e);
+            UI.showToast('Erro inesperado ao salvar a senha.', 'error');
+        }
+    },
+
+    // ---------- Pedido de ajuda do profissional ----------
+    async enviarAjuda(event) {
+        event.preventDefault();
+        const nomeEstab = document.getElementById('ajuda-salao').value.trim();
+        const nome = document.getElementById('ajuda-nome').value.trim();
+        const cpf = document.getElementById('ajuda-cpf').value.trim();
+        const tipo = document.getElementById('ajuda-tipo').value;
+        const mensagem = document.getElementById('ajuda-mensagem').value.trim();
+
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            // Localiza o salão pelo nome para gravar o aviso junto dele
+            let estabId = null;
+            const { data: saloes, error: erroSalao } = await supabaseClient
+                .from('estabelecimentos')
+                .select('id')
+                .ilike('nome_salao', nomeEstab)
+                .limit(1);
+            if (erroSalao) console.error('Erro ao procurar salão:', erroSalao);
+            if (saloes && saloes.length > 0) estabId = saloes[0].id;
+
+            const { error } = await supabaseClient.from('solicitacoes').insert([{
+                estabelecimento_id: estabId,
+                tipo: tipo,
+                nome_pessoa: nome,
+                nome_salao: nomeEstab,
+                cpf: cpf,
+                mensagem: mensagem
+            }]);
+            if (error) {
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            this.fecharModal('modal-ajuda');
+            event.target.reset();
+            UI.showToast('Pedido enviado! O salão vai falar com você.');
+        } catch (e) {
+            console.error('Erro ao enviar pedido:', e);
+            UI.showToast('Erro inesperado ao enviar o pedido.', 'error');
+        }
+    },
+
+    loginAdmin(event) {
+        event.preventDefault();
+        const email = document.getElementById('login-admin-email').value.trim();
+        const password = document.getElementById('login-admin-senha').value.trim();
+        if (supabaseClient) {
+            supabaseClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
+                if (error) {
+                    console.error('Erro no login do admin:', error);
+                    UI.showToast(mensagemAmigavel(error), 'error');
+                } else {
+                    // O salao entrou: grava o papel e esquece o profissional.
+                    window.hcSessao.definir('salao');
+                    window.hcSessao.limparResiduo('salao');
+                    App.user = { loggedIn: true, role: 'admin', name: email.split('@')[0] };
+                    App.finishLogin('Bem-vindo ao Painel!');
+                }
+            });
         }
     }
-    requestAnimationFrame(handleParticles);
-}
-handleParticles();
-</script>
+};
+
+const App = {
+    user: { loggedIn: false, role: '', name: '', id: null },
+    fotoBase64Temp: '',
+    logoBase64Temp: '',
+    async init() {
+        console.log("HairConcept inicializado.");
+
+        // DETECTAR RETORNO DO MERCADO PAGO
+        const urlParams = new URLSearchParams(window.location.search);
+        const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
+        
+        if (statusPagamento === 'approved') {
+            const estabId = localStorage.getItem('hairconcept_estab_id');
+            const planoPago = localStorage.getItem('hairconcept_plan_pendente') || 'mensal';
+            localStorage.setItem('hairconcept_plan', planoPago);
+            localStorage.removeItem('hairconcept_plan_pendente');
+            if (estabId && supabaseClient) {
+                await supabaseClient.from('estabelecimentos').update({ plano: planoPago }).eq('id', estabId);
+            }
+            UI.showToast(`Pagamento aprovado! Plano ${planoPago === 'anual' ? 'Anual' : 'Mensal'} ativado com sucesso.`);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (statusPagamento === 'failure' || statusPagamento === 'cancelled') {
+            UI.showToast('O pagamento não foi concluído. Mantendo plano grátis.', 'error');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (dataInput && !dataInput.value) {
+            dataInput.value = dataLocalISO();
+        }
+        // Quem manda na tela e a sessao gravada no login. Se por algum
+        // motivo ela faltar, cai no papel do usuario.
+        const papelSessao = window.hcSessao ? window.hcSessao.papel : '';
+        const ehProfissional = papelSessao
+            ? (papelSessao === 'profissional')
+            : (this.user.role === 'profissional');
+
+        // Todo mundo precisa da agenda e das notas
+        // Cada peça protegida por conta própria: uma falhando não derruba
+        // as outras nem deixa a PÁGINA EM BRANCO.
+        var seguro = function (nome, fn) {
+            try { fn(); } catch (e) { console.warn('[HairConcept] ' + nome + ' falhou:', e && e.message); }
+        };
+        seguro('agenda',   function () { App.renderAgendaGrid(); });
+        seguro('post-its', function () { App.carregarPostIts(); });
+        seguro('recados',  function () { App.carregarRecadosEstabelecimento(); });
+        seguro('frase',    function () { App.proximaFrase(); });
+
+        if (!ehProfissional) {
+            // Só o salão carrega o resto. Cada peça protegida: uma falhando
+            // não derruba as outras nem deixa a tela em branco.
+            var seguroSalao = function (nome, fn) {
+                try { fn(); } catch (e) { console.warn('[HairConcept] ' + nome + ' falhou:', e && e.message); }
+            };
+            seguroSalao('equipe',        function () { App.renderListaProfissionais(); });
+            seguroSalao('produtos',      function () { App.renderProdutos(); });
+            seguroSalao('servicos',      function () { App.renderServicos(); });
+            seguroSalao('select-profs',  function () { App.popularSelectProfissionais(); });
+            seguroSalao('config',        function () { App.carregarConfiguracoes(); });
+            seguroSalao('relatorios',    function () { App.renderRelatorios(); });
+            seguroSalao('avaliacoes',    function () { App.renderAvaliacoes(); });
+            seguroSalao('avisos',        function () { App.carregarAvisos(); });
+            seguroSalao('clientes',      function () { App.renderClientes(); });
+            seguroSalao('agenda-cli',    function () { App.popularClientesAgenda(); });
+            seguroSalao('ranking',       function () { App.renderRanking(); });
+            seguroSalao('avaliacao',     function () { App.renderAvaliacao(); });
+        }
+
+        // Mostra ou esconde as partes conforme o perfil
+        if (ehProfissional) {
+            // O painel antigo saiu: a area nova ja tem tudo dentro dela.
+            document.getElementById('painel-profissional-extra')?.classList.add('hidden');
+            // O profissional nao usa a barra do salao: ele tem a area dele
+            document.getElementById('hc-sidebar')?.classList.add('hidden');
+            document.getElementById('hc-side-abrir')?.classList.add('hidden');
+            document.getElementById('hc-side-fundo')?.classList.add('hidden');
+            document.querySelectorAll('.hc-side-item').forEach(function (b) {
+                b.classList.add('admin-only', 'hidden');
+            });
+            // O selo do certificado precisa estar carregado ANTES de desenhar
+            // a area, senao o chapeu nao aparece no nome.
+            try { await this.carregarSeloCertificados(); } catch (e) { console.warn('selo:', e && e.message); }
+            // Cor salva no navegador (funciona mesmo sem a coluna no banco)
+            const corSalva = localStorage.getItem('hairconcept_prof_cor');
+            if (corSalva) this.aplicarCorProf(corSalva);
+            try { this.carregarFechamento(); } catch (e) { console.warn('fechamento:', e && e.message); }
+            this.abrirAreaProf();
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+        } else {
+            document.getElementById('hc-area-prof')?.classList.add('hidden');
+            document.getElementById('painel-profissional-extra')?.classList.add('hidden');
+            document.getElementById('bloco-minha-barra')?.classList.add('hidden');
+            // A barra e a gaveta do salao voltam ao lugar
+            document.getElementById('hc-sidebar')?.classList.remove('hidden');
+            document.getElementById('hc-side-abrir')?.classList.remove('hidden');
+            document.getElementById('hc-side-fundo')?.classList.remove('hidden');
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+        }
+    },
+    async finishLogin(msg) {
+        if (msg) UI.showToast(msg);
+        try { if (this.carregarModeloAgenda) await this.carregarModeloAgenda(); } catch (e) {}
+        try { if (this.verificarExclusaoPendente) await this.verificarExclusaoPendente(); } catch (e) {}
+        try { if (this.carregarModeloAgenda) await this.carregarModeloAgenda(); } catch (e) {}
+        // Restaura o modo de agenda salvo (dia ou semana)
+        try {
+            if (this.modoAgendaAtual && this.modoAgendaAtual() === 'semana') {
+                setTimeout(function () { App.trocarModoAgenda('semana'); }, 600);
+            }
+        } catch (e) { /* segue no modo dia */ }
+        document.getElementById('aba-login')?.classList.add('hidden');
+        document.getElementById('main-header')?.classList.remove('hidden');
+        UI.switchTab('aba-agenda');
+        
+        const nameDisplay = document.getElementById('user-name-display');
+        const roleDisplay = document.getElementById('user-role-display');
+        if (nameDisplay) nameDisplay.textContent = this.user.name;
+        if (roleDisplay) roleDisplay.textContent = this.user.role.toUpperCase();
+        
+        if (this.user.role === 'admin') {
+            await this.verificarOuCriarEstabelecimento();
+        } else {
+            this.init();
+        }
+    },
+    mostrarBoasVindas(estab) {
+        const nome = (estab && estab.nome_salao) || localStorage.getItem('hairconcept_nome_novo_salao') || 'Seu Salão';
+        const el = document.getElementById('welcome-nome-salao');
+        if (el) el.textContent = nome;
+
+        const img = document.getElementById('welcome-logo-img');
+        const icone = document.getElementById('welcome-logo-icon');
+        const logo = estab && estab.logo_url;
+        if (img && icone) {
+            if (logo) {
+                img.src = logo;
+                img.classList.remove('hidden');
+                icone.classList.add('hidden');
+            } else {
+                img.classList.add('hidden');
+                icone.classList.remove('hidden');
+            }
+        }
+
+        document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+        document.getElementById('aba-boasvindas')?.classList.remove('hidden');
+    },
+
+    concluirBoasVindas() {
+        const id = this._userIdBoasVindas;
+        if (id) localStorage.setItem('hairconcept_boasvindas_' + id, 'visto');
+        this._userIdBoasVindas = null;
+        this.init();
+        UI.switchTab('aba-agenda');
+    },
+
+    async verificarOuCriarEstabelecimento() {
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) return;
+            const userId = session.user.id;
+            
+            // Antes usava maybeSingle(): com 2 saloes na conta ele dava ERRO,
+            // e o erro fazia o site criar MAIS um salao vazio a cada login.
+            let { data: listaEstab, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: true })
+                .limit(1);
+            let estab = (listaEstab && listaEstab[0]) || null;
+
+            const headerSub = document.getElementById('saloon-name-header');
+
+            if (error) {
+                // Falha de leitura NAO e motivo para criar salao novo
+                console.warn('Nao consegui ler o salao:', error);
+                return;
+            }
+            if (!estab) {
+                const nomePadrao = localStorage.getItem('hairconcept_nome_novo_salao') || '';
+                localStorage.removeItem('hairconcept_nome_novo_salao');
+                const { data: newEstab, error: createErr } = await supabaseClient
+                    .from('estabelecimentos')
+                    .insert([{
+                        user_id: userId,
+                        nome_salao: nomePadrao,
+                        email: session.user.email,
+                        plano: 'gratis'
+                    }])
+                    .select()
+                    .single();
+
+                if (!createErr && newEstab) {
+                    localStorage.setItem('hairconcept_estab_id', newEstab.id);
+                    localStorage.setItem('hairconcept_plan', 'gratis');
+                    if (headerSub) headerSub.textContent = newEstab.nome_salao;
+                }
+            } else {
+                localStorage.setItem('hairconcept_estab_id', estab.id);
+                if (estab.plano) {
+                    localStorage.setItem('hairconcept_plan', estab.plano);
+                }
+                // Mesma regra do aplicarIdentidadeNoHeader: nome do salao se existir,
+                // senao HairConcept. Antes escrevia o que viesse, mesmo vazio.
+                if (headerSub) headerSub.textContent = (estab.nome_salao && estab.nome_salao.trim()) ? estab.nome_salao.trim() : 'HairConcept';
+            }
+            // Primeiro login: mostra o guia antes da agenda
+            const jaViu = localStorage.getItem('hairconcept_boasvindas_' + userId);
+            if (!jaViu) {
+                this.mostrarBoasVindas(estab || null);
+                // Só marca como visto depois que ele clicar em "Começar agora"
+                this._userIdBoasVindas = userId;
+            } else {
+                this.init();
+            }
+        } catch (e) {
+            console.error("Erro ao verificar estabelecimento:", e);
+            this.init();
+        }
+    },
+    // Gera o codigo do salao a partir do nome: "Salao X" -> "salaox"
+    gerarCodigoSalao(nome) {
+        return String(nome || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'salao';
+    },
+
+    // ---------- Controle de tentativas do profissional ----------
+    // Depois de 4 erros na mesma chave, trava por 15 minutos.
+    async _salaoPorCodigo(codigo) {
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos').select('id')
+                .eq('codigo_acesso', String(codigo || '').trim().toLowerCase())
+                .maybeSingle();
+            return data ? data.id : null;
+        } catch (e) { return null; }
+    },
+
+    async contarTentativas(codigo, chave) {
+        const salaId = await this._salaoPorCodigo(codigo);
+        if (!salaId) return 0;
+        try {
+            const desde = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+            const { data } = await supabaseClient
+                .from('tentativas_login').select('id')
+                .eq('estabelecimento_id', salaId)
+                .eq('chave_final', String(chave || '').slice(-2))
+                .gte('tentou_em', desde);
+            return (data || []).length;
+        } catch (e) { return 0; }
+    },
+
+    async registrarTentativaFalha(codigo, chave) {
+        const salaId = await this._salaoPorCodigo(codigo);
+        if (!salaId) return 0;
+        try {
+            await supabaseClient.from('tentativas_login').insert([{
+                estabelecimento_id: salaId,
+                nome_digitado: '(site)',
+                chave_final: String(chave || '').slice(-2)
+            }]);
+        } catch (e) { /* nao atrapalha o login */ }
+        return await this.contarTentativas(codigo, chave);
+    },
+
+    async limparTentativas(salaId, chave) {
+        if (!salaId) return;
+        try {
+            await supabaseClient.from('tentativas_login').delete()
+                .eq('estabelecimento_id', salaId)
+                .eq('chave_final', String(chave || '').slice(-2));
+        } catch (e) { /* silencioso */ }
+    },
+
+    async loginProfissional(event) {
+        event.preventDefault();
+        const nomeEstabelecimento = document.getElementById('login-prof-estabelecimento').value.trim();
+        const nomeDigitado = (document.getElementById('login-prof-nome')?.value || '').trim();
+        const cpf = (document.getElementById('login-prof-id').value || '').replace(/\D/g, '');
+        const senha = cpf; // a chave de 11 numeros e o acesso
+        const normaliza = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (cpf.length !== 11) { UI.showToast('A chave de acesso tem 11 números.', 'error'); return; }
+        const jaErrou = await this.contarTentativas(nomeEstabelecimento, cpf);
+        if (jaErrou >= 4) {
+            UI.showToast('Acesso travado por 15 minutos. Avise o salão para liberar.', 'error');
+            return;
+        }
+        try {
+            const { data: lista, error } = await supabaseClient.rpc('login_profissional_v2', {
+                p_codigo: nomeEstabelecimento,
+                p_nome: nomeDigitado,
+                p_chave: cpf
+            });
+            const data = Array.isArray(lista) ? lista[0] : lista;
+            if (error || !data || !data.id) {
+                if (error) console.error('Erro no login do profissional:', error);
+                const tent = await this.registrarTentativaFalha(nomeEstabelecimento, cpf);
+                if (tent >= 4) {
+                    UI.showToast('Acesso travado por 15 minutos. Avise o salão para liberar.', 'error');
+                } else {
+                    UI.showToast('Salão, nome ou chave incorretos. Tentativa ' + tent + ' de 4.', 'error');
+                }
+                return;
+            }
+            if (data.estabelecimento_id) {
+                localStorage.setItem('hairconcept_estab_id', data.estabelecimento_id);
+                this.limparTentativas(data.estabelecimento_id, cpf);
+            }
+            if (data.codigo_acesso) {
+                window.hcSalao.definir(data.codigo_acesso);
+            } else if (data.nome_salao && App.gerarCodigoSalao) {
+                window.hcSalao.definir(App.gerarCodigoSalao(data.nome_salao));
+            }
+            localStorage.setItem('hairconcept_prof_id', data.id);
+            if (data.token) window.hcProf.definir(data.token);
+
+            // Guarda só o necessário (o servidor não devolve CPF nem senha)
+            const dadosProf = {
+                id: data.id,
+                nome: data.nome || '',
+                cargo: data.cargo || '',
+                foto_url: data.foto_url || '',
+                estabelecimento_id: data.estabelecimento_id || '',
+                nome_salao: data.nome_salao || nomeEstabelecimento
+            };
+            localStorage.setItem('hairconcept_prof_dados', JSON.stringify(dadosProf));
+            // Grava o papel: e isso que decide a tela daqui para a frente.
+            window.hcSessao.definir('profissional');
+
+            this.user = { loggedIn: true, role: 'profissional', name: dadosProf.nome, id: dadosProf.id };
+
+            // O profissional também vê o nome e a logo do salão onde trabalha
+            this.aplicarIdentidadeNoHeader(dadosProf.nome_salao, dadosProf.logo_url || null);
+            if (dadosProf.estabelecimento_id) {
+                this.carregarIdentidadeDoSalao(dadosProf.estabelecimento_id);
+            }
+
+            const elNome = document.getElementById('prof-header-nome');
+            const elCargo = document.getElementById('prof-header-cargo');
+            const elFoto = document.getElementById('prof-header-foto');
+            if (elNome) elNome.textContent = dadosProf.nome;
+            if (elCargo) elCargo.textContent = dadosProf.cargo;
+            if (elFoto && dadosProf.foto_url) elFoto.src = dadosProf.foto_url;
+
+            this.carregarMinhaBarra();
+            this.finishLogin(`Bem-vindo, ${dadosProf.nome}!`);
+        } catch (e) {
+            UI.showToast('Erro ao validar login do profissional.', 'error');
+        }
+    },
+    async handleCreateProfissional(e) {
+        e.preventDefault();
+        const planoAtual = localStorage.getItem('hairconcept_plan') || 'gratis';
+        const estabelecimentoId = localStorage.getItem('hairconcept_estab_id');
+        const nomeEstabelecimentoHeader = document.getElementById('saloon-name-header')?.textContent || 'Salão';
+
+        try {
+            // Garante o ID do salão: se o navegador ainda não tem, busca no banco agora.
+            let idSalao = estabelecimentoId;
+            if (!idSalao) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    const { data: estab, error: erroEstab } = await supabaseClient
+                        .from('estabelecimentos')
+                        .select('id')
+                        .eq('user_id', session.user.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    if (erroEstab) console.error('Erro ao buscar o salão:', erroEstab);
+                    if (estab) {
+                        idSalao = estab.id;
+                        localStorage.setItem('hairconcept_estab_id', estab.id);
+                    }
+                }
+            }
+            if (!idSalao) {
+                UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+                return;
+            }
+            const { count, error: countError } = await supabaseClient
+                .from('profissionais')
+                .select('*', { count: 'exact', head: true })
+                .eq('estabelecimento_id', idSalao);
+            if (countError) throw countError;
+            
+            // O limite vem do BANCO (funcao meu_limite_profissionais). O navegador e so reserva.
+            let limiteMaximo = 2;
+            try {
+                const { data: lim } = await supabaseClient.rpc('meu_limite_profissionais');
+                if (lim && Number(lim) > 0) limiteMaximo = Number(lim);
+                else if (planoAtual === 'mensal') limiteMaximo = 10;
+                else if (planoAtual === 'anual') limiteMaximo = 30;
+            } catch (e) {
+                if (planoAtual === 'mensal') limiteMaximo = 10;
+                else if (planoAtual === 'anual') limiteMaximo = 30;
+            }
+
+            if (count >= limiteMaximo) {
+                UI.showToast(`Limite atingido! O plano atual permite apenas ${limiteMaximo} profissionais.`, 'error');
+                return;
+            }
+            
+            const elNome = document.getElementById('prof-nome');
+            const elCargo = document.getElementById('prof-cargo');
+            const elCpf = document.getElementById('prof-cpf');
+            const elSenha = document.getElementById('prof-senha');
+            if (!elNome || !elCargo || !elCpf) {
+                UI.showToast('Abra a aba Equipe e recarregue a pagina antes de cadastrar.', 'error');
+                return;
+            }
+            if (!elNome.value.trim()) { UI.showToast('Escreva o nome do profissional.', 'error'); elNome.focus(); return; }
+            if (!elCargo.value.trim()) { UI.showToast('Escreva o cargo ou especialidade.', 'error'); elCargo.focus(); return; }
+            if ((elCpf.value || '').replace(/\D/g, '').length !== 11) { UI.showToast('A chave de acesso precisa ter 11 números.', 'error'); elCpf.focus(); return; }
+            const nome = document.getElementById('prof-nome').value.trim();
+            const cargo = document.getElementById('prof-cargo').value.trim();
+            const cpf = (document.getElementById('prof-cpf').value || '').replace(/\D/g, '');
+            const senha = cpf; // a chave de 11 numeros tambem e gravada embaralhada
+            const foto_url = this.fotoBase64Temp || null;
+
+            if (senha.length < 4) {
+                UI.showToast('A senha precisa ter pelo menos 4 caracteres.', 'error');
+                return;
+            }
+
+            // Profissional NAO tem conta de login propria: e so uma ficha do salao.
+            const userIdInterno = null;
+
+            // 2) O cadastro nunca morre: se o CPF ja existe no salao, reativamos a ficha
+            const { data: jaExiste } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome, ativo, user_id')
+                .eq('estabelecimento_id', idSalao)
+                .eq('cpf', cpf)
+                .limit(1)
+                .maybeSingle();
+
+            let novoProf = null;
+            let error = null;
+
+            if (jaExiste && jaExiste.id) {
+                if (jaExiste.ativo !== false) {
+                    UI.showToast('Esta chave ja esta em uso na equipe: ' + (jaExiste.nome || '') + '.', 'error');
+                    return;
+                }
+                if (!confirm('Profissional ja cadastrado: ' + (jaExiste.nome || '') + '\n\nDeseja reativar ele na equipe?\n\nOs dados e o historico serao mantidos.')) {
+                    UI.showToast('Cadastro mantido como inativo. Nada foi alterado.');
+                    return;
+                }
+                const atualizar = { nome: nome, cargo: cargo, foto_url: foto_url, ativo: true, estabelecimento: nomeEstabelecimentoHeader };
+                
+                const res = await supabaseClient.from('profissionais').update(atualizar).eq('id', jaExiste.id).select();
+                error = res.error; novoProf = res.data;
+                if (!error) {
+                    await supabaseClient.rpc('definir_senha_profissional', { p_id: jaExiste.id, p_senha: senha });
+                    e.target.reset();
+                    this.fotoBase64Temp = '';
+                    this.renderListaProfissionais();
+                    this.popularSelectProfissionais();
+                    this.renderAgendaGrid();
+                    UI.showToast('Profissional reativado! Ele ja esta na agenda com o historico dele.', 'success');
+                    return;
+                }
+            } else {
+                const res = await supabaseClient
+                    .from('profissionais')
+                    .insert([{
+                        estabelecimento_id: idSalao,
+                        estabelecimento: nomeEstabelecimentoHeader,
+                        nome,
+                        cargo,
+                        cpf,
+                        foto_url,
+                        user_id: userIdInterno
+                    }])
+                    .select();
+                error = res.error; novoProf = res.data;
+            }
+
+            if (error) throw error;
+            if (!novoProf || novoProf.length === 0) {
+                UI.showToast('Não foi possível criar o profissional. Tente novamente.', 'error');
+                return;
+            }
+
+            // Grava a senha embaralhada pelo banco
+            const { error: erroSenha } = await supabaseClient.rpc('definir_senha_profissional', {
+                p_id: novoProf[0].id,
+                p_senha: senha
+            });
+            if (erroSenha) {
+                console.error('Erro ao definir a senha:', erroSenha);
+                UI.showToast('Profissional criado, mas a senha falhou. Use "Trocar senha" na lista.', 'error');
+            }
+
+            e.target.reset();
+            this.fotoBase64Temp = '';
+            document.getElementById('preview-foto-prof').classList.add('hidden');
+            document.getElementById('icon-foto-prof').classList.remove('hidden');
+            this.renderListaProfissionais();
+            this.popularSelectProfissionais();
+        } catch (err) {
+            if (err && err.code === '23505') {
+                UI.showToast('Essa chave já está em uso neste salão. Escolha outros 11 números.', 'error');
+            } else {
+                UI.showToast(mensagemAmigavel(err), 'error');
+            }
+        }
+    },
+    // Desativar / reativar: o cadastro do profissional NAO e apagado.
+    async alternarAtivoProfissional(id, ativoAtual) {
+        const vaiAtivar = !ativoAtual;
+        const pergunta = vaiAtivar
+            ? 'Colocar este profissional de volta na agenda? O cadastro e o historico serao mantidos.'
+            : 'Tirar este profissional da agenda? O cadastro fica guardado e ele pode ser reativado pelo CPF.';
+        if (!confirm(pergunta)) return;
+        try {
+            const { error } = await supabaseClient
+                .from('profissionais')
+                .update({ ativo: vaiAtivar })
+                .eq('id', id);
+            if (error) throw error;
+            UI.showToast(vaiAtivar ? 'Profissional reativado! Ele ja esta na agenda.' : 'Profissional desativado. O cadastro foi mantido.');
+            this.renderListaProfissionais();
+            this.popularSelectProfissionais();
+            this.renderAgendaGrid();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async excluirProfissional(id) {
+        if (!confirm("Excluir este profissional?\n\nOs atendimentos antigos continuam com o nome dele. Se ele voltar, e so cadastrar de novo.")) return;
+        try {
+            const { data: apagados, error } = await supabaseClient
+                .from('profissionais')
+                .delete()
+                .eq('id', id)
+                .select('id');
+            if (error) throw error;
+            if (!apagados || apagados.length === 0) {
+                UI.showToast('O servidor nao permitiu excluir. Saia e entre de novo com a conta dona do salao.', 'error');
+                return;
+            }
+            UI.showToast('Cadastro excluido. Os atendimentos antigos ficam com o nome dele.');
+            this.renderListaProfissionais();
+            this.popularSelectProfissionais();
+            this.renderRankingGestao();
+            this.renderAgendaGrid();
+            this.renderAgendaSemana();
+        } catch (e) {
+            const msg = String(e && e.message ? e.message : e);
+            if (msg.indexOf('23503') >= 0 || msg.toLowerCase().indexOf('foreign key') >= 0) {
+                UI.showToast('Este profissional tem historico. Use DESATIVAR: o cadastro e os dados ficam guardados.', 'error');
+            } else {
+                UI.showToast(mensagemAmigavel(e), 'error');
+            }
+        }
+    },
+    async handleAtualizarMinhaFoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result;
+            const profId = localStorage.getItem('hairconcept_prof_id');
+            if (!profId) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('profissionais')
+                    .update({ foto_url: base64 })
+                    .eq('id', profId);
+                if (error) throw error;
+                var elFotoP = document.getElementById('prof-header-foto');
+            if (elFotoP) elFotoP.src = base64;
+                UI.showToast('Foto de perfil atualizada e salva com sucesso!');
+                this.renderListaProfissionais();
+            } catch (err) {
+                UI.showToast(mensagemAmigavel(err), 'error');
+            }
+        };
+        reader.readAsDataURL(file);
+    },
+    handleLogoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.logoBase64Temp = e.target.result;
+            // Aceita os ids da tela NOVA (cfg-*) e os da tela antiga (preview-*)
+            const preview = document.getElementById('cfg-logo-preview') || document.getElementById('preview-logo-salao');
+            const icon = document.getElementById('cfg-logo-icone') || document.getElementById('icon-logo-salao');
+            if (preview) {
+                preview.src = this.logoBase64Temp;
+                preview.classList.remove('hidden');
+            }
+            if (icon) icon.classList.add('hidden');
+            // Mostra no cabeçalho já, antes mesmo de salvar
+            this.aplicarLogoNoHeader(this.logoBase64Temp);
+        };
+        reader.readAsDataURL(file);
+    },
+    async enviarRecadoEstabelecimento() {
+        const input = document.getElementById('prof-recado-input');
+        const mensagem = input.value.trim();
+        if (!mensagem) {
+            UI.showToast('Escreva uma mensagem antes de enviar.', 'error');
+            return;
+        }
+        const remetente = this.user.name || 'Profissional';
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        try {
+            const { error } = await supabaseClient.from('recados').insert([{
+                estabelecimento_id: estabId,
+                remetente: remetente,
+                mensagem: mensagem,
+                profissional_id: localStorage.getItem('hairconcept_prof_id') || null,
+                para_todos: false,
+                lido: false
+            }]);
+            if (error) throw error;
+            input.value = '';
+            this.carregarRecadosEstabelecimento();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+    async carregarRecadosEstabelecimento() {
+        const containerAdmin = document.getElementById('lista-recados-estab');
+        const containerProf = document.getElementById('chat-historico-prof');
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        try {
+            const { data, error } = await supabaseClient
+                .from('recados')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('created_at', { ascending: true });
+                
+            if (error) throw error;
+            const mensagens = data || [];
+
+            if (containerAdmin) {
+                containerAdmin.innerHTML = mensagens.length > 0 ? [...mensagens].reverse().map(r => `
+                    <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-brand-500 font-bold uppercase">${r.remetente}:</span>
+                                <span class="text-[9px] text-zinc-500">${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <span class="text-zinc-200 mt-0.5 block">${r.mensagem}</span>
+                        </div>
+                        <button onclick="App.apagarRecado('${r.id}')" title="Apagar mensagem" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 text-[10px] font-bold uppercase transition shrink-0 flex items-center gap-1">
+                            <i class="fa-solid fa-trash"></i> Apagar
+                        </button>
+                    </div>
+                `).join('') : '<p class="text-xs text-zinc-500">Nenhum recado recebido da equipe por enquanto.</p>';
+            }
+
+            if (containerProf) {
+                // O profissional so ve as mensagens DELE e os avisos para todos.
+                const meuId = localStorage.getItem('hairconcept_prof_id');
+                const meuNome = String((this.user && this.user.name) || '').toLowerCase();
+                const minhas = mensagens.filter(function (r) {
+                    if (r.para_todos) return true;
+                    if (r.profissional_id) return String(r.profissional_id) === String(meuId);
+                    return String(r.remetente || '').toLowerCase().indexOf(meuNome) >= 0;
+                });
+                containerProf.innerHTML = minhas.length > 0 ? minhas.map(r => {
+                    const isEu = r.remetente.toLowerCase().includes((this.user.name || '').toLowerCase()) && !r.remetente.includes('Admin');
+                    return `
+                        <div class="flex flex-col ${isEu ? 'items-end' : 'items-start'} mb-2">
+                            <span class="text-[9px] text-zinc-500 mb-0.5 px-1">${r.remetente} • ${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            <div class="p-3 rounded-2xl max-w-[85%] text-xs ${isEu ? 'bg-brand-500 text-white rounded-br-xs' : 'bg-zinc-900 border border-white/10 text-zinc-200 rounded-bl-xs'}">
+                                ${r.mensagem}
+                            </div>
+                        </div>
+                    `;
+                }).join('') : '<p class="text-xs text-zinc-500 text-center py-4">Inicie uma conversa com o estabelecimento.</p>';
+                containerProf.scrollTop = containerProf.scrollHeight;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async apagarRecado(id) {
+        try {
+            const { error } = await supabaseClient.from('recados').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast("Mensagem apagada.", "success");
+            this.carregarRecadosEstabelecimento();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), "error");
+        }
+    },
+    async enviarRespostaAdmin() {
+        const input = document.getElementById('admin-resposta-input');
+        const mensagem = input.value.trim();
+        if (!mensagem) {
+            UI.showToast("Escreva uma resposta antes de enviar.", "error");
+            return;
+        }
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        try {
+            // O salao escolhe: responder a um profissional ou avisar a equipe toda.
+            const destino = document.getElementById('admin-resposta-para');
+            const paraTodos = destino ? destino.value === 'todos' : false;
+            const idDestino = (!paraTodos && destino) ? destino.value : null;
+
+            const { error } = await supabaseClient.from('recados').insert([{
+                estabelecimento_id: estabId,
+                remetente: '👑 Salão (Admin)',
+                mensagem: mensagem,
+                profissional_id: idDestino,
+                para_todos: paraTodos,
+                lido: false
+            }]);
+            if (error) throw error;
+            UI.showToast("Resposta enviada!", "success");
+            input.value = '';
+            this.carregarRecadosEstabelecimento();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), "error");
+        }
+    },
+       async excluirAgendamento(id, cliente) {
+        if (!confirm('Desmarcar o atendimento de ' + (cliente || '') + '?')) return;
+        try {
+            const { error } = await supabaseClient.from('agendamentos').delete().eq('id', id);
+            if (error) {
+                console.error('Erro ao desmarcar:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            UI.showToast('Atendimento desmarcado.');
+            this.renderAgendaGrid();
+            this.renderRelatorios();
+        } catch (e) {
+            console.error('Erro inesperado ao desmarcar:', e);
+            UI.showToast('Erro inesperado ao desmarcar.', 'error');
+        }
+    },
+
+    async mudarStatusAgendamento(id, status) {
+        try {
+            const { error } = await supabaseClient
+                .from('agendamentos')
+                .update({ status: status })
+                .eq('id', id);
+            if (error) {
+                console.error('Erro ao mudar o status:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            this.renderAgendaGrid();
+        } catch (e) {
+            console.error('Erro inesperado ao mudar status:', e);
+            UI.showToast('Erro inesperado ao mudar o estado.', 'error');
+        }
+    },
+
+    // ========== CLIENTES ==========
+    // ===== Votos e estrelas =====
+    abrirVoto(clienteId, clienteNome) {
+        const cId = document.getElementById('voto-cliente-id');
+        const cNome = document.getElementById('voto-cliente-nome');
+        const tipo = document.getElementById('voto-tipo');
+        const obs = document.getElementById('voto-obs');
+        if (cId) cId.value = clienteId;
+        if (cNome) cNome.textContent = clienteNome || '';
+        if (tipo) tipo.value = 'mais';
+        if (obs) obs.value = '';
+        this.preencherSelectProfissionaisVoto();
+        Auth.abrirModal('modal-voto');
+    },
+
+    async preencherSelectProfissionaisVoto() {
+        const sel = document.getElementById('voto-profissional');
+        if (!sel) return;
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome')
+                .eq('estabelecimento_id', estabId);
+            if (error) { console.warn('Erro ao buscar profissionais:', error.message); return; }
+            sel.innerHTML = '';
+            const op = document.createElement('option');
+            op.value = '';
+            op.textContent = 'Nenhum / so sobre a cliente';
+            sel.appendChild(op);
+            (data || []).forEach(function (p) {
+                const o = document.createElement('option');
+                o.value = p.id;
+                o.textContent = p.nome || '';
+                sel.appendChild(o);
+            });
+        } catch (e) {
+            console.warn('Erro ao preencher profissionais do voto:', e);
+        }
+    },
+
+    async salvarVoto(event) {
+        event.preventDefault();
+        const clienteId = document.getElementById('voto-cliente-id')?.value;
+        const notaBruta = document.getElementById('voto-tipo')?.value || '1';
+        const nota = Math.max(-1, Math.min(5, Number(notaBruta)));
+        const tipo = nota < 0 ? 'menos' : 'mais';
+        const profId = document.getElementById('voto-profissional')?.value || null;
+        const obs = document.getElementById('voto-obs')?.value.trim() || null;
+
+        if (!clienteId) { UI.showToast('Cliente nao identificada.', 'error'); return; }
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
+
+        try {
+            const { error } = await supabaseClient.rpc('registrar_ponto', {
+                p_profissional_id: profId || null,
+                p_cliente_id: clienteId,
+                p_nota: nota,
+                p_tipo: tipo,
+                p_obs: obs
+            });
+            if (error) {
+                console.error('Erro ao registrar voto:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            Auth.fecharModal('modal-voto');
+            UI.showToast('Nota ' + (nota > 0 ? '+' + nota : nota) + ' registrada!');
+            this.renderClientes();
+            this.popularClientesAgenda();
+            this.renderRanking();
+            this.renderAvaliacao();
+        } catch (e) {
+            console.error('Erro inesperado ao votar:', e);
+            UI.showToast('Erro inesperado ao registrar.', 'error');
+        }
+    },
+
+    // Estrelas do profissional: proporcional ao total de clientes do salao
+    // Quantas estrelas acender. Positivo enche a barra na proporcao dos clientes
+    // do salao; NEGATIVO nao gera estrela negativa (era o que quebrava o layout).
+    calcularEstrelaProf(pontos, totalClientes) {
+        const base = totalClientes > 0 ? totalClientes : 1;
+        const negativo = pontos < 0;
+        const progresso = negativo ? 0 : Math.min(pontos / base, 1);
+        const cheias = Math.max(0, Math.floor(progresso * 5));
+        const resto = negativo ? 0 : (progresso * 5) - cheias;
+        const meia = resto >= 0.5;
+        return {
+            pontos: pontos,
+            total: base,
+            progresso: progresso,
+            negativo: negativo,
+            cheias: cheias,
+            meia: meia,
+            vazias: Math.max(0, 5 - cheias - (meia ? 1 : 0))
+        };
+    },
 
 
-<script>
-// No celular, a grade da semana mostra UM dia por vez, e deslizar troca de dia.
-(function () {
-  var diaAtivo = 0;
-  function aplicarDia() {
-    var cels = document.querySelectorAll('#semana-corpo .semana-cel');
-    var cabs = document.querySelectorAll('#semana-cabecalho .semana-th');
-    if (!cabs.length) return;
-    var n = cabs.length;
-    if (diaAtivo < 0) diaAtivo = n - 1;
-    if (diaAtivo >= n) diaAtivo = 0;
-    cels.forEach(function (c, i) { c.classList.toggle('mostrando', (i % n) === diaAtivo); });
-    cabs.forEach(function (c, i) { c.classList.toggle('mostrando', i === diaAtivo); });
-  }
-  window.__aplicarDiaSemana = aplicarDia;
+    // =================================================================
+    // AVALIACAO - a barra tem o tamanho da base de clientes do salao.
+    // Um voto por cliente+profissional: votar de novo SUBSTITUI o anterior.
+    // =================================================================
+    _tipoAvaliacao: 'prof',
 
-  var x0 = null;
-  var alvo = document.getElementById('agenda-modo-semana');
-  if (alvo) {
-    alvo.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
-    alvo.addEventListener('touchend', function (e) {
-      if (x0 === null) return;
-      var dx = e.changedTouches[0].clientX - x0;
-      if (Math.abs(dx) > 45) { diaAtivo += (dx < 0 ? 1 : -1); aplicarDia(); }
-      x0 = null;
-    }, { passive: true });
-  }
+    trocarTipoAvaliacao(tipo) {
+        this._tipoAvaliacao = (tipo === 'cli') ? 'cli' : 'prof';
+        const bp = document.getElementById('btn-aval-prof');
+        const bc = document.getElementById('btn-aval-cli');
+        const ativo = 'flex-1 px-4 py-3 rounded-2xl bg-brand-500/15 text-brand-500 text-xs font-bold uppercase transition flex items-center justify-center gap-2';
+        const inativo = 'flex-1 px-4 py-3 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-xs font-bold uppercase transition flex items-center justify-center gap-2';
+        if (bp) bp.className = this._tipoAvaliacao === 'prof' ? ativo : inativo;
+        if (bc) bc.className = this._tipoAvaliacao === 'cli' ? ativo : inativo;
+        const busca = document.getElementById('aval-busca');
+        if (busca) busca.value = '';
+        this.renderAvaliacao();
+    },
 
-  // Reaplica sempre que a semana for redesenhada
-  var orig = window.renderAgendaSemanaHook;
-  var obs = new MutationObserver(function () { if (window.innerWidth < 768) aplicarDia(); });
-  var corpo = document.getElementById('semana-corpo');
-  if (corpo) obs.observe(corpo, { childList: true });
-  if (window.innerWidth < 768) setTimeout(aplicarDia, 400);
-})();
-</script>
+    // Cliente: 0 a 5 estrelas. Cada reclamacao tira uma. Ao chegar em -1,
+    // a fileira some e entra o aviso CUIDADO (o cliente deu trabalho).
+    estrelasClienteHTML(pontos, total) {
+        // -1 ou menos: a fileira ACABA e entra o aviso CUIDADO
+        if (pontos < 0) {
+            return '<span class="hc-cuidado"><i class="fa-solid fa-triangle-exclamation"></i> CUIDADO</span>';
+        }
+        // 0 a 5 estrelas. Comeca cheio em 5 e cada reclamacao tira uma.
+        const cheias = Math.max(0, Math.min(5, Math.round(pontos)));
+        let html = '';
+        for (let i = 0; i < cheias; i++) html += '<i class="fa-solid fa-star text-amber-400"></i>';
+        for (let i = 0; i < 5 - cheias; i++) html += '<i class="fa-regular fa-star text-zinc-600"></i>';
+        return html;
+    },
 
-<!-- Script Principal -->
-<script src="app.js"></script>
-</body>
-</html>
+    estrelasHTML(pontos, total) {
+        // Nota negativa: UMA estrela VERMELHA. Simples assim.
+        if (pontos < 0) {
+            return '<i class="fa-solid fa-star text-rose-500"></i>';
+        }
+        const e = this.calcularEstrelaProf(pontos, total);
+        let html = '';
+        for (let i = 0; i < e.cheias; i++) html += '<i class="fa-solid fa-star"></i>';
+        if (e.meia) html += '<i class="fa-solid fa-star-half-stroke"></i>';
+        for (let i = 0; i < e.vazias; i++) html += '<i class="fa-regular fa-star text-zinc-600"></i>';
+        return html;
+    },
+
+    // Motivos prontos, para o salao registrar em um toque
+    MOTIVOS: {
+        prof: [
+            { v: 'mais', t: 'Elogio do cliente' },
+            { v: 'mais', t: 'Cliente voltou satisfeita' },
+            { v: 'mais', t: 'Atendimento rapido e caprichado' },
+            { v: 'menos', t: 'Reclamacao do cliente' },
+            { v: 'menos', t: 'Atrasou o atendimento' },
+            { v: 'menos', t: 'Faltou sem avisar' },
+            { v: 'menos', t: 'Desmarcou em cima da hora' }
+        ],
+        cli: [
+            { v: 'mais', t: 'Cliente facil de atender' },
+            { v: 'mais', t: 'Elogiou a equipe' },
+            { v: 'mais', t: 'Pontual e educada' },
+            { v: 'menos', t: 'Deu trabalho no atendimento' },
+            { v: 'menos', t: 'Atrasou ou faltou' },
+            { v: 'menos', t: 'Desmarcou em cima da hora' },
+            { v: 'menos', t: 'Reclamou sem motivo' }
+        ]
+    },
+
+    async renderAvaliacao() {
+        const container = document.getElementById('aval-lista');
+        const totalEl = document.getElementById('aval-total-clientes');
+        if (!container) return;
+        const tipo = this._tipoAvaliacao || 'prof';
+        const busca = (document.getElementById('aval-busca')?.value || '').trim().toLowerCase();
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+
+        container.innerHTML = '<p class="text-xs text-zinc-500">Carregando...</p>';
+        try {
+            const { count } = await supabaseClient
+                .from('clientes').select('*', { count: 'exact', head: true })
+                .eq('estabelecimento_id', estabId);
+            const total = count || 0;
+            if (totalEl) totalEl.textContent = total + ' cliente(s) na base';
+
+            let lista = [];
+            if (tipo === 'prof') {
+                const { data } = await supabaseClient
+                    .from('profissionais').select('id, nome, cargo, foto_url, cpf')
+                    .eq('estabelecimento_id', estabId)
+                    .order('nome');
+                lista = (data || []).map(p => ({ id: p.id, nome: p.nome || '', sub: p.cargo || '', foto: p.foto_url, busca: (p.nome || '') + ' ' + (p.cargo || '') }));
+            } else {
+                const { data } = await supabaseClient
+                    .from('clientes').select('id, nome, telefone, cpf')
+                    .eq('estabelecimento_id', estabId)
+                    .order('nome');
+                lista = (data || []).map(c => ({ id: c.id, nome: c.nome || '', sub: 'final ' + String(c.telefone || c.cpf || '----').slice(-4), foto: null, busca: (c.nome || '') + ' ' + (c.telefone || '') + ' ' + (c.cpf || '') }));
+            }
+
+            if (busca) lista = lista.filter(i => i.busca.toLowerCase().includes(busca));
+
+            // Pontos: vem do banco quando existe, senao calcula na hora
+            const pontosMap = {};
+            try {
+                const { data: votos } = await supabaseClient
+                    .from('avaliacoes_cliente').select('profissional_id, cliente_id, tipo, nota')
+                    .eq('estabelecimento_id', estabId);
+                (votos || []).forEach(v => {
+                    const chave = (tipo === 'prof') ? v.profissional_id : v.cliente_id;
+                    if (!chave) return;
+                    // Profissional: +1 elogio / -1 alerta. Cliente: a propria nota (-1 a 5).
+                    const valor = (tipo === 'prof')
+                        ? (v.tipo === 'mais' ? 1 : -1)
+                        : (v.nota !== null && v.nota !== undefined ? Number(v.nota) : (v.tipo === 'mais' ? 1 : -1));
+                    pontosMap[chave] = (pontosMap[chave] || 0) + valor;
+                });
+            } catch (e) { console.warn('Erro ao somar os pontos:', e); }
+
+            // Filtro fino: faixa de nota e ordem escolhidas pelo salao
+            const faixa = (document.getElementById('aval-faixa')?.value || 'todos');
+            const ordem = (document.getElementById('aval-ordem')?.value || 'maior');
+
+            let ordenada = lista.slice();
+            if (faixa !== 'todos') {
+                ordenada = ordenada.filter(function (i) {
+                    const n = pontosMap[i.id] || 0;
+                    if (faixa === 'positivo') return n > 0;
+                    if (faixa === 'negativo') return n < 0;
+                    if (faixa === 'zero') return n === 0;
+                    if (faixa === 'top') return n >= 4;
+                    return true;
+                });
+            }
+            ordenada.sort(function (a, b) {
+                const na = pontosMap[a.id] || 0, nb = pontosMap[b.id] || 0;
+                if (ordem === 'maior') return nb - na;
+                if (ordem === 'menor') return na - nb;
+                if (ordem === 'az') return String(a.nome).localeCompare(String(b.nome), 'pt-BR');
+                if (ordem === 'za') return String(b.nome).localeCompare(String(a.nome), 'pt-BR');
+                return 0;
+            });
+
+            container.innerHTML = '';
+            if (ordenada.length === 0) {
+                container.innerHTML = '<p class="text-xs text-zinc-500">Nada encontrado. Cadastre na aba ' + (tipo === 'prof' ? 'Equipe' : 'Clientes') + '.</p>';
+                this.renderRankingGestao(pontosMap, total, tipo);
+                return;
+            }
+
+            ordenada.forEach(item => {
+                const pontos = pontosMap[item.id] || 0;
+                const est = this.calcularEstrelaProf(pontos, total);
+                const negativo = pontos < 0;
+                const card = document.createElement('div');
+                card.className = 'p-4 rounded-2xl bg-zinc-950 border ' + (negativo ? 'border-rose-500/40' : 'border-white/10') + ' space-y-3';
+
+                const topo = document.createElement('div');
+                topo.className = 'flex items-center justify-between gap-3 flex-wrap';
+                const info = document.createElement('div');
+                const h4 = document.createElement('h4');
+                h4.className = 'text-xs font-bold text-white uppercase';
+                h4.textContent = item.nome;
+                const sub = document.createElement('p');
+                sub.className = 'text-[10px] text-brand-500';
+                sub.textContent = item.sub;
+                info.appendChild(h4); info.appendChild(sub);
+
+                const dir = document.createElement('div');
+                dir.className = 'text-right';
+                const estrelas = document.createElement('div');
+                estrelas.className = 'prof-estrelas';
+                estrelas.innerHTML = this.estrelasHTML(pontos, total);
+                const cont = document.createElement('span');
+                cont.className = 'block text-[9px] ' + (negativo ? 'text-rose-400 font-bold' : 'text-zinc-500') + ' mt-0.5';
+                cont.textContent = pontos + ' / ' + total;
+                dir.appendChild(estrelas); dir.appendChild(cont);
+
+                topo.appendChild(info); topo.appendChild(dir);
+
+                const barra = document.createElement('div');
+                barra.className = 'prof-barra';
+                const cheia = document.createElement('div');
+                cheia.className = 'prof-barra-cheia' + (negativo ? ' bg-rose-500' : '');
+                cheia.style.width = Math.round(est.progresso * 100) + '%';
+                barra.appendChild(cheia);
+
+                const motivos = this.MOTIVOS[tipo];
+                const linha = document.createElement('div');
+                linha.className = 'flex items-center gap-2 flex-wrap';
+
+                const sel = document.createElement('select');
+                sel.className = 'flex-grow min-w-[180px] glass-input rounded-xl px-3 py-2 text-xs text-white';
+                motivos.forEach(m => {
+                    const o = document.createElement('option');
+                    o.value = m.v + '|' + m.t;
+                    o.textContent = (m.v === 'mais' ? '+1  ' : '−1  ') + m.t;
+                    sel.appendChild(o);
+                });
+
+                const btnMais = document.createElement('button');
+                btnMais.className = 'px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 text-xs font-bold uppercase transition cursor-pointer';
+                btnMais.textContent = '+1';
+                btnMais.onclick = () => this.registrarPontoProf(item.id, 'mais', sel.value.split('|')[1]);
+
+                const btnMenos = document.createElement('button');
+                btnMenos.className = 'px-3 py-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 text-xs font-bold uppercase transition cursor-pointer';
+                btnMenos.textContent = '−1';
+                btnMenos.onclick = () => this.registrarPontoProf(item.id, 'menos', sel.value.split('|')[1]);
+
+                linha.appendChild(sel); linha.appendChild(btnMais); linha.appendChild(btnMenos);
+
+                card.appendChild(topo); card.appendChild(barra); card.appendChild(linha);
+                container.appendChild(card);
+            });
+
+            this.renderRankingGestao(pontosMap, total, tipo);
+        } catch (e) {
+            console.warn('Erro na avaliacao:', e);
+            container.innerHTML = '<p class="text-xs text-zinc-500">Nao foi possivel carregar agora.</p>';
+        }
+    },
+
+    async renderRankingGestao(pontosMap, total, tipo) {
+        const container = document.getElementById('ranking-gestao');
+        if (!container) return;
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            if (!pontosMap) {
+                pontosMap = {};
+                try {
+                    const { data: votos } = await supabaseClient
+                        .from('avaliacoes_cliente').select('profissional_id, cliente_id, tipo')
+                        .eq('estabelecimento_id', estabId);
+                    (votos || []).forEach(v => {
+                        const chave = (tipo === 'cli') ? v.cliente_id : v.profissional_id;
+                        if (!chave) return;
+                        pontosMap[chave] = (pontosMap[chave] || 0) + (v.tipo === 'mais' ? 1 : -1);
+                    });
+                } catch (e) { /* segue sem ranking */ }
+            }
+            if (typeof total !== 'number') {
+                const { count } = await supabaseClient.from('clientes').select('*', { count: 'exact', head: true }).eq('estabelecimento_id', estabId);
+                total = count || 0;
+            }
+            const tabela = (tipo === 'cli') ? 'clientes' : 'profissionais';
+            const { data } = await supabaseClient.from(tabela).select('id, nome').eq('estabelecimento_id', estabId);
+            const lista = (data || []).map(x => ({ nome: x.nome || '', pontos: pontosMap[x.id] || 0 }))
+                .sort((a, b) => b.pontos - a.pontos).slice(0, 5);
+
+            container.innerHTML = '';
+            if (lista.length === 0) {
+                container.innerHTML = '<p class="text-[10px] text-zinc-500">Sem dados ainda.</p>';
+                return;
+            }
+            lista.forEach((item, i) => {
+                const l = document.createElement('div');
+                l.className = 'flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-zinc-950 border border-white/5';
+                const esq = document.createElement('span');
+                esq.className = 'text-[11px] text-white font-bold';
+                esq.textContent = (i + 1) + '. ' + item.nome;
+                const dir = document.createElement('span');
+                dir.className = 'text-[10px] ' + (item.pontos < 0 ? 'text-rose-400 font-bold' : 'text-zinc-400');
+                dir.textContent = item.pontos + ' / ' + total;
+                l.appendChild(esq); l.appendChild(dir);
+                container.appendChild(l);
+            });
+        } catch (e) {
+            console.warn('Erro no ranking:', e);
+        }
+    },
+
+    // Registra o ponto do profissional. Votar de novo SUBSTITUI o voto
+    // anterior do mesmo cliente, para a barra nunca inflar.
+    async registrarPontoProf(profissionalId, tipo, motivo) {
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
+        try {
+            const { error } = await supabaseClient.rpc('registrar_ponto', {
+                p_profissional_id: profissionalId,
+                p_cliente_id: null,
+                p_nota: tipo === 'menos' ? -1 : 1,
+                p_tipo: tipo,
+                p_obs: motivo || null
+            });
+            if (error) throw error;
+            UI.showToast(tipo === 'mais' ? 'Ponto registrado: ' + (motivo || '') : 'Alerta registrado: ' + (motivo || ''));
+            this.renderAvaliacao();
+            this.renderListaProfissionais();
+        } catch (e) {
+            console.error('Erro ao registrar ponto:', e);
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+        // O profissional ve SO a propria barra, as estrelas e o 0 / clientes
+    async carregarMinhaBarra() {
+        const caixa = document.getElementById('minha-barra-prof');
+        if (!caixa) return;
+        const token = localStorage.getItem('hairconcept_prof_token');
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        try {
+            let pontos = 0, total = 0;
+            if (token) {
+                const { data } = await supabaseClient.rpc('meus_pontos', { p_token: token });
+                const linha = Array.isArray(data) ? data[0] : data;
+                if (linha) { pontos = Number(linha.pontos) || 0; total = Number(linha.total_clientes) || 0; }
+            }
+            if (!total && estabId) {
+                const { count } = await supabaseClient.from('clientes').select('*', { count: 'exact', head: true }).eq('estabelecimento_id', estabId);
+                total = count || 0;
+            }
+            const e = this.calcularEstrelaProf(pontos, total);
+            // Negativo = vermelho, igual ao profissional
+            const negativo = pontos < 0;
+            caixa.innerHTML = '';
+            const estrelas = document.createElement('div');
+            estrelas.className = 'prof-estrelas text-lg';
+            estrelas.innerHTML = this.estrelasClienteHTML(pontos, total);
+            const barra = document.createElement('div');
+            barra.className = 'prof-barra mt-2';
+            const cheia = document.createElement('div');
+            cheia.className = 'prof-barra-cheia' + (negativo ? ' bg-rose-500' : '');
+            cheia.style.width = Math.round(e.progresso * 100) + '%';
+            barra.appendChild(cheia);
+            const cont = document.createElement('p');
+            cont.className = 'text-[10px] mt-2 ' + (negativo ? 'text-rose-400 font-bold' : 'text-zinc-400');
+            cont.textContent = pontos + ' / ' + total + ' cliente(s)';
+            caixa.appendChild(estrelas); caixa.appendChild(barra); caixa.appendChild(cont);
+        } catch (err) {
+            console.warn('Nao foi possivel carregar a barra do profissional:', err);
+        }
+    },
+
+    async renderRanking() {
+        const container = document.getElementById('ranking-profissionais');
+        const totalEl = document.getElementById('ranking-total-clientes');
+        if (!container) return;
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+
+        try {
+            const { data: profs, error: e1 } = await supabaseClient
+                .from('profissionais').select('id, nome, cargo, foto_url')
+                .eq('estabelecimento_id', estabId);
+            if (e1) { console.warn('Erro ao buscar equipe:', e1.message); return; }
+
+            const { data: votos } = await supabaseClient
+                .from('avaliacoes_cliente').select('profissional_id, tipo')
+                .eq('estabelecimento_id', estabId);
+
+            const { count: totalClientes } = await supabaseClient
+                .from('clientes').select('*', { count: 'exact', head: true })
+                .eq('estabelecimento_id', estabId);
+
+            const total = totalClientes || 0;
+            if (totalEl) totalEl.textContent = total + ' cliente(s) na base';
+
+            const pontosPorProf = {};
+            (votos || []).forEach(function (v) {
+                if (!v.profissional_id || v.tipo !== 'mais') return;
+                pontosPorProf[v.profissional_id] = (pontosPorProf[v.profissional_id] || 0) + 1;
+            });
+
+            const lista = (profs || []).map(function (p) {
+                return { p: p, pontos: pontosPorProf[p.id] || 0 };
+            }).sort(function (a, b) { return b.pontos - a.pontos; });
+
+            container.innerHTML = '';
+            if (lista.length === 0) {
+                const msg = document.createElement('p');
+                msg.className = 'text-xs text-zinc-500';
+                msg.textContent = 'Nenhum profissional cadastrado ainda.';
+                container.appendChild(msg);
+                return;
+            }
+
+            lista.forEach(function (item) {
+                const est = App.calcularEstrelaProf(item.pontos, total);
+
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
+
+                const topo = document.createElement('div');
+                topo.className = 'flex items-center justify-between gap-3';
+
+                const info = document.createElement('div');
+                const nome = document.createElement('h4');
+                nome.className = 'text-xs font-bold text-white uppercase';
+                nome.textContent = item.p.nome || '';
+                const cargo = document.createElement('p');
+                cargo.className = 'text-[10px] text-brand-500';
+                cargo.textContent = item.p.cargo || '';
+                info.appendChild(nome); info.appendChild(cargo);
+
+                const dir = document.createElement('div');
+                dir.className = 'text-right';
+                const estrelas = document.createElement('div');
+                estrelas.className = 'prof-estrelas';
+                for (let i = 0; i < est.cheias; i++) estrelas.innerHTML += '<i class="fa-solid fa-star"></i>';
+                if (est.meia) estrelas.innerHTML += '<i class="fa-solid fa-star-half-stroke"></i>';
+                for (let i = 0; i < est.vazias; i++) estrelas.innerHTML += '<i class="fa-regular fa-star text-zinc-600"></i>';
+                const contagem = document.createElement('span');
+                contagem.className = 'block text-[9px] text-zinc-500 mt-0.5';
+                contagem.textContent = item.pontos + ' de ' + total + ' cliente(s)';
+                dir.appendChild(estrelas); dir.appendChild(contagem);
+
+                topo.appendChild(info); topo.appendChild(dir);
+
+                const barra = document.createElement('div');
+                barra.className = 'prof-barra';
+                const cheia = document.createElement('div');
+                cheia.className = 'prof-barra-cheia';
+                cheia.style.width = Math.round(est.progresso * 100) + '%';
+                barra.appendChild(cheia);
+
+                card.appendChild(topo);
+                card.appendChild(barra);
+                container.appendChild(card);
+            });
+        } catch (e) {
+            console.warn('Erro ao montar o ranking:', e);
+        }
+    },
+
+    // ---------- Ponto da cliente ----------
+    // Um toque e o voto entra. Nao abre modal: quem tem pressa nao
+    // pode parar para escolher opcao no meio do movimento.
+    // Votar de novo SUBSTITUI o voto anterior (regra do voto unico).
+    // Voto da cliente: nota de -1 ate 5. Cada registro SOMA na nota dela.
+    async registrarPontoCliente(clienteId, nota, nomeCliente) {
+        if (!clienteId) { UI.showToast('Cliente nao identificada.', 'error'); return; }
+        const n = Math.max(-1, Math.min(5, Number(nota)));
+        if (isNaN(n)) { UI.showToast('Nota invalida.', 'error'); return; }
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao. Recarregue a pagina.', 'error'); return; }
+        try {
+            const { error } = await supabaseClient.rpc('registrar_ponto', {
+                p_profissional_id: null,
+                p_cliente_id: clienteId,
+                p_nota: n,
+                p_tipo: n < 0 ? 'menos' : 'mais',
+                p_obs: n < 0 ? 'Cliente deu trabalho' : (n >= 4 ? 'Cliente elogiada' : 'Cliente boa')
+            });
+            if (error) throw error;
+            UI.showToast((nomeCliente || 'Cliente') + ': nota ' + (n > 0 ? '+' + n : n) + ' registrada.');
+            this.renderClientes();
+            this.popularClientesAgenda();
+            this.renderAvaliacao();
+        } catch (e) {
+            console.error('Erro ao registrar ponto da cliente:', e);
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async renderClientes() {
+        this.ligarMascaraTelefone();
+        // O teclado do celular abre numerico e o campo se arruma sozinho
+        const campoTel = document.getElementById('cli-telefone');
+        if (campoTel && campoTel.dataset.maskLigada !== 'on') {
+            campoTel.dataset.maskLigada = 'on';
+            campoTel.addEventListener('input', function () {
+                campoTel.value = App.mascaraTelefone(campoTel.value);
+                App.guardarRascunho(['cli-nome','cli-telefone','cli-cpf','cli-email']);
+            });
+        }
+        // Guarda o rascunho a cada digitacao no cadastro de cliente
+        ['cli-nome','cli-telefone','cli-cpf','cli-email'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el && el.dataset.rascunho !== 'on') {
+                el.dataset.rascunho = 'on';
+                el.addEventListener('input', function () { App.guardarRascunho(['cli-nome','cli-telefone','cli-cpf','cli-email']); });
+            }
+        });
+        this.devolverRascunho();
+        const lista = document.getElementById('lista-clientes');
+        const total = document.getElementById('clientes-total');
+        if (!lista) return;
+
+        const busca = (document.getElementById('busca-clientes')?.value || '').trim();
+        const estabId = await this.obterEstabId();
+        if (!estabId) { lista.textContent = 'Não encontrei o seu salão. Recarregue a página.'; return; }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('clientes')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('nome', { ascending: true });
+
+            if (error) {
+                console.error('Erro ao buscar clientes:', error);
+                lista.textContent = 'Não foi possível carregar os clientes agora.';
+                return;
+            }
+
+            // Votos de cada cliente (uso interno do salao)
+            let votos = [];
+            try {
+                const { data: v } = await supabaseClient
+                    .from('avaliacoes_cliente')
+                    .select('cliente_id, tipo')
+                    .eq('estabelecimento_id', estabId);
+                votos = v || [];
+            } catch (e) {
+                console.warn('Nao foi possivel carregar os votos:', e);
+            }
+            const saldo = {};
+            votos.forEach(function (v) {
+                if (!saldo[v.cliente_id]) saldo[v.cliente_id] = { mais: 0, menos: 0 };
+                if (v.tipo === 'mais') saldo[v.cliente_id].mais++;
+                else saldo[v.cliente_id].menos++;
+            });
+
+            let clientes = data || [];
+            const digitosBusca = busca.replace(/\D/g, '');
+            if (busca) {
+                const alvo = busca.toLowerCase();
+                clientes = clientes.filter(function (c) {
+                    const nomeOk = (c.nome || '').toLowerCase().indexOf(alvo) >= 0;
+                    const telOk = digitosBusca && String(c.telefone || '').replace(/\D/g, '').indexOf(digitosBusca) >= 0;
+                    const cpfOk = digitosBusca && String(c.cpf || '').replace(/\D/g, '').indexOf(digitosBusca) >= 0;
+                    const emailOk = (c.email || '').toLowerCase().indexOf(alvo) >= 0;
+                    return nomeOk || telOk || cpfOk || emailOk;
+                });
+            }
+
+            // Filtro fino: ordenar a lista de clientes
+            const ordemCli = (document.getElementById('clientes-ordem')?.value || 'az');
+            if (ordemCli === 'za') clientes.sort(function (a, b) { return String(b.nome || '').localeCompare(String(a.nome || ''), 'pt-BR'); });
+            else if (ordemCli === 'recentes') clientes.sort(function (a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); });
+
+            if (total) {
+                total.textContent = clientes.length === 1 ? '1 cliente' : clientes.length + ' clientes';
+            }
+
+            lista.innerHTML = '';
+            if (clientes.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-zinc-500';
+                p.textContent = busca
+                    ? 'Nenhum cliente encontrado para esta busca.'
+                    : 'Nenhum cliente cadastrado ainda. Adicione o primeiro acima.';
+                lista.appendChild(p);
+                return;
+            }
+
+            clientes.forEach((c) => {
+                const s = saldo[c.id] || { mais: 0, menos: 0 };
+                const alerta = (s.menos - s.mais) > 0;
+                const boa = (s.mais - s.menos) > 0;
+
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border space-y-2 ' + (alerta ? 'cli-alerta' : (boa ? 'cli-boa' : 'border-white/10'));
+
+                const topo = document.createElement('div');
+                topo.className = 'flex items-start justify-between gap-3';
+
+                const info = document.createElement('div');
+                const nome = document.createElement('h4');
+                nome.className = 'text-xs font-bold text-white uppercase';
+                nome.textContent = c.nome || '';
+                const contato = document.createElement('p');
+                contato.className = 'text-[10px] text-zinc-400';
+                contato.textContent = [c.telefone, c.cpf, c.email].filter(Boolean).join(' • ');
+                info.appendChild(nome); info.appendChild(contato);
+
+                // Votos: estrela amarela para cliente boa, vermelha para alerta
+                const linhaVotos = document.createElement('div');
+                linhaVotos.className = 'cli-votos mt-1';
+                const icone = document.createElement('i');
+                icone.className = alerta
+                    ? 'fa-solid fa-star cli-estrela-vermelha'
+                    : (boa ? 'fa-solid fa-star cli-estrela-amarela' : 'fa-regular fa-star text-zinc-600');
+                const mais = document.createElement('span');
+                mais.className = 'cli-mais';
+                mais.textContent = '+' + s.mais;
+                const menos = document.createElement('span');
+                menos.className = 'cli-menos';
+                menos.textContent = '-' + s.menos;
+                linhaVotos.appendChild(icone);
+                linhaVotos.appendChild(mais);
+                linhaVotos.appendChild(menos);
+                if (alerta) {
+                    const aviso = document.createElement('span');
+                    aviso.className = 'cli-menos uppercase font-bold ml-1';
+                    aviso.textContent = 'cuidado';
+                    linhaVotos.appendChild(aviso);
+                }
+                info.appendChild(linhaVotos);
+
+                if (c.obs_interna) {
+                    const obs = document.createElement('p');
+                    obs.className = 'cli-obs';
+                    obs.textContent = c.obs_interna;
+                    info.appendChild(obs);
+                }
+                topo.appendChild(info);
+                card.appendChild(topo);
+
+                const acoes = document.createElement('div');
+                acoes.className = 'flex items-center gap-2 flex-wrap';
+
+                if (c.telefone) {
+                    const btnZap = document.createElement('a');
+                    btnZap.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition';
+                    btnZap.href = 'https://wa.me/55' + String(c.telefone).replace(/\D/g, '');
+                    btnZap.target = '_blank';
+                    btnZap.innerHTML = '<i class="fa-brands fa-whatsapp"></i> WhatsApp';
+                    acoes.appendChild(btnZap);
+                }
+                if (c.email) {
+                    const btnMail = document.createElement('a');
+                    btnMail.className = 'px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 text-[10px] font-bold uppercase transition';
+                    btnMail.href = 'mailto:' + c.email;
+                    btnMail.innerHTML = '<i class="fa-solid fa-envelope"></i> E-mail';
+                    acoes.appendChild(btnMail);
+                }
+
+                const btnMais = document.createElement('button');
+                btnMais.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
+                btnMais.textContent = '+1';
+                
+
+                const btnEditar = document.createElement('button');
+                btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-[10px] font-bold uppercase transition cursor-pointer';
+                btnEditar.textContent = 'Editar';
+                btnEditar.onclick = () => this.abrirEditarCliente(c.id, c.nome, c.telefone, c.cpf, c.email);
+                acoes.appendChild(btnEditar);
+
+                const btnExcluir = document.createElement('button');
+                btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition cursor-pointer';
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.onclick = () => this.excluirCliente(c.id);
+                acoes.appendChild(btnExcluir);
+
+                card.appendChild(acoes);
+                lista.appendChild(card);
+            });
+        } catch (e) {
+            console.error('Erro inesperado ao listar clientes:', e);
+            lista.textContent = 'Não foi possível carregar os clientes agora.';
+        }
+    },
+
+    // ---------- Mascara de telefone ----------
+    // Deixa digitar do jeito que a pessoa quiser, mas grava sempre
+    // no padrao (11) 99999-9999. Evita "Amanda 1, Amanda 2" no cadastro.
+    mascaraTelefone(valor) {
+        const d = String(valor || '').replace(/\D/g, '').slice(0, 11);
+        if (d.length <= 2) return d;
+        if (d.length <= 6) return '(' + d.slice(0,2) + ') ' + d.slice(2);
+        if (d.length <= 10) return '(' + d.slice(0,2) + ') ' + d.slice(2,6) + '-' + d.slice(6);
+        return '(' + d.slice(0,2) + ') ' + d.slice(2,7) + '-' + d.slice(7);
+    },
+
+    ligarMascaraTelefone() {
+        const campo = document.getElementById('cli-telefone');
+        if (!campo || campo.dataset.mascara === 'on') return;
+        campo.dataset.mascara = 'on';
+        campo.setAttribute('inputmode', 'numeric');
+        campo.setAttribute('maxlength', '15');
+        campo.addEventListener('input', function () {
+            campo.value = App.mascaraTelefone(campo.value);
+        });
+    },
+
+    // ---------- Rascunho automatico do formulario ----------
+    // Se a internet cair ou a pessoa sair sem querer, o que foi digitado
+    // volta quando ela abrir a tela de novo. So no proprio aparelho.
+    guardarRascunho(campos) {
+        try {
+            const dados = {};
+            campos.forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el && el.value) dados[id] = el.value;
+            });
+            if (Object.keys(dados).length) {
+                localStorage.setItem('hairconcept_rascunho', JSON.stringify(dados));
+            }
+        } catch (e) { /* silencioso */ }
+    },
+
+    devolverRascunho() {
+        try {
+            const bruto = localStorage.getItem('hairconcept_rascunho');
+            if (!bruto) return false;
+            const dados = JSON.parse(bruto);
+            let recuperou = false;
+            Object.keys(dados).forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el && !el.value) { el.value = dados[id]; recuperou = true; }
+            });
+            if (recuperou) UI.showToast('Recuperei o que voce tinha digitado.');
+            return recuperou;
+        } catch (e) { return false; }
+    },
+
+    limparRascunho() {
+        try { localStorage.removeItem('hairconcept_rascunho'); } catch (e) {}
+    },
+
+    async handleCreateCliente(event) {
+        event.preventDefault();
+        const nome = document.getElementById('cli-nome').value.trim();
+        const telefone = document.getElementById('cli-telefone').value.trim();
+        const cpf = document.getElementById('cli-cpf').value.trim();
+        const email = document.getElementById('cli-email').value.trim();
+
+        if (!nome) {
+            UI.showToast('Escreva o nome do cliente.', 'error');
+            return;
+        }
+
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página.', 'error');
+            return;
+        }
+
+        // Aviso claro quando o telefone ja existe, ANTES de gravar.
+        // Quem nao sabe mexer precisa saber que ja tem ficha.
+        if (telefone) {
+            try {
+                const soDigitos = String(telefone).replace(/\D/g, '');
+                const { data: iguais } = await supabaseClient
+                    .from('clientes').select('id, nome, telefone')
+                    .eq('estabelecimento_id', estabId)
+                    .ilike('telefone', '%' + soDigitos.slice(-8) + '%');
+                if (iguais && iguais.length) {
+                    const achado = iguais[0];
+                    const seguir = confirm(
+                        'Ja existe uma cliente com esse telefone:\n\n' +
+                        achado.nome + '\n\n' +
+                        'Deseja criar OUTRA ficha com o mesmo numero?\n' +
+                        'Se for a mesma pessoa, use a ficha que ja existe.'
+                    );
+                    if (!seguir) { UI.showToast('Cadastro cancelado. A ficha que ja existe continua valendo.'); return; }
+                }
+            } catch (e) { /* nao trava o cadastro */ }
+        }
+
+        try {
+            // Evita duplicar: procura pelo telefone ou CPF antes de gravar
+            const { data: existentes, error: erroBusca } = await supabaseClient
+                .from('clientes')
+                .select('id, nome, telefone, cpf')
+                .eq('estabelecimento_id', estabId);
+            if (erroBusca) console.warn('Não foi possível conferir duplicados:', erroBusca.message);
+
+            const telLimpo = telefone.replace(/\D/g, '');
+            const cpfLimpo = cpf.replace(/\D/g, '');
+            const repetido = (existentes || []).find(function (c) {
+                const telIgual = telLimpo && String(c.telefone || '').replace(/\D/g, '') === telLimpo;
+                const cpfIgual = cpfLimpo && String(c.cpf || '').replace(/\D/g, '') === cpfLimpo;
+                return telIgual || cpfIgual;
+            });
+
+            if (repetido) {
+                UI.showToast('Esse contato já está cadastrado: ' + repetido.nome, 'error');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('clientes').insert([{
+                estabelecimento_id: estabId,
+                nome: nome,
+                telefone: telefone || null,
+                cpf: cpf || null,
+                email: email || null
+            }]);
+            if (error) {
+                console.error('Erro ao criar cliente:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+
+            UI.showToast('Cliente adicionado!');
+            document.getElementById('cli-nome').value = '';
+            document.getElementById('cli-telefone').value = '';
+            document.getElementById('cli-cpf').value = '';
+            document.getElementById('cli-email').value = '';
+            this.renderClientes();
+            this.popularClientesAgenda();
+        } catch (e) {
+            console.error('Erro inesperado ao criar cliente:', e);
+            UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
+        }
+    },
+
+    abrirEditarCliente(id, nome, telefone, cpf, email) {
+        const campoId = document.getElementById('editar-cli-id');
+        if (campoId) campoId.value = id;
+        const n = document.getElementById('editar-cli-nome');
+        const t = document.getElementById('editar-cli-telefone');
+        const c = document.getElementById('editar-cli-cpf');
+        const m = document.getElementById('editar-cli-email');
+        if (n) n.value = nome || '';
+        if (t) t.value = telefone || '';
+        if (c) c.value = cpf || '';
+        if (m) m.value = email || '';
+        Auth.abrirModal('modal-editar-cliente');
+    },
+
+    async salvarEdicaoCliente(event) {
+        event.preventDefault();
+        const id = document.getElementById('editar-cli-id').value;
+        const nome = document.getElementById('editar-cli-nome').value.trim();
+        const telefone = document.getElementById('editar-cli-telefone').value.trim();
+        const cpf = document.getElementById('editar-cli-cpf').value.trim();
+        const email = document.getElementById('editar-cli-email').value.trim();
+
+        // Sem id = cliente NOVO. Com id = edicao da ficha que ja existe.
+        if (!id && !nome) { UI.showToast('Escreva o nome do cliente.', 'error'); return; }
+
+        if (!id) {
+            try {
+                const estabId = await this.obterEstabId();
+                if (!estabId) { UI.showToast('Não encontrei o seu salão. Recarregue a página.', 'error'); return; }
+                const { error: erroNovo } = await supabaseClient.from('clientes').insert([{
+                    estabelecimento_id: estabId,
+                    nome: nome,
+                    telefone: telefone || null,
+                    cpf: cpf || null,
+                    email: email || null
+                }]);
+                if (erroNovo) { console.error('Erro ao criar cliente:', erroNovo); UI.showToast(mensagemAmigavel(erroNovo), 'error'); return; }
+                Auth.fecharModal('modal-editar-cliente');
+                // Leva o nome novo para o campo da agenda, sem digitar de novo
+                const campoNome = document.getElementById('cliente-nome');
+                if (campoNome) campoNome.value = nome;
+                UI.showToast('Cliente cadastrado!');
+                this.renderClientes();
+                this.popularClientesAgenda();
+            } catch (e) {
+                console.error('Erro inesperado ao criar cliente:', e);
+                UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
+            }
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('clientes')
+                .update({ nome: nome, telefone: telefone || null, cpf: cpf || null, email: email || null })
+                .eq('id', id)
+                .select('id');
+            if (error) {
+                console.error('Erro ao editar cliente:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            if (!data || data.length === 0) {
+                UI.showToast('Nenhum cliente foi atualizado. Confira se você está no salão certo.', 'error');
+                return;
+            }
+            Auth.fecharModal('modal-editar-cliente');
+            UI.showToast('Cliente atualizado!');
+            this.renderClientes();
+            this.popularClientesAgenda();
+        } catch (e) {
+            console.error('Erro inesperado ao editar cliente:', e);
+            UI.showToast('Erro inesperado ao salvar o cliente.', 'error');
+        }
+    },
+
+    async excluirCliente(id) {
+        if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+        try {
+            const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
+            if (error) {
+                console.error('Erro ao excluir cliente:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            UI.showToast('Cliente excluído.');
+            this.renderClientes();
+            this.popularClientesAgenda();
+        } catch (e) {
+            console.error('Erro inesperado ao excluir cliente:', e);
+            UI.showToast('Erro inesperado ao excluir.', 'error');
+        }
+    },
+
+    // ---------- Trocar senha do profissional ----------
+    abrirTrocarSenhaProfissional(id, nome, cpf) {
+        const campoId = document.getElementById('trocasenha-prof-id');
+        const campoNome = document.getElementById('trocasenha-prof-nome');
+        const campoCpf = document.getElementById('trocasenha-prof-cpf');
+        const s1 = document.getElementById('trocasenha-senha');
+        const s2 = document.getElementById('trocasenha-senha2');
+        if (campoId) campoId.value = id;
+        if (campoNome) campoNome.textContent = nome;
+        if (campoCpf) campoCpf.value = cpf || '';
+        if (s1) s1.value = '';
+        if (s2) s2.value = '';
+        Auth.abrirModal('modal-trocar-senha');
+    },
+
+    async salvarNovaSenhaProfissional(event) {
+        event.preventDefault();
+        const id = document.getElementById('trocasenha-prof-id').value;
+        const senha = document.getElementById('trocasenha-senha').value;
+        const senha2 = document.getElementById('trocasenha-senha2').value;
+
+        if (!id) {
+            UI.showToast('Profissional não identificado. Feche e tente de novo.', 'error');
+            return;
+        }
+        if (senha !== senha2) {
+            UI.showToast('As duas senhas precisam ser iguais.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.rpc('definir_senha_profissional', {
+                p_id: id,
+                p_senha: senha
+            });
+
+            if (error) {
+                console.error('Erro ao trocar senha:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+
+            // (a conta interna é atualizada pelo banco; não mexe na sessão do salão)
+            Auth.fecharModal('modal-trocar-senha');
+            UI.showToast('Senha alterada! Passe a senha nova para o profissional.');
+        } catch (e) {
+            console.error('Erro inesperado ao trocar senha:', e);
+            UI.showToast('Erro inesperado ao salvar a senha.', 'error');
+        }
+    },
+
+    // ---------- Editar profissional ----------
+    abrirEditarProfissional(id, nome, cargo, cpf, ev) {
+        if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+        const campoId = document.getElementById('editar-prof-id');
+        if (campoId) campoId.value = id;
+        const campoNome = document.getElementById('editar-prof-nome');
+        const campoCargo = document.getElementById('editar-prof-cargo');
+        const campoCpf = document.getElementById('editar-prof-cpf');
+        if (campoNome) campoNome.value = nome || '';
+        if (campoCargo) campoCargo.value = cargo || '';
+        if (campoCpf) campoCpf.value = cpf || '';
+        const campoRecado = document.getElementById('recado-prof-id');
+        if (campoRecado) campoRecado.value = id;
+        const campoRecadoTxt = document.getElementById('recado-prof-texto');
+        if (campoRecadoTxt) campoRecadoTxt.value = '';
+        Auth.abrirModal('modal-editar-prof');
+    },
+
+    // Mensagem particular do salao para o profissional (tabela recados)
+    async enviarRecadoProfissional(event) {
+        event.preventDefault();
+        const id = document.getElementById('recado-prof-id')?.value;
+        const texto = (document.getElementById('recado-prof-texto')?.value || '').trim();
+        if (!id || !texto) { UI.showToast('Escreva a mensagem.', 'error'); return; }
+        const estabId = await this.obterEstabId();
+        if (!estabId) { UI.showToast('Nao encontrei o seu salao.', 'error'); return; }
+        try {
+            const { error } = await supabaseClient.from('recados').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: id,
+                remetente: 'salao',
+                mensagem: texto
+            }]);
+            if (error) throw error;
+            const campo = document.getElementById('recado-prof-texto');
+            if (campo) campo.value = '';
+            UI.showToast('Mensagem enviada para a aba do profissional.');
+        } catch (e) {
+            console.error('Erro ao enviar mensagem:', e);
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async salvarEdicaoProfissional(event) {
+        event.preventDefault();
+        const id = document.getElementById('editar-prof-id').value;
+        const nome = document.getElementById('editar-prof-nome').value.trim();
+        const cargo = document.getElementById('editar-prof-cargo').value.trim();
+        const cpf = document.getElementById('editar-prof-cpf').value.trim();
+
+        if (!id) {
+            UI.showToast('Profissional não identificado. Feche e tente de novo.', 'error');
+            return;
+        }
+        if (!supabaseClient) {
+            UI.showToast('Não foi possível conectar ao servidor.', 'error');
+            return;
+        }
+        try {
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .update({ nome: nome, cargo: cargo, cpf: cpf })
+                .eq('id', id)
+                .select('id');
+
+            if (error) {
+                console.error('Erro ao editar profissional:', error);
+                if (error.code === '23505') {
+                    UI.showToast('Já existe um profissional com esse CPF.', 'error');
+                } else {
+                    UI.showToast(mensagemAmigavel(error), 'error');
+                }
+                return;
+            }
+            if (!data || data.length === 0) {
+                UI.showToast('Nenhum profissional foi atualizado. Confira se você está no salão certo.', 'error');
+                return;
+            }
+            const chaveNova = String(cpf || '').replace(/\D/g, '');
+            if (chaveNova.length === 11) {
+                const { error: erroChave } = await supabaseClient.rpc('definir_senha_profissional', { p_id: id, p_senha: chaveNova });
+                if (erroChave) console.warn('Chave nao regravada:', erroChave.message);
+            }
+            Auth.fecharModal('modal-editar-prof');
+            UI.showToast('Dados do profissional atualizados!');
+            this.renderListaProfissionais();
+            this.popularSelectProfissionais();
+            this.renderRankingGestao();
+        } catch (e) {
+            console.error('Erro inesperado ao editar:', e);
+            UI.showToast('Erro inesperado ao salvar os dados.', 'error');
+        }
+    },
+
+    // ---------- Avisos e pedidos dos clientes ----------
+    async carregarAvisos() {
+        const container = document.getElementById('lista-avisos');
+        if (!container) return;
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('solicitacoes')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Erro ao carregar avisos:', error);
+                container.textContent = 'Não foi possível carregar os avisos agora.';
+                return;
+            }
+
+            const avisos = data || [];
+            this.atualizarBadgeAvisos(avisos);
+
+            container.innerHTML = '';
+            if (avisos.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-zinc-500';
+                p.textContent = 'Nenhum aviso ou pedido por enquanto.';
+                container.appendChild(p);
+                return;
+            }
+
+            const rotulos = {
+                esqueci_senha: 'Esqueci minha senha',
+                reclamacao: 'Reclamação',
+                excluir_dados: 'Excluir meus dados',
+                outro: 'Outro assunto'
+            };
+
+            avisos.forEach(a => {
+                const item = document.createElement('div');
+                item.className = 'aviso-item' + (a.resolvido ? ' resolvido' : '');
+
+                const linhaTopo = document.createElement('div');
+                linhaTopo.className = 'flex items-center justify-between gap-3 flex-wrap';
+
+                const rotulo = document.createElement('span');
+                rotulo.className = 'text-[10px] font-bold uppercase text-brand-500';
+                rotulo.textContent = rotulos[a.tipo] || a.tipo;
+
+                const dataTexto = document.createElement('span');
+                dataTexto.className = 'text-[10px] text-zinc-500';
+                dataTexto.textContent = a.created_at ? new Date(a.created_at).toLocaleString('pt-BR') : '';
+
+                linhaTopo.appendChild(rotulo);
+                linhaTopo.appendChild(dataTexto);
+
+                const quem = document.createElement('p');
+                quem.className = 'text-xs text-white font-bold mt-2';
+                quem.textContent = (a.nome_pessoa || 'Sem nome') + ' — ' + (a.nome_salao || '') + (a.cpf ? ' — CPF ' + a.cpf : '');
+
+                const msg = document.createElement('p');
+                msg.className = 'text-xs text-zinc-300 mt-1';
+                msg.textContent = a.mensagem || '';
+
+                const acoes = document.createElement('div');
+                acoes.className = 'flex gap-2 mt-3';
+
+                const btnResolver = document.createElement('button');
+                btnResolver.className = 'px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase hover:bg-emerald-500/20 transition';
+                btnResolver.textContent = a.resolvido ? 'Reabrir' : 'Marcar como resolvido';
+                btnResolver.onclick = () => this.marcarAviso(a.id, !a.resolvido);
+
+                const btnExcluir = document.createElement('button');
+                btnExcluir.className = 'px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold uppercase hover:bg-red-500/20 transition';
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.onclick = () => this.excluirAviso(a.id);
+
+                acoes.appendChild(btnResolver);
+
+                // Se for pedido de senha, oferece o atalho para trocar direto
+                if (a.tipo === 'esqueci_senha') {
+                    const btnTrocar = document.createElement('button');
+                    btnTrocar.className = 'px-3 py-1.5 rounded-lg bg-brand-500/10 text-brand-500 border border-brand-500/20 text-[10px] font-bold uppercase hover:bg-brand-500/20 transition';
+                    btnTrocar.textContent = 'Trocar senha deste profissional';
+                    btnTrocar.onclick = async () => {
+                        const cpfLimpo = String(a.cpf || '').replace(/\D/g, '');
+                        if (!cpfLimpo) {
+                            UI.showToast('O aviso não trouxe CPF. Procure na aba Equipe.', 'error');
+                            return;
+                        }
+                        try {
+                            const { data, error } = await supabaseClient
+                                .from('profissionais')
+                                .select('id, nome, cpf')
+                                .eq('estabelecimento_id', localStorage.getItem('hairconcept_estab_id'));
+                            if (error) {
+                                console.error('Erro ao buscar profissionais:', error);
+                                UI.showToast('Não foi possível buscar o profissional. Use a aba Equipe.', 'error');
+                                return;
+                            }
+                            const achado = (data || []).find(p => String(p.cpf || '').replace(/\D/g, '') === cpfLimpo);
+                            if (!achado) {
+                                UI.showToast('Não achei nenhum profissional com esse CPF. Procure na aba Equipe.', 'error');
+                                return;
+                            }
+                            this.abrirTrocarSenhaProfissional(achado.id, achado.nome, achado.cpf);
+                        } catch (e) {
+                            console.error('Erro ao abrir troca de senha pelo aviso:', e);
+                            UI.showToast('Erro inesperado ao abrir a troca de senha.', 'error');
+                        }
+                    };
+                    acoes.appendChild(btnTrocar);
+                }
+
+                acoes.appendChild(btnExcluir);
+
+                item.appendChild(linhaTopo);
+                item.appendChild(quem);
+                item.appendChild(msg);
+                item.appendChild(acoes);
+                container.appendChild(item);
+            });
+        } catch (e) {
+            console.error('Erro inesperado ao carregar avisos:', e);
+            container.textContent = 'Não foi possível carregar os avisos agora.';
+        }
+    },
+
+    atualizarBadgeAvisos(avisos) {
+        const badge = document.getElementById('badge-avisos');
+        if (!badge) return;
+        const pendentes = (avisos || []).filter(a => !a.resolvido).length;
+        if (pendentes > 0) {
+            badge.textContent = String(pendentes);
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    },
+
+    async marcarAviso(id, resolvido) {
+        try {
+            const { error } = await supabaseClient
+                .from('solicitacoes')
+                .update({ resolvido: resolvido })
+                .eq('id', id);
+            if (error) {
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            this.carregarAvisos();
+        } catch (e) {
+            console.error('Erro ao marcar aviso:', e);
+            UI.showToast('Erro inesperado ao atualizar o aviso.', 'error');
+        }
+    },
+
+    async excluirAviso(id) {
+        if (!confirm('Tem certeza que deseja excluir este aviso?')) return;
+        try {
+            const { error } = await supabaseClient.from('solicitacoes').delete().eq('id', id);
+            if (error) {
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            UI.showToast('Aviso excluído.');
+            this.carregarAvisos();
+        } catch (e) {
+            console.error('Erro ao excluir aviso:', e);
+            UI.showToast('Erro inesperado ao excluir o aviso.', 'error');
+        }
+    },
+
+    // Lista os clientes do salao no campo de nome da agenda (sugestao ao digitar)
+    // O clique em "+ Cadastrar cliente" na agenda: abre a janela de cliente
+    // em branco, ja com a data e o profissional escolhidos.
+    async novoClienteDaAgenda() {
+        const d = document.getElementById('agendamento-data');
+        const p = document.getElementById('agendamento-profissional');
+        this._clienteEdicaoId = null;
+        ['editar-cli-nome', 'editar-cli-telefone', 'editar-cli-cpf', 'editar-cli-email'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const tit = document.getElementById('titulo-cliente');
+        if (tit) tit.textContent = 'Novo Cliente';
+        const dCli = document.getElementById('editar-cli-data');
+        if (dCli && d) dCli.value = d.value;
+        const pCli = document.getElementById('editar-cli-profissional');
+        if (pCli && p && p.options) {
+            pCli.innerHTML = '';
+            for (let i = 0; i < p.options.length; i++) {
+                const op = document.createElement('option');
+                op.value = p.options[i].value; op.textContent = p.options[i].textContent;
+                if (p.options[i].value === p.value) op.selected = true;
+                pCli.appendChild(op);
+            }
+        }
+        Auth.abrirModal('modal-editar-cliente');
+    },
+
+    async popularClientesAgenda() {
+        const dl = document.getElementById('lista-clientes-agenda');
+        if (!dl) return;
+        try {
+            let estabId = localStorage.getItem('hairconcept_estab_id');
+            if (!estabId) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    const { data: lista } = await supabaseClient
+                        .from('estabelecimentos').select('id')
+                        .eq('user_id', session.user.id)
+                        .order('created_at', { ascending: true }).limit(1);
+                    estabId = lista && lista[0] ? lista[0].id : null;
+                }
+            }
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('clientes').select('nome')
+                .eq('estabelecimento_id', estabId)
+                .order('nome', { ascending: true });
+            dl.innerHTML = '';
+            (data || []).forEach(function (c) {
+                if (!c.nome) return;
+                const op = document.createElement('option');
+                op.value = c.nome;
+                dl.appendChild(op);
+            });
+        } catch (e) { console.warn('Nao carreguei a lista de clientes:', e); }
+    },
+
+    async popularSelectProfissionais() {
+        const select = document.getElementById('agendamento-profissional');
+        if (!select) return;
+        try {
+            let estabId = localStorage.getItem('hairconcept_estab_id');
+
+            if (!estabId && supabaseClient && supabaseClient.auth) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    const { data: estab } = await supabaseClient
+                        .from('estabelecimentos')
+                        .select('id')
+                        .eq('user_id', session.user.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    if (estab) {
+                        estabId = estab.id;
+                        localStorage.setItem('hairconcept_estab_id', estab.id);
+                    }
+                }
+            }
+
+            const { data, error } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome')
+                .eq('estabelecimento_id', estabId);
+
+            if (error) {
+                console.error('Erro ao buscar profissionais:', error);
+                return;
+            }
+
+            select.innerHTML = '';
+            if (data && data.length > 0) {
+                data.forEach(p => {
+                    const op = document.createElement('option');
+                    op.value = p.id;
+                    op.textContent = p.nome;
+                    select.appendChild(op);
+                });
+            } else {
+                const op = document.createElement('option');
+                op.value = '';
+                op.textContent = 'Cadastre um profissional na aba Equipe';
+                select.appendChild(op);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    async carregarIdentidadeDoSalao(estabId) {
+        // O profissional não carrega as configurações, então busca só a identidade
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('nome_salao, logo_url')
+                .eq('id', estabId)
+                .maybeSingle();
+            if (error) { console.warn('Não foi possível carregar a identidade do salão:', error.message); return; }
+            if (data) {
+                App.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
+                const salvo = JSON.parse(localStorage.getItem('hairconcept_prof_dados') || '{}');
+                salvo.nome_salao = data.nome_salao;
+                salvo.logo_url = data.logo_url || '';
+                localStorage.setItem('hairconcept_prof_dados', JSON.stringify(salvo));
+            }
+        } catch (e) {
+            console.warn('Erro ao carregar a identidade do salão:', e);
+        }
+    },
+
+    // ===== Estados do atendimento =====
+    normalizarHora(v) { return String(v || '').slice(0, 5); },
+
+    // Fim real de um atendimento (se nao tiver, assume 30 minutos)
+    fimDoAtendimento(ag) {
+        const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
+        const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
+        const fim = temFim ? this.minutosDoDia(this.normalizarHora(ag.horario_fim)) : (inicio + 30);
+        return fim > inicio ? fim : inicio + 30;
+    },
+
+    // Um horario esta ocupado se cai dentro de algum atendimento do profissional
+    horarioOcupado(agendamentos, profId, hhmm) {
+        const alvo = this.minutosDoDia(hhmm);
+        if (alvo < 0) return false;
+        return (agendamentos || []).some(a => {
+            if (String(a.profissional_id) !== String(profId)) return false;
+            const inicio = this.minutosDoDia(this.normalizarHora(a.horario));
+            const fim = this.fimDoAtendimento(a);
+            return inicio >= 0 && alvo >= inicio && alvo < fim;
+        });
+    },
+
+    // Devolve a lista de horarios livres do profissional naquele dia
+    horariosLivres(agendamentos, profId) {
+        const todos = [];
+        for (let m = 480; m <= 1080; m += 30) {
+            todos.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+        }
+        if (!profId) return todos;
+        return todos.filter(h => !this.horarioOcupado(agendamentos, profId, h));
+    },
+
+    // Aplica o bloqueio nos campos de hora da janela de marcar
+    async aplicarHorariosLivres() {
+        const selProf = document.getElementById('agendamento-profissional');
+        const campoHora = document.getElementById('agendamento-horario');
+        const campoFim = document.getElementById('agendamento-horario-fim');
+        const campoData = document.getElementById('agendamento-data');
+        if (!selProf || !campoHora) return;
+
+        // Modo encaixe: nao bloqueia nada (a decisao e do salao)
+        if (this._modoEncaixe) {
+            campoHora.removeAttribute('disabled');
+            if (campoFim) campoFim.removeAttribute('disabled');
+            return;
+        }
+
+        const estabId = await this.obterEstabId();
+        const dataEscolhida = campoData ? campoData.value : null;
+        if (!estabId || !dataEscolhida) return;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('agendamentos')
+                .select('horario, horario_fim, profissional_id')
+                .eq('estabelecimento_id', estabId)
+                .eq('data', dataEscolhida);
+            if (error) { console.warn('Nao foi possivel conferir a agenda:', error.message); return; }
+
+            const profId = selProf.value;
+            const livres = this.horariosLivres(data || [], profId);
+
+            if (livres.length === 0) {
+                UI.showToast('Esse profissional nao tem horario livre neste dia. Use "Adicionar dentro" num atendimento.', 'error');
+                return;
+            }
+
+            // Se a hora atual esta ocupada, pula para o primeiro horario livre
+            const atual = this.normalizarHora(campoHora.value);
+            if (livres.indexOf(atual) < 0) {
+                campoHora.value = livres[0];
+                if (campoFim) {
+                    const mi = this.minutosDoDia(livres[0]);
+                    const mf = mi + 30;
+                    campoFim.value = String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0');
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao aplicar horarios livres:', e);
+        }
+    },
+
+    minutosDoDia(hhmm) {
+        const p = String(hhmm || '').split(':');
+        const h = parseInt(p[0], 10);
+        const m = parseInt(p[1], 10);
+        if (isNaN(h) || isNaN(m)) return -1;
+        return (h * 60) + m;
+    },
+
+    // O atendimento cobre todos os blocos entre o inicio e o fim
+    cobreHorario(ag, hhmm) {
+        const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
+        const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
+        const fim = temFim ? this.minutosDoDia(this.normalizarHora(ag.horario_fim)) : (inicio + 30);
+        const alvo = this.minutosDoDia(hhmm);
+        if (inicio < 0 || alvo < 0) return false;
+        return alvo >= inicio && alvo < fim;
+    },
+
+    duracaoMinutos(ag) {
+        const inicio = this.minutosDoDia(this.normalizarHora(ag.horario));
+        const temFim = !!(ag.horario_fim && this.normalizarHora(ag.horario_fim));
+        if (inicio < 0) return 30;
+        if (!temFim) return 30;
+        const fim = this.minutosDoDia(this.normalizarHora(ag.horario_fim));
+        const d = fim - inicio;
+        return d > 0 ? d : 30;
+    },
+
+    classeEstado(status) {
+        const s = String(status || 'espera').toLowerCase();
+        if (s === 'atendendo') return 'ag-atendendo';
+        if (s === 'finalizado') return 'ag-finalizado';
+        if (s === 'faltou') return 'ag-faltou';
+        return 'ag-espera';
+    },
+
+    rotuloEstado(status) {
+        const s = String(status || 'espera').toLowerCase();
+        if (s === 'atendendo') return 'Atendendo';
+        if (s === 'finalizado') return 'Finalizado';
+        if (s === 'faltou') return 'Nao veio';
+        return 'Em espera';
+    },
+
+    aplicarIdentidadeNoHeader(nomeSalao, logoUrl) {
+        const elNome = document.getElementById('saloon-name-header');
+        const assinatura = document.getElementById('header-assinatura');
+        const temNome = !!(nomeSalao && nomeSalao.trim()) && nomeSalao.trim().toLowerCase() !== 'meu salão';
+
+        // Nome grande: o nome do salao. Sem nome cadastrado, mostra HairConcept.
+        if (elNome) elNome.textContent = temNome ? nomeSalao.trim() : 'HairConcept';
+        // Assinatura pequena: SEMPRE HairConcept e sempre visivel.
+        // Antes ela sumia quando o salao tinha nome; agora fica junto do nome.
+        if (assinatura) {
+            assinatura.textContent = 'HairConcept';
+            assinatura.classList.remove('hidden');
+        }
+
+        this.aplicarLogoNoHeader(logoUrl);
+    },
+
+    aplicarLogoNoHeader(logoUrl) {
+        const img = document.getElementById('header-logo-img');
+        const icone = document.getElementById('header-icon-scissors');
+        if (!img || !icone) return;
+        if (logoUrl) {
+            img.src = logoUrl;
+            img.classList.remove('hidden');
+            icone.classList.add('hidden');
+        } else {
+            img.src = '';
+            img.classList.add('hidden');
+            icone.classList.remove('hidden');
+        }
+    },
+
+    montarEmailInterno(cpf, idSalao) {
+        // E-mail invisível: o profissional continua entrando só com CPF e senha.
+        const cpfLimpo = String(cpf || '').replace(/\D/g, '');
+        const salaoCurto = String(idSalao || '').replace(/-/g, '').slice(0, 8);
+        if (!cpfLimpo || !salaoCurto) return null;
+        return `prof.${cpfLimpo}.${salaoCurto}@hairconcept.com.br`;
+    },
+
+    async obterEstabId() {
+        // Devolve o ID do salao VALIDANDO contra o banco. Se o valor guardado estiver
+        // velho (de outro salao ou de um teste), busca o correto e regenera.
+        let id = localStorage.getItem('hairconcept_estab_id');
+        if (!supabaseClient || !supabaseClient.auth) return id || null;
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) return id || null;
+            // 1o: o salao pelo CODIGO (deconcept2). Assim trocar de conta
+            // Google nao abre um salao vazio e os clientes nao "somem".
+            const codigo = (localStorage.getItem('hairconcept_codigo_salao') || '').trim().toLowerCase();
+            if (codigo) {
+                const { data: porCodigo } = await supabaseClient
+                    .from('estabelecimentos')
+                    .select('id')
+                    .eq('codigo_acesso', codigo)
+                    .maybeSingle();
+                if (porCodigo && porCodigo.id) {
+                    localStorage.setItem('hairconcept_estab_id', porCodigo.id);
+                    return porCodigo.id;
+                }
+            }
+            if (id) {
+                const { data: confere } = await supabaseClient
+                    .from('estabelecimentos')
+                    .select('id')
+                    .eq('id', id)
+                    .eq('user_id', session.user.id)
+                    .maybeSingle();
+                if (confere && confere.id) return id;
+            }
+            // Se o guardado nao serve, pega o salao MAIS RECENTE da conta
+            // (contas com varios estabelecimentos abriam o errado)
+            const { data: estab } = await supabaseClient
+                .from('estabelecimentos')
+                .select('id')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            if (estab && estab.id) {
+                localStorage.setItem('hairconcept_estab_id', estab.id);
+                return estab.id;
+            }
+        } catch (e) {
+            console.warn('Erro ao validar o salao:', e);
+        }
+        return id || null;
+    },
+
+    // Abre a janela para colocar um serviço DENTRO de um atendimento
+    abrirEncaixe(pai) {
+        if (!pai) return;
+        this._modoEncaixe = true;
+        const campoData = document.getElementById('agendamento-data');
+        if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
+
+        // Sugere: começa no início do atendimento e dura 30 minutos
+        const inicio = this.normalizarHora(pai.horario) || '08:00';
+        const mi = this.minutosDoDia(inicio);
+        const mf = mi + 30;
+        const fim = mi >= 0
+            ? String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0')
+            : '08:30';
+
+        const campoHora = document.getElementById('agendamento-horario');
+        const campoFim = document.getElementById('agendamento-horario-fim');
+        if (campoHora) campoHora.value = inicio;
+        if (campoFim) campoFim.value = fim;
+
+        const selProf = document.getElementById('agendamento-profissional');
+        if (selProf && pai.profissional_id) selProf.value = pai.profissional_id;
+
+        const cx = document.getElementById('agendamento-encaixe');
+        if (cx) cx.checked = false;
+
+        const aviso = document.getElementById('aviso-encaixe');
+        if (aviso) aviso.classList.remove('hidden');
+        Auth.abrirModal('modal-marcar');
+        UI.showToast('Preenchendo dentro do atendimento de ' + (pai.cliente || '') + '.');
+    },
+
+    // ===== FECHAMENTO DO PROFISSIONAL =====
+    hojeISO() { return dataLocalISO(); },
+
+    // Carrega o ciclo atual e o historico de fechamentos
+    async carregarFechamento() {
+        const painel = document.getElementById('painel-fechamento');
+        if (!painel) return;
+        const lista = document.getElementById('fech-lista');
+        const hist = document.getElementById('fech-historico');
+        const elPeriodo = document.getElementById('fech-periodo');
+        const elQtd = document.getElementById('fech-qtd');
+        const elValor = document.getElementById('fech-valor');
+
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) return;
+
+            // Descobre o id do profissional desta sessao
+            let profId = this.user.id;
+            if (!profId) {
+                const { data: p } = await supabaseClient
+                    .from('profissionais').select('id').eq('user_id', session.user.id).maybeSingle();
+                if (p) profId = p.id;
+            }
+            if (!profId) return;
+            this._profIdFech = profId;
+
+            // Inicio do ciclo: dia seguinte ao ultimo fechamento
+            const { data: fechs } = await supabaseClient
+                .from('fechamentos').select('*')
+                .eq('profissional_id', profId)
+                .order('fim', { ascending: false });
+
+            let inicio = '0001-01-01';
+            if (fechs && fechs.length > 0 && fechs[0].fim) {
+                const d = new Date(fechs[0].fim + 'T00:00:00');
+                d.setDate(d.getDate() + 1);
+                inicio = dataLocalISO(d);
+            }
+            this._inicioCiclo = inicio;
+
+            // Atendimentos do ciclo (do inicio ate hoje)
+            const hoje = dataLocalISO();
+            const { data: ags, error } = await supabaseClient
+                .from('agendamentos').select('*')
+                .eq('profissional_id', profId)
+                .gte('data', inicio)
+                .lte('data', hoje)
+                .order('data', { ascending: true });
+            if (error) { console.warn('Erro ao buscar atendimentos do ciclo:', error.message); }
+
+            const atendimentos = (ags || []).filter(function (a) {
+                return String(a.status || '').toLowerCase() !== 'faltou';
+            });
+            const totalValor = atendimentos.reduce(function (s, a) { return s + (parseFloat(a.valor) || 0); }, 0);
+
+            this._totalCiclo = { qtd: atendimentos.length, valor: totalValor };
+
+            if (elPeriodo) {
+                const de = inicio === '0001-01-01' ? 'o comeco' : inicio.split('-').reverse().join('/');
+                elPeriodo.textContent = 'Ciclo atual: de ' + de + ' ate hoje (' + hoje.split('-').reverse().join('/') + ')';
+            }
+            if (elQtd) elQtd.textContent = String(atendimentos.length);
+            if (elValor) elValor.textContent = 'R$ ' + totalValor.toFixed(2);
+            this.calcularFechamento();
+
+            // Lista dos atendimentos do ciclo
+            if (lista) {
+                lista.innerHTML = '';
+                if (atendimentos.length === 0) {
+                    const p = document.createElement('p');
+                    p.className = 'text-xs text-zinc-500';
+                    p.textContent = 'Nenhum atendimento neste ciclo ainda.';
+                    lista.appendChild(p);
+                }
+                atendimentos.slice().reverse().forEach(function (a) {
+                    const linha = document.createElement('div');
+                    linha.className = 'fech-linha';
+                    const esq = document.createElement('div');
+                    const dia = document.createElement('span');
+                    dia.className = 'dia';
+                    dia.textContent = (a.data || '').split('-').reverse().slice(0, 2).join('/') + ' ' + this.normalizarHora(a.horario);
+                    const cli = document.createElement('span');
+                    cli.className = 'cli ml-2';
+                    cli.textContent = a.cliente || '';
+                    const sv = document.createElement('span');
+                    sv.className = 'text-zinc-400 ml-2';
+                    sv.textContent = a.servico || '';
+                    esq.appendChild(dia); esq.appendChild(cli); esq.appendChild(sv);
+                    const val = document.createElement('span');
+                    val.className = 'val';
+                    val.textContent = 'R$ ' + (parseFloat(a.valor) || 0).toFixed(2);
+                    linha.appendChild(esq); linha.appendChild(val);
+                    lista.appendChild(linha);
+                }.bind(this));
+            }
+
+            // Historico de ciclos fechados
+            if (hist) {
+                hist.innerHTML = '';
+                if (!fechs || fechs.length === 0) {
+                    const p = document.createElement('p');
+                    p.className = 'text-xs text-zinc-500';
+                    p.textContent = 'Nenhum ciclo fechado ainda.';
+                    hist.appendChild(p);
+                }
+                (fechs || []).forEach(function (f) {
+                    const linha = document.createElement('div');
+                    linha.className = 'fech-linha';
+                    const esq = document.createElement('div');
+                    const per = document.createElement('span');
+                    per.className = 'dia';
+                    per.textContent = (f.inicio || '').split('-').reverse().join('/') + ' a ' + (f.fim || '').split('-').reverse().join('/');
+                    const rec = document.createElement('span');
+                    rec.className = 'text-zinc-400 ml-2';
+                    rec.textContent = f.recebido_em ? 'recebido em ' + f.recebido_em.split('-').reverse().join('/') : '';
+                    esq.appendChild(per); esq.appendChild(rec);
+                    const val = document.createElement('span');
+                    val.className = 'val';
+                    val.textContent = 'R$ ' + (parseFloat(f.total_comissao) || 0).toFixed(2) + ' de comissao';
+                    linha.appendChild(esq); linha.appendChild(val);
+                    hist.appendChild(linha);
+                });
+            }
+        } catch (e) {
+            console.warn('Erro ao carregar o fechamento:', e);
+        }
+    },
+
+    calcularFechamento() {
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const total = this._totalCiclo ? this._totalCiclo.valor : 0;
+        const com = isNaN(pct) ? 0 : (total * pct) / 100;
+        const el = document.getElementById('fech-comissao');
+        if (el) el.textContent = 'R$ ' + com.toFixed(2);
+    },
+
+    abrirFecharCiclo() {
+        const total = this._totalCiclo || { qtd: 0, valor: 0 };
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const com = isNaN(pct) ? 0 : (total.valor * pct) / 100;
+
+        const elPer = document.getElementById('fechar-periodo');
+        const elQtd = document.getElementById('fechar-atend');
+        const elVal = document.getElementById('fechar-valor');
+        const elCom = document.getElementById('fechar-comissao');
+        const elData = document.getElementById('fechar-recebido');
+
+        const inicio = this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : null;
+        if (elPer) elPer.textContent = 'Periodo: ' + (inicio ? inicio.split('-').reverse().join('/') : 'inicio') + ' ate ' + dataLocalISO().split('-').reverse().join('/');
+        if (elQtd) elQtd.textContent = String(total.qtd);
+        if (elVal) elVal.textContent = 'R$ ' + total.valor.toFixed(2);
+        if (elCom) elCom.textContent = 'R$ ' + com.toFixed(2);
+        if (elData) elData.value = dataLocalISO();
+        Auth.abrirModal('modal-fechar');
+    },
+
+    async confirmarFechamento() {
+        const profId = this._profIdFech;
+        const total = this._totalCiclo || { qtd: 0, valor: 0 };
+        if (!profId) { UI.showToast('Nao encontrei o seu cadastro. Recarregue a pagina.', 'error'); return; }
+        if (total.qtd === 0) { UI.showToast('Nao ha atendimentos neste ciclo para fechar.', 'error'); return; }
+
+        const pct = parseFloat(document.getElementById('fech-pct')?.value);
+        const comissaoPct = isNaN(pct) ? 0 : pct;
+        const comissaoVal = (total.valor * comissaoPct) / 100;
+        const recebido = document.getElementById('fechar-recebido')?.value || dataLocalISO();
+
+        try {
+            const { error } = await supabaseClient.from('fechamentos').insert([{
+                estabelecimento_id: localStorage.getItem('hairconcept_estab_id'),
+                profissional_id: profId,
+                inicio: this._inicioCiclo && this._inicioCiclo !== '0001-01-01' ? this._inicioCiclo : dataLocalISO(),
+                fim: dataLocalISO(),
+                total_atendimentos: total.qtd,
+                total_valor: total.valor,
+                comissao_pct: comissaoPct,
+                total_comissao: comissaoVal,
+                recebido_em: recebido
+            }]);
+            if (error) {
+                console.error('Erro ao fechar o ciclo:', error);
+                UI.showToast(mensagemAmigavel(error), 'error');
+                return;
+            }
+            Auth.fecharModal('modal-fechar');
+            const campoPct = document.getElementById('fech-pct');
+            if (campoPct) campoPct.value = '';
+            UI.showToast('Ciclo fechado! O proximo comeca amanha.');
+            this.carregarFechamento();
+        } catch (e) {
+            console.error('Erro inesperado ao fechar:', e);
+            UI.showToast('Erro inesperado ao fechar o ciclo.', 'error');
+        }
+    },
+
+    abrirMarcar(horario) {
+        this._modoEncaixe = false;
+        const campoData = document.getElementById('agendamento-data');
+        const campoHora = document.getElementById('agendamento-horario');
+        if (campoData) campoData.value = document.getElementById('filtro-data-agenda')?.value || dataLocalISO();
+        if (campoHora) campoHora.value = horario || '08:00';
+        const campoFim = document.getElementById('agendamento-horario-fim');
+        if (campoFim) {
+            const m = this.minutosDoDia(campoHora ? campoHora.value : '08:00');
+            const fim = m >= 0 ? m + 30 : 510;
+            const hh = String(Math.floor(fim / 60)).padStart(2, '0');
+            const mm = String(fim % 60).padStart(2, '0');
+            campoFim.value = hh + ':' + mm;
+        }
+        const cxEncaixe = document.getElementById('agendamento-encaixe');
+        if (cxEncaixe) cxEncaixe.checked = false;
+        const avisoEnc = document.getElementById('aviso-encaixe');
+        if (avisoEnc) avisoEnc.classList.add('hidden');
+        this.aplicarHorariosLivres();
+        Auth.abrirModal('modal-marcar');
+    },
+
+    async handleCreateAgendamento(event) {
+        event.preventDefault();
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
+        const data = document.getElementById('agendamento-data').value;
+        const profissional_id = document.getElementById('agendamento-profissional').value;
+        // Envia só HH:MM para o banco, sem os segundos
+        const horario = String(document.getElementById('agendamento-horario')?.value || '').slice(0, 5);
+        const horarioFim = String(document.getElementById('agendamento-horario-fim')?.value || '').slice(0, 5);
+        const aceitaEncaixe = !!document.getElementById('agendamento-encaixe')?.checked;
+
+        if (!horarioFim || horarioFim <= horario) {
+            UI.showToast('O horário de fim precisa ser depois do horário de início.', 'error');
+            return;
+        }
+
+        // Fora do modo encaixe, nao deixa marcar em cima de outro atendimento
+        if (!this._modoEncaixe) {
+            try {
+                const { data: doDia } = await supabaseClient
+                    .from('agendamentos')
+                    .select('horario, horario_fim, profissional_id, cliente')
+                    .eq('estabelecimento_id', estabId)
+                    .eq('data', data)
+                    .eq('profissional_id', profissional_id);
+                if (this.horarioOcupado(doDia || [], profissional_id, horario)) {
+                    const selP = document.getElementById('agendamento-profissional');
+                    const nomeDoProf = (selP && selP.selectedOptions && selP.selectedOptions[0]) ? selP.selectedOptions[0].textContent : 'este profissional';
+                    UI.showToast('Esse horario ja esta ocupado para ' + nomeDoProf + '. Use Adicionar dentro se quiser encaixar.', 'error');
+                    return;
+                }
+            } catch (e) {
+                console.warn('Nao foi possivel conferir a agenda:', e);
+            }
+        }
+        const cliente = document.getElementById('cliente-nome').value;
+        const servico = document.getElementById('cliente-servico').value;
+        const valor = parseValor(document.getElementById('cliente-valor').value);
+        try {
+            const { error } = await supabaseClient.from('agendamentos').insert([{
+                estabelecimento_id: estabId,
+                data,
+                profissional_id,
+                horario: horario,
+                horario_fim: horarioFim,
+                status: 'espera',
+                aceita_encaixe: aceitaEncaixe,
+                cliente,
+                servico,
+                valor
+            }]);
+            if (error) throw error;
+            UI.showToast('Agendamento efetuado com sucesso!');
+            document.getElementById('cliente-nome').value = '';
+            document.getElementById('cliente-servico').value = '';
+            document.getElementById('cliente-valor').value = '';
+            Auth.fecharModal('modal-marcar');
+
+            // LEVA PARA A AGENDA, no dia que foi marcado.
+            // Sem isto o atendimento entrava mas a pessoa nao via nada.
+            const filtroData = document.getElementById('filtro-data-agenda');
+            if (filtroData && data) filtroData.value = data;
+            if (this.user && this.user.role === 'profissional' && this.user.id) {
+                localStorage.setItem('hairconcept_prof_selecionado', this.user.id);
+            } else if (profissional_id) {
+                localStorage.setItem('hairconcept_prof_selecionado', profissional_id);
+            }
+            // Só a troca de aba aqui: se algo acima falhar, a agenda abre do mesmo jeito
+            UI.switchTab('aba-agenda');
+            try { this.renderAgendaGrid(); } catch (e) { console.warn(e); }
+            try { this.renderAgendaSemana(); } catch (e) { console.warn(e); }
+            try { this.renderRelatorios(); } catch (e) { console.warn(e); }
+        } catch (e) {
+            UI.showToast('Nao consegui marcar o atendimento. ' + mensagemAmigavel(e), 'error');
+        }
+    },
+    // ===== BARRA LATERAL DE PROFISSIONAIS =====
+    // Monta a lista de profissionais na lateral da agenda.
+    // A foto vem da aba do profissional; sem foto, mostra as duas iniciais.
+    iniciaisDoNome(nome) {
+        const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
+        if (partes.length === 0) return '?';
+        if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+        return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+    },
+
+    async montarLateralProfs() {
+        const lista = document.getElementById('ag-lista-profs');
+        if (!lista) return;
+        try {
+            const estabId = await this.obterEstabId();
+            const { data } = await supabaseClient
+                .from('profissionais')
+                .select('id, nome, cargo, foto_url, ativo')
+                .eq('estabelecimento_id', estabId);
+
+            let profs = (data || []).filter(function (p) { return p.ativo !== false; });
+            profs.sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'); });
+
+            this._profsLateral = profs;
+
+            // Se ninguem estiver selecionado, pega o primeiro
+            const selecionado = localStorage.getItem('hairconcept_prof_selecionado');
+            if (!selecionado || !profs.some(function (p) { return p.id === selecionado; })) {
+                if (profs.length > 0) localStorage.setItem('hairconcept_prof_selecionado', profs[0].id);
+            }
+
+            this.desenharLateralProfs(profs);
+        } catch (e) {
+            console.warn('Nao foi possivel montar a barra de profissionais:', e);
+        }
+    },
+
+    desenharLateralProfs(profs) {
+        const lista = document.getElementById('ag-lista-profs');
+        if (!lista) return;
+        // O selo do certificado aparece na agenda (o cliente ve).
+        // Se ainda nao carregou, carrega agora e redesenha uma vez.
+        if (!this._temCertificado) {
+            const self = this;
+            this.carregarSeloCertificados().then(function () {
+                if (self._profsLateral && self._profsLateral.length) {
+                    self.desenharLateralProfs(self._profsLateral);
+                }
+            }).catch(function () {});
+        }
+        const selecionado = localStorage.getItem('hairconcept_prof_selecionado');
+        const comNome = profs.length <= 15;
+
+        lista.innerHTML = '';
+        if (profs.length === 0) {
+            const p = document.createElement('p');
+            p.className = 'text-[10px] text-zinc-500 px-1';
+            p.textContent = 'Nenhum profissional ativo.';
+            lista.appendChild(p);
+            return;
+        }
+
+        profs.forEach(function (pf) {
+            const item = document.createElement('div');
+            item.className = 'ag-item' + (pf.id === selecionado ? ' ativo' : '');
+            item.title = (pf.nome || '') + (pf.cargo ? ' - ' + pf.cargo : '') + (pf.bio ? ' · ' + pf.bio : '');
+            item.onclick = function () { App.selecionarProfAgenda(pf.id); };
+
+            const av = document.createElement('div');
+            av.className = 'ag-avatar';
+            if (pf.foto_url) {
+                const img = document.createElement('img');
+                img.src = pf.foto_url;
+                img.className = 'w-full h-full rounded-[inherit] object-cover';
+                av.appendChild(img);
+            } else {
+                av.textContent = App.iniciaisDoNome(pf.nome);
+            }
+            item.appendChild(av);
+
+            if (comNome) {
+                const nome = document.createElement('span');
+                nome.className = 'ag-item-nome';
+                const txt = document.createElement('span');
+                txt.textContent = pf.nome || '';
+                nome.appendChild(txt);
+                // Selo dourado: quem tem certificado aparece com o chapeu
+                if (App.seloCertificado) nome.insertAdjacentHTML('beforeend', App.seloCertificado(pf.id));
+                item.appendChild(nome);
+            }
+
+            lista.appendChild(item);
+        });
+    },
+
+    filtrarLateralProfs(termo) {
+        const t = String(termo || '').toLowerCase();
+        // Se a lateral ainda nao foi montada, monta agora: antes a busca
+        // devolvia lista vazia e nada era filtrado, sem aviso nenhum.
+        if (!this._profsLateral) {
+            if (typeof this.montarLateralProfs === 'function') {
+                this.montarLateralProfs();
+                return;
+            }
+            this._profsLateral = [];
+        }
+        const todos = this._profsLateral;
+        const filtrados = todos.filter(function (p) {
+            return String(p.nome || '').toLowerCase().indexOf(t) >= 0;
+        });
+        this.desenharLateralProfs(filtrados);
+    },
+
+    selecionarProfAgenda(id) {
+        localStorage.setItem('hairconcept_prof_selecionado', id);
+        const lateral = document.getElementById('ag-lateral');
+        if (lateral) lateral.classList.remove('aberta');
+        this.montarLateralProfs();
+        this.renderAgendaGrid();
+    },
+
+// ===== CERTIFICADOS DO PROFISSIONAL =====
+    handleFotoCertificado(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this._certFotoTemp = e.target.result;
+            const prev = document.getElementById('cert-preview');
+            if (prev) { prev.src = this._certFotoTemp; prev.classList.remove('hidden'); }
+            const nome = document.getElementById('cert-arquivo-nome');
+            if (nome) nome.textContent = file.name;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async salvarCertificado(event) {
+        if (event) event.preventDefault();
+        const curso = (document.getElementById('cert-curso') || {}).value || '';
+        const instituicao = (document.getElementById('cert-instituicao') || {}).value || '';
+        const dataConc = (document.getElementById('cert-data') || {}).value || null;
+        const link = (document.getElementById('cert-link') || {}).value || '';
+        if (!String(curso).trim()) { UI.showToast('Escreva o nome do curso.', 'error'); return; }
+        if (!this._certFotoTemp && !String(link).trim()) {
+            UI.showToast('Anexe a foto ou cole o link do certificado.', 'error');
+            return;
+        }
+        try {
+            const estabId = await this.obterEstabId();
+            const profId = localStorage.getItem('hairconcept_prof_id');
+            if (!profId) { UI.showToast('Nao encontrei o seu cadastro. Saia e entre de novo.', 'error'); return; }
+            const { error } = await supabaseClient.from('certificados').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                curso: String(curso).trim(),
+                instituicao: instituicao ? String(instituicao).trim() : null,
+                data_conclusao: dataConc || null,
+                comprovante_url: this._certFotoTemp || String(link).trim() || null
+            }]);
+            if (error) throw error;
+            this._certFotoTemp = null;
+            if (event && event.target && event.target.reset) event.target.reset();
+            const prev = document.getElementById('cert-preview');
+            if (prev) { prev.src = ''; prev.classList.add('hidden'); }
+            const nome = document.getElementById('cert-arquivo-nome');
+            if (nome) nome.textContent = '';
+            UI.showToast('Certificado salvo!');
+            this.carregarMeusCertificados();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarMeusCertificados() {
+        const lista = document.getElementById('lista-certificados');
+        if (!lista) return;
+        try {
+            const profId = localStorage.getItem('hairconcept_prof_id');
+            if (!profId) return;
+            const { data, error } = await supabaseClient
+                .from('certificados').select('*')
+                .eq('profissional_id', profId)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            const itens = data || [];
+            lista.innerHTML = '';
+            if (itens.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-[10px] text-zinc-500';
+                p.textContent = 'Nenhum certificado cadastrado ainda.';
+                lista.appendChild(p);
+                return;
+            }
+            itens.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-white/10';
+                const ehLink = c.comprovante_url && c.comprovante_url.indexOf('http') === 0;
+                let img;
+                if (ehLink) {
+                    img = document.createElement('a');
+                    img.href = c.comprovante_url;
+                    img.target = '_blank';
+                    img.rel = 'noopener';
+                    img.className = 'w-12 h-12 rounded-lg border border-white/10 shrink-0 flex items-center justify-center bg-zinc-950 text-brand-500';
+                    img.title = 'Abrir o certificado';
+                    img.innerHTML = '<i class="fa-solid fa-up-right-from-square"></i>';
+                } else {
+                    img = document.createElement('img');
+                    img.src = c.comprovante_url || FOTO_PADRAO;
+                    img.className = 'w-12 h-12 rounded-lg object-cover cursor-pointer border border-white/10 shrink-0';
+                    img.title = 'Ver certificado';
+                    img.onclick = () => App.verCertificado(c.comprovante_url, c.curso);
+                }
+                const info = document.createElement('div');
+                info.className = 'flex-1 min-w-0';
+                const h = document.createElement('p');
+                h.className = 'text-[11px] font-bold text-white truncate';
+                h.textContent = c.curso || '';
+                const sub = document.createElement('p');
+                sub.className = 'text-[9px] text-zinc-400';
+                const partes = [];
+                if (c.instituicao) partes.push(c.instituicao);
+                if (c.data_conclusao) partes.push(new Date(c.data_conclusao + 'T00:00:00').toLocaleDateString('pt-BR'));
+                sub.textContent = partes.join(' · ') || 'Certificado registrado';
+                info.appendChild(h); info.appendChild(sub);
+                const btn = document.createElement('button');
+                btn.className = 'px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[9px] font-bold uppercase hover:bg-rose-500/20 transition shrink-0';
+                btn.textContent = 'Apagar';
+                btn.onclick = () => App.apagarCertificado(c.id, c.curso);
+                card.appendChild(img); card.appendChild(info); card.appendChild(btn);
+                lista.appendChild(card);
+            });
+        } catch (e) {
+            console.warn('Nao foi possivel carregar os certificados:', e);
+        }
+    },
+
+    verCertificado(url, curso) {
+        if (!url) return;
+        const janela = window.open('', '_blank');
+        if (!janela) return;
+        janela.document.write('<html><head><title>' + (curso || 'Certificado') + '</title><style>body{margin:0;background:#18181b;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:96vw;max-height:96vh;box-shadow:0 8px 40px rgba(0,0,0,.6)}</style></head><body><img src="' + url + '" alt="Certificado"></body></html>');
+    },
+
+    async apagarCertificado(id, curso) {
+        if (!confirm('Apagar o certificado "' + (curso || '') + '"?')) return;
+        try {
+            const { error } = await supabaseClient.from('certificados').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Certificado apagado.');
+            this.carregarMeusCertificados();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // ===== CURSOS (salao cadastra, profissional estuda) =====
+    async salvarCurso(event) {
+        if (event) event.preventDefault();
+        const titulo = ((document.getElementById('curso-titulo') || {}).value || '').trim();
+        const link = ((document.getElementById('curso-link') || {}).value || '').trim();
+        const tipo = ((document.getElementById('curso-tipo') || {}).value || 'Curso');
+        const descricao = ((document.getElementById('curso-descricao') || {}).value || '').trim();
+        if (!titulo || !link) { UI.showToast('Preencha o título e o link.', 'error'); return; }
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
+            const { error } = await supabaseClient.from('cursos').insert([{
+                estabelecimento_id: estabId,
+                titulo: titulo,
+                link: link,
+                tipo: tipo,
+                descricao: descricao || null
+            }]);
+            if (error) throw error;
+            if (event && event.target && event.target.reset) event.target.reset();
+            UI.showToast('Curso indicado para a equipe!');
+            this.carregarCursosSalao();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async carregarCursosSalao() {
+        const box = document.getElementById('lista-cursos');
+        if (!box) return;
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data, error } = await supabaseClient
+                .from('cursos').select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('criado_em', { ascending: false });
+            if (error) throw error;
+            this.desenharCursosSalao(data || []);
+        } catch (e) {
+            box.innerHTML = '<p class="text-xs text-zinc-500 p-4 glass-water rounded-2xl border border-white/10">Rode o SQL no Supabase para liberar a aba de cursos.</p>';
+        }
+    },
+
+    desenharCursosSalao(cursos) {
+        const box = document.getElementById('lista-cursos');
+        if (!box) return;
+        box.innerHTML = '';
+        if (!cursos.length) {
+            box.innerHTML = '<p class="text-xs text-zinc-500 p-4 glass-water rounded-2xl border border-white/10">Nenhum curso indicado ainda. Use o formulário acima.</p>';
+            return;
+        }
+        const icones = { 'Video': 'fa-circle-play', 'Curso': 'fa-book', 'Artigo': 'fa-newspaper', 'PDF': 'fa-file-pdf', 'Site': 'fa-globe' };
+        cursos.forEach(function (c) {
+            const item = document.createElement('div');
+            item.className = 'glass-water rounded-2xl border border-white/10 p-4 flex items-center gap-3 flex-wrap';
+
+            const ic = document.createElement('div');
+            ic.className = 'w-9 h-9 rounded-xl flex items-center justify-center bg-brand-500/15 text-brand-500 flex-shrink-0';
+            ic.innerHTML = '<i class="fa-solid ' + (icones[c.tipo] || 'fa-graduation-cap') + '"></i>';
+
+            const info = document.createElement('div');
+            info.className = 'flex-grow min-w-[140px]';
+            const t = document.createElement('strong');
+            t.className = 'block text-xs font-bold text-white uppercase';
+            t.textContent = c.titulo || 'Curso';
+            info.appendChild(t);
+            const sub = document.createElement('span');
+            sub.className = 'block text-[10px] text-zinc-500';
+            sub.textContent = (c.tipo || 'Curso') + (c.descricao ? ' · ' + c.descricao : '');
+            info.appendChild(sub);
+
+            const ver = document.createElement('a');
+            ver.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white text-[10px] font-bold uppercase';
+            ver.href = c.link || '#';
+            ver.target = '_blank';
+            ver.rel = 'noopener';
+            ver.textContent = 'Abrir';
+
+            const del = document.createElement('button');
+            del.className = 'px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 text-[10px] font-bold uppercase cursor-pointer';
+            del.textContent = 'Remover';
+            del.onclick = function () { App.removerCurso(c.id); };
+
+            item.appendChild(ic); item.appendChild(info); item.appendChild(ver); item.appendChild(del);
+            box.appendChild(item);
+        });
+    },
+
+    async removerCurso(id) {
+        if (!id) return;
+        try {
+            const { error } = await supabaseClient.from('cursos').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Curso removido.');
+            this.carregarCursosSalao();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // ===== MEU JEITO: cor escolhida pelo profissional =====
+    // Fica salva no perfil dele (coluna cor_prof) e vem junto no login.
+    aplicarCorProf(cor) {
+        const area = document.getElementById('hc-area-prof');
+        if (!area || !cor) return;
+        area.style.setProperty('--pc', cor);
+        this._corProf = cor;
+    },
+
+    async escolherCorProf(cor) {
+        this.aplicarCorProf(cor);
+        const profId = localStorage.getItem('hairconcept_prof_id');
+        if (!profId) { UI.showToast('Cor aplicada nesta sessão.'); return; }
+        try {
+            const { error } = await supabaseClient
+                .from('profissionais').update({ cor_prof: cor }).eq('id', profId);
+            if (error) throw error;
+            if (this.user && this.user.profDados) this.user.profDados.cor = cor;
+            localStorage.setItem('hairconcept_prof_cor', cor);
+            UI.showToast('Sua cor foi salva!');
+        } catch (e) {
+            // Se a coluna ainda nao existir, guarda no navegador e segue
+            localStorage.setItem('hairconcept_prof_cor', cor);
+            UI.showToast('Cor aplicada. Rode o SQL para ela ficar salva no perfil.', 'error');
+        }
+    },
+
+    // ===== MINHA FRASE: aparece embaixo do nome na agenda =====
+    async salvarBio() {
+        const el = document.getElementById('prof-bio');
+        const bio = el ? String(el.value || '').trim() : '';
+        const profId = localStorage.getItem('hairconcept_prof_id');
+        if (!profId) return;
+        try {
+            const { error } = await supabaseClient
+                .from('profissionais').update({ bio: bio || null }).eq('id', profId);
+            if (error) throw error;
+            if (this.user && this.user.profDados) this.user.profDados.bio = bio;
+            UI.showToast('Sua frase foi salva!');
+        } catch (e) {
+            UI.showToast('Rode o SQL para a frase ficar salva no perfil.', 'error');
+        }
+    },
+
+    // ===== MEUS CURSOS: os que o salao indicou =====
+    async carregarCursosProf() {
+        const box = document.getElementById('hc-prof-cursos');
+        if (!box) return;
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data, error } = await supabaseClient
+                .from('cursos').select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('titulo', { ascending: true });
+            if (error) throw error;
+            this.desenharCursosProf(data || []);
+        } catch (e) {
+            box.innerHTML = '<p class="hc-prof-dica">Nenhum curso indicado ainda.</p>';
+        }
+    },
+
+    desenharCursosProf(cursos) {
+        const box = document.getElementById('hc-prof-cursos');
+        if (!box) return;
+        box.innerHTML = '';
+        if (!cursos.length) {
+            box.innerHTML = '<p class="hc-prof-dica">O salão ainda não indicou cursos. Fique de olho!</p>';
+            return;
+        }
+        const icones = { 'Video': 'fa-circle-play', 'Curso': 'fa-book', 'Artigo': 'fa-newspaper', 'PDF': 'fa-file-pdf', 'Site': 'fa-globe' };
+        cursos.forEach(function (c) {
+            const item = document.createElement('div');
+            item.className = 'hc-prof-curso';
+
+            const ic = document.createElement('div');
+            ic.className = 'hc-prof-curso-icone';
+            const fa = icones[c.tipo] || 'fa-graduation-cap';
+            ic.innerHTML = '<i class="fa-solid ' + fa + '"></i>';
+
+            const info = document.createElement('div');
+            info.className = 'hc-prof-curso-info';
+            const t = document.createElement('strong');
+            t.textContent = c.titulo || 'Curso';
+            info.appendChild(t);
+            if (c.descricao) {
+                const d = document.createElement('span');
+                d.textContent = c.descricao;
+                info.appendChild(d);
+            }
+
+            item.appendChild(ic);
+            item.appendChild(info);
+
+            if (c.link) {
+                const lk = document.createElement('a');
+                lk.className = 'hc-prof-curso-link';
+                lk.href = c.link;
+                lk.target = '_blank';
+                lk.rel = 'noopener';
+                lk.textContent = 'Abrir';
+                item.appendChild(lk);
+            }
+            box.appendChild(item);
+        });
+    },
+
+    // ===== EXPORTAR AS NOTAS =====
+    exportarPostIts() {
+        const lista = this._postIts || [];
+        if (!lista.length) { UI.showToast('Você ainda não tem notas.'); return; }
+        const txt = lista.map(function (p, i) {
+            return '--- Nota ' + (i + 1) + ' ---\n' + (p.texto || p.text || '');
+        }).join('\n\n');
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'minhas-notas.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+        UI.showToast('Notas baixadas!');
+    },
+
+    async carregarSeloCertificados() {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('certificados').select('profissional_id')
+                .eq('estabelecimento_id', estabId);
+            // Conta quantos certificados cada profissional tem
+            const mapa = {};
+            (data || []).forEach(c => {
+                if (!c.profissional_id) return;
+                mapa[c.profissional_id] = (mapa[c.profissional_id] || 0) + 1;
+            });
+            this._certPorProf = mapa;
+            this._temCertificado = new Set(Object.keys(mapa));
+        } catch (e) {
+            this._certPorProf = {};
+            this._temCertificado = new Set();
+        }
+    },
+
+    // Devolve o selo. Com 1 curso: 🎓  Com 2+: 🎓 + o numero
+    seloCertificado(profId) {
+        const n = (this._certPorProf && this._certPorProf[profId]) || 0;
+        if (n === 0) return '';
+        if (n === 1) {
+            return ' <i class="fa-solid fa-graduation-cap text-amber-400" title="1 curso registrado"></i>';
+        }
+        return ' <i class="fa-solid fa-graduation-cap text-amber-400" title="' + n + ' cursos registrados"></i>' +
+               '<span class="text-[9px] font-black text-amber-400 align-super">+' + (n - 1) + '</span>';
+    },
+
+// ===== MODELO DE AGENDA DO SALAO (preferencia no banco) =====
+    async salvarModeloAgenda(modelo) {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { error } = await supabaseClient
+                .from('estabelecimentos')
+                .update({ modelo_agenda: modelo })
+                .eq('id', estabId);
+            if (error) throw error;
+            localStorage.setItem('hairconcept_modo_agenda', modelo);
+            UI.showToast('Modelo da agenda salvo! Ele abre assim para o salao inteiro.');
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // Le a preferencia do salao ao entrar
+    async carregarModeloAgenda() {
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+            const { data } = await supabaseClient
+                .from('estabelecimentos')
+                .select('modelo_agenda')
+                .eq('id', estabId)
+                .maybeSingle();
+            const modo = (data && data.modelo_agenda) || 'semana';
+            localStorage.setItem('hairconcept_modo_agenda', modo);
+            const sel = document.getElementById('config-modelo-agenda');
+            if (sel) sel.value = modo;
+        } catch (e) { /* segue no padrao */ }
+    },
+
+// ===== EXCLUIR CONTA (carencia de 7 dias) =====
+    async pedirExclusaoConta() {
+        const nomeSalao = (document.getElementById('config-nome-salao') || {}).value || '';
+        const digitado = prompt('EXCLUIR A CONTA\n\nSeus dados serao apagados definitivamente em 7 dias.\nDurante esse prazo voce pode entrar e cancelar.\n\nPara confirmar, digite o nome do salao:');
+        if (digitado === null) return;
+        if (String(digitado).trim().toLowerCase() !== String(nomeSalao).trim().toLowerCase()) {
+            UI.showToast('O nome digitado nao confere. Nada foi alterado.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.rpc('pedir_exclusao_conta');
+            if (error) throw error;
+            UI.showToast('Conta marcada para exclusao. Voce tem 7 dias para voltar atras.', 'success');
+            setTimeout(function () { Auth.logout(); }, 2500);
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async cancelarExclusaoConta() {
+        try {
+            const { error } = await supabaseClient.rpc('cancelar_exclusao_conta');
+            if (error) throw error;
+            UI.showToast('Exclusao cancelada. Sua conta continua ativa.', 'success');
+            this.verificarExclusaoPendente();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async verificarExclusaoPendente() {
+        const caixa = document.getElementById('aviso-exclusao');
+        if (!caixa) return;
+        try {
+            const s = await supabaseClient.auth.getSession();
+            const uid = s && s.data && s.data.session ? s.data.session.user.id : null;
+            if (!uid) return;
+            const { data } = await supabaseClient.from('estabelecimentos')
+                .select('excluido_em').eq('user_id', uid).maybeSingle();
+            if (data && data.excluido_em) {
+                const limite = new Date(data.excluido_em);
+                limite.setDate(limite.getDate() + 7);
+                const txt = document.getElementById('aviso-exclusao-data');
+                if (txt) txt.textContent = limite.toLocaleDateString('pt-BR');
+                caixa.classList.remove('hidden');
+            } else {
+                caixa.classList.add('hidden');
+            }
+        } catch (e) { /* silencioso */ }
+    },
+
+    async checarContaExcluida(session) {
+        if (!session || !session.user) return false;
+        try {
+            const { data } = await supabaseClient.from('estabelecimentos')
+                .select('excluido_em').eq('user_id', session.user.id).maybeSingle();
+            if (data && data.excluido_em) {
+                const limite = new Date(data.excluido_em);
+                limite.setDate(limite.getDate() + 7);
+                UI.showToast('Esta conta foi excluida. Os dados serao apagados em ' + limite.toLocaleDateString('pt-BR') + '.', 'error');
+                return true;
+            }
+        } catch (e) { /* segue */ }
+        return false;
+    },
+
+    // ===== MODELO DE AGENDA DO SALAO =====
+    // Rotulo do modelo escolhido (mostrado no topo da agenda)
+    rotuloModeloAgenda() {
+        const m = this.modoAgendaAtual ? this.modoAgendaAtual() : 'semana';
+        if (m === 'dia') return 'Agenda do dia (todos os profissionais)';
+        return 'Semana do profissional';
+    },
+
+// ===== GRADE DA SEMANA =====
+    // Seg a Sab do profissional selecionado. No celular mostra um dia por vez.
+    diasDaSemana(baseISO) {
+        // baseISO = qualquer data da semana; retorna o domingo anterior (inicio da semana)
+        const d = new Date((baseISO || dataLocalISO()) + 'T00:00:00');
+        const dow = d.getDay(); // 0=dom
+        const inicio = new Date(d);
+        inicio.setDate(d.getDate() - dow);
+        const dias = [];
+        for (let i = 1; i <= 6; i++) { // 1=seg .. 6=sab
+            const x = new Date(inicio);
+            x.setDate(inicio.getDate() + i);
+            dias.push(dataLocalISO(x));
+        }
+        return dias;
+    },
+
+    nomeDiaCurto(iso) {
+        const d = new Date(iso + 'T00:00:00');
+        const nomes = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+        const num = String(d.getDate()).padStart(2, '0');
+        return nomes[d.getDay()] + ' ' + num;
+    },
+
+    // Desenha a grade da semana do profissional selecionado
+    async renderAgendaSemana() {
+        const wrap = document.getElementById('semana-wrap');
+        const cab = document.getElementById('semana-cabecalho');
+        const corpo = document.getElementById('semana-corpo');
+        if (!wrap || !cab || !corpo) return;
+
+        try {
+            const estabId = await this.obterEstabId();
+            if (!estabId) return;
+
+            const { data: profsTodos } = await supabaseClient
+                .from('profissionais').select('id, nome')
+                .eq('estabelecimento_id', estabId);
+            const ativos = (profsTodos || []).filter(function (p) { return true; });
+
+            // Profissional da semana: o selecionado na lateral, ou o proprio (se for profissional)
+            let profId = null;
+            if (this.user.role === 'profissional') {
+                profId = this.user.id;
+            } else {
+                profId = localStorage.getItem('hairconcept_prof_selecionado');
+            }
+            if (!profId || !ativos.some(function (p) { return p.id === profId; })) {
+                profId = ativos.length > 0 ? ativos[0].id : null;
+            }
+            this._profSemana = profId;
+
+            if (!profId) {
+                cab.innerHTML = '';
+                corpo.innerHTML = '<tr><td class="py-6 px-4 text-center text-zinc-500 text-xs">Cadastre um profissional para ver a semana.</td></tr>';
+                return;
+            }
+
+            // Data de referencia (o campo de data manda)
+            const campoData = document.getElementById('filtro-data-agenda');
+            const ref = (campoData && campoData.value) || dataLocalISO();
+            const dias = this.diasDaSemana(ref);
+
+            // Busca os agendamentos da semana inteira de uma vez
+            const { data: ags } = await supabaseClient
+                .from('agendamentos')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .eq('profissional_id', profId)
+                .gte('data', dias[0])
+                .lte('data', dias[5]);
+
+            const todos = ags || [];
+
+            // Bloqueios do periodo (fechado / folga / intervalo)
+            let bloqueios = [];
+            try {
+                const { data: bl } = await supabaseClient.rpc('bloqueios_do_periodo', { p_de: dias[0], p_ate: dias[5] });
+                bloqueios = bl || [];
+            } catch (e) {
+                // Se a funcao ainda nao existir, a grade simplesmente nao pinta bloqueio
+                console.warn('Bloqueios indisponiveis:', e);
+            }
+
+            // Descobre o bloqueio que cobre um dia (e horario, se houver)
+            const bloqueioEm = function (iso, hhmm, profIdSel) {
+                return (bloqueios || []).find(function (b) {
+                    if (b.data !== iso) return false;
+                    // prof_id nulo = salao inteiro; senao, so o profissional
+                    if (b.profissional_id && b.profissional_id !== profIdSel) return false;
+                    if (!b.hora_inicio) return true; // dia todo
+                    const hi = App.normalizarHora(b.hora_inicio);
+                    const hf = App.normalizarHora(b.hora_fim);
+                    const alvo = hhmm;
+                    return hhmm >= hi && hhmm < hf;
+                });
+            };
+            this._bloqueioEm = bloqueioEm;
+
+            // Cabecalho: dias + botao de menu por dia
+            const hoje = dataLocalISO();
+            cab.innerHTML = '';
+            const thHora = document.createElement('th');
+            thHora.className = 'semana-th-hora';
+            thHora.textContent = 'Horário';
+            cab.appendChild(thHora);
+
+            // Quantos atendimentos tem em cada dia (para o circulo de contagem)
+            const contagemDia = {};
+            todos.forEach(function (a) {
+                if (!a.data) return;
+                contagemDia[a.data] = (contagemDia[a.data] || 0) + 1;
+            });
+
+            dias.forEach(function (iso, idx) {
+                const th = document.createElement('th');
+                th.className = 'semana-th' + (iso === hoje ? ' hoje' : '') + (idx === 0 ? ' primeiro' : '');
+                th.dataset.dia = iso;
+
+                const topo = document.createElement('div');
+                topo.className = 'semana-th-topo';
+                const nome = document.createElement('span');
+                nome.className = 'semana-dia-nome';
+                nome.textContent = App.nomeDiaCurto(iso);
+                topo.appendChild(nome);
+
+                // Circulo com a quantidade de atendimentos do dia
+                const cont = document.createElement('span');
+                cont.className = 'semana-dia-cont' + (contagemDia[iso] ? '' : ' vazio');
+                cont.textContent = contagemDia[iso] || '0';
+                cont.title = (contagemDia[iso] || 0) + ' atendimento(s)';
+                topo.appendChild(cont);
+
+                const btnMenu = document.createElement('button');
+                btnMenu.type = 'button';
+                btnMenu.className = 'semana-menu-btn';
+                btnMenu.title = 'Opções do dia';
+                btnMenu.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                btnMenu.onclick = function (ev) { ev.stopPropagation(); App.abrirMenuDia(ev, iso); };
+                topo.appendChild(btnMenu);
+
+                th.appendChild(topo);
+                cab.appendChild(th);
+            });
+
+            // Corpo: horarios x dias
+            const horarios = [];
+            for (let m = 8 * 60; m < 19 * 60; m += 30) {
+                horarios.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+            }
+
+            corpo.innerHTML = '';
+            horarios.forEach(function (h, hi) {
+                const tr = document.createElement('tr');
+                tr.className = 'semana-linha';
+
+                const tdH = document.createElement('td');
+                tdH.className = 'semana-hora';
+                tdH.textContent = h;
+                tr.appendChild(tdH);
+
+                dias.forEach(function (iso, idx) {
+                    const td = document.createElement('td');
+                    td.className = 'semana-cel' + (idx === 0 ? ' primeiro' : '');
+                    td.dataset.dia = iso;
+                    td.dataset.hora = h;
+
+                    // 1) atendimento que comeca neste bloco
+                    const ag = todos.find(function (a) {
+                        return a.data === iso && App.normalizarHora(a.horario) === h;
+                    });
+                    if (ag) {
+                        const dur = App.duracaoMinutos(ag);
+                        const blocos = Math.max(1, Math.round(dur / 30));
+                        const caixa = document.createElement('div');
+                        caixa.className = 'semana-ag ' + App.classeEstado(ag.status);
+                        caixa.style.height = (blocos * 26 - 4) + 'px';
+                        const corDoProf = (function () {
+                            const p = (profs || []).find(function (x) { return x.id === ag.profissional_id; });
+                            return p && p.cor_agenda ? p.cor_agenda : '';
+                        })();
+                        if (corDoProf) {
+                            caixa.style.borderLeftColor = corDoProf;
+                            caixa.style.borderLeftWidth = '3px';
+                            caixa.style.borderLeftStyle = 'solid';
+                        }
+                        const cli = document.createElement('strong');
+                        cli.className = 'semana-ag-cli';
+                        cli.textContent = ag.cliente || '';
+                        const sv = document.createElement('span');
+                        sv.className = 'semana-ag-sv';
+                        sv.textContent = ag.servico || '';
+                        const hr = document.createElement('span');
+                        hr.className = 'semana-ag-hr';
+                        // Horario e duracao, no formato do painel: "08:30 | 30 min"
+                        const durTxt = dur >= 60
+                            ? (Math.floor(dur / 60) + ' h' + (dur % 60 ? ' ' + (dur % 60) + ' min' : ''))
+                            : (dur + ' min');
+                        hr.textContent = App.normalizarHora(ag.horario) + ' | ' + durTxt;
+                        caixa.appendChild(cli); caixa.appendChild(sv); caixa.appendChild(hr);
+
+                        // Status do atendimento (Espera / Atendendo / Finalizado / Nao veio)
+                        if (ag.status) {
+                            const st = document.createElement('span');
+                            st.className = 'semana-ag-status';
+                            st.textContent = App.rotuloEstado(ag.status);
+                            caixa.appendChild(st);
+                        }
+                        if (ag.observacao) {
+                            const ob = document.createElement('span');
+                            ob.className = 'semana-ag-obs';
+                            ob.textContent = ag.observacao;
+                            caixa.appendChild(ob);
+                        }
+                        caixa.title = (ag.cliente || '') + ' • ' + (ag.servico || '') + ' • R$ ' + parseFloat(ag.valor || 0).toFixed(2);
+                        caixa.onclick = function (ev) { ev.stopPropagation(); App.abrirDiaDoAtendimento(iso, ag); };
+                        td.appendChild(caixa);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 2) bloco coberto por um atendimento longo (continuacao)
+                    const cobrindo = todos.find(function (a) {
+                        return a.data === iso && App.cobreHorario(a, h);
+                    });
+                    if (cobrindo) {
+                        const cont = document.createElement('div');
+                        cont.className = 'semana-ag-cont ' + App.classeEstado(cobrindo.status);
+                        cont.title = (cobrindo.cliente || '') + ' (continuação)';
+                        td.appendChild(cont);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 3) fechado pelo dono
+                    const blq = App._bloqueioEm ? App._bloqueioEm(iso, h, App._profSemana) : null;
+                    if (blq) {
+                        const f = document.createElement('div');
+                        f.className = 'semana-ag fechado';
+                        f.style.height = '24px';
+                        f.title = blq.motivo || 'Fechado';
+                        const t = document.createElement('span');
+                        t.className = 'semana-ag-cli';
+                        t.style.fontSize = '8.5px';
+                        t.textContent = blq.hora_inicio ? (App.normalizarHora(blq.hora_inicio) + ' ' + (blq.motivo || 'Fechado')) : (blq.motivo || 'Fechado');
+                        f.appendChild(t);
+                        td.appendChild(f);
+                        tr.appendChild(td);
+                        return;
+                    }
+
+                    // 4) livre
+                    if (App.user.role === 'admin') {
+                        const b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'semana-livre';
+                        b.textContent = '';
+                        b.title = 'Marcar em ' + App.nomeDiaCurto(iso) + ' as ' + h;
+                        b.onclick = function () { App.marcarNoDia(iso, h); };
+                        td.appendChild(b);
+                    }
+                    tr.appendChild(td);
+                });
+
+                corpo.appendChild(tr);
+            });
+
+            wrap.classList.remove('hidden');
+        } catch (e) {
+            console.warn('Erro ao montar a semana:', e);
+        }
+    },
+
+    // Marca atendimento num dia/hora clicados na semana
+    marcarNoDia(iso, hora) {
+        const campoData = document.getElementById('filtro-data-agenda');
+        if (campoData) campoData.value = iso;
+        const sel = document.getElementById('agendamento-profissional');
+        if (sel && this._profSemana) sel.value = this._profSemana;
+        this.abrirMarcar(hora);
+    },
+
+    // Abre o dia do atendimento na agenda detalhada
+    abrirDiaDoAtendimento(iso, ag) {
+        const campoData = document.getElementById('filtro-data-agenda');
+        if (campoData) campoData.value = iso;
+        if (ag && ag.profissional_id) localStorage.setItem('hairconcept_prof_selecionado', ag.profissional_id);
+        this.trocarModoAgenda('dia');
+        this.renderAgendaGrid();
+    },
+
+    // ===== MENU DO DIA (≡) =====
+    abrirMenuDia(ev, iso) {
+        this._diaMenu = iso;
+        const pop = document.getElementById('menu-dia-pop');
+        if (!pop) return;
+        const rotulo = document.getElementById('menu-dia-rotulo');
+        if (rotulo) {
+            const d = new Date(iso + 'T00:00:00');
+            rotulo.textContent = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+        }
+        // periodo de horarios do intervalo
+        pop.classList.remove('hidden');
+        const r = ev.currentTarget.getBoundingClientRect();
+        const larg = 230;
+        let left = r.left - larg / 2;
+        if (left < 8) left = 8;
+        if (left + larg > window.innerWidth - 8) left = window.innerWidth - larg - 8;
+        pop.style.left = left + 'px';
+        pop.style.top = (r.bottom + 6) + 'px';
+    },
+
+    fecharMenuDia() {
+        const pop = document.getElementById('menu-dia-pop');
+        if (pop) pop.classList.add('hidden');
+    },
+
+    async fecharAgendaDia() {
+        const iso = this._diaMenu;
+        if (!iso) return;
+        const selProf = document.getElementById('menu-dia-todos');
+        const soProfissional = selProf && selProf.checked;
+        const profId = soProfissional ? (this._profSemana || null) : null;
+        const motivo = (document.getElementById('menu-dia-motivo') || {}).value || 'Fechado';
+        try {
+            const estabId = await this.obterEstabId();
+            const { error } = await supabaseClient.from('bloqueios').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                data: iso,
+                motivo: motivo
+            }]);
+            if (error) throw error;
+            this.fecharMenuDia();
+            UI.showToast('Dia fechado: ' + motivo + '.');
+            this.renderAgendaSemana();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    async fecharAgendaIntervalo() {
+        const iso = this._diaMenu;
+        if (!iso) return;
+        const hi = (document.getElementById('menu-dia-de') || {}).value || '';
+        const hf = (document.getElementById('menu-dia-ate') || {}).value || '';
+        if (!hi || !hf || hf <= hi) {
+            UI.showToast('Escolha o horário de início e de fim.', 'error');
+            return;
+        }
+        const selProf = document.getElementById('menu-dia-todos');
+        const soProfissional = selProf && selProf.checked;
+        const profId = soProfissional ? (this._profSemana || null) : null;
+        const motivo = (document.getElementById('menu-dia-motivo') || {}).value || 'Fechado';
+        try {
+            const estabId = await this.obterEstabId();
+            const { error } = await supabaseClient.from('bloqueios').insert([{
+                estabelecimento_id: estabId,
+                profissional_id: profId,
+                data: iso,
+                hora_inicio: hi,
+                hora_fim: hf,
+                motivo: motivo
+            }]);
+            if (error) throw error;
+            this.fecharMenuDia();
+            UI.showToast('Intervalo fechado das ' + hi + ' às ' + hf + '.');
+            this.renderAgendaSemana();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+
+    // ===== TROCA DE MODO (Dia / Semana) =====
+    trocarModoAgenda(modo) {
+        localStorage.setItem('hairconcept_modo_agenda', modo);
+        const d = document.getElementById('agenda-modo-dia');
+        const s = document.getElementById('agenda-modo-semana');
+        const bD = document.getElementById('btn-modo-dia');
+        const bS = document.getElementById('btn-modo-semana');
+        if (!d || !s) return;
+        // A classe do container controla o que aparece
+        const cont = document.getElementById('agenda-modos');
+        if (cont) cont.classList.toggle('ag-modo-semana', modo === 'semana');
+        if (modo === 'semana') {
+            d.classList.add('hidden');
+            s.classList.remove('hidden');
+            if (bD) bD.classList.remove('ativo');
+            if (bS) bS.classList.add('ativo');
+            this.renderAgendaSemana();
+        } else {
+            s.classList.add('hidden');
+            d.classList.remove('hidden');
+            if (bS) bS.classList.remove('ativo');
+            if (bD) bD.classList.add('ativo');
+            this.renderAgendaGrid();
+        }
+    },
+
+    modoAgendaAtual() {
+        return localStorage.getItem('hairconcept_modo_agenda') || 'dia';
+    },
+
+    async renderAgendaGrid() {
+        const tbody = document.getElementById('grid-horarios-body');
+        const headerRow = document.getElementById('grid-header-row');
+        if (!tbody || !headerRow) return;
+        // Garante que a barra lateral esta montada (so para o dono)
+        if (this.user && this.user.role !== 'profissional' && !this._profsLateral) {
+            this.montarLateralProfs();
+        }
+        // Selos de certificado (🎓) junto das estrelas
+        if (!this._temCertificado) await this.carregarSeloCertificados();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const dataFiltro = document.getElementById('filtro-data-agenda').value;
+        try {
+            const { data: profs } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
+            const { data: agendamentos } = await supabaseClient.from('agendamentos').select('*').eq('estabelecimento_id', estabId).eq('data', dataFiltro);
+            // Pontos de elogio e total de clientes, para as estrelas do cabeçalho
+            let votosProf = {};
+            let totalClientesBase = 0;
+            try {
+                const { data: vv } = await supabaseClient
+                    .from('avaliacoes_cliente').select('profissional_id, tipo')
+                    .eq('estabelecimento_id', estabId);
+                (vv || []).forEach(function (v) {
+                    if (!v.profissional_id || v.tipo !== 'mais') return;
+                    votosProf[v.profissional_id] = (votosProf[v.profissional_id] || 0) + 1;
+                });
+                const { count } = await supabaseClient
+                    .from('clientes').select('*', { count: 'exact', head: true })
+                    .eq('estabelecimento_id', estabId);
+                totalClientesBase = count || 0;
+            } catch (e) {
+                console.warn('Nao foi possivel carregar as estrelas:', e);
+            }
+            if (!profs || profs.length === 0) {
+                headerRow.innerHTML = '<th class="py-3 px-4">Horário</th><th class="py-3 px-4">Sem profissionais cadastrados</th>';
+                tbody.innerHTML = '<tr><td colspan="2" class="py-4 px-4 text-center text-zinc-500">Cadastre profissionais na aba Equipe para ver a agenda.</td></tr>';
+                return;
+            }
+            let profsExibicao = profs;
+            if (this.user.role === 'profissional') {
+                // O profissional ve so a agenda dele
+                profsExibicao = profs.filter(p => p.id == this.user.id);
+            } else {
+                // O dono escolhe na barra lateral qual profissional ver
+                var sel = localStorage.getItem('hairconcept_prof_selecionado');
+                var escolhido = (profs || []).filter(function (p) { return p.id === sel && p.ativo !== false; });
+                if (escolhido.length > 0) profsExibicao = escolhido;
+            }
+            headerRow.innerHTML = '';
+            const thHora = document.createElement('th');
+            thHora.className = 'py-3 px-4 w-24';
+            thHora.textContent = 'Horário';
+            headerRow.appendChild(thHora);
+
+            profsExibicao.forEach(function (p) {
+                const th = document.createElement('th');
+                th.className = 'py-3 px-4';
+                const linha = document.createElement('div');
+                linha.className = 'flex items-center gap-2';
+
+                const img = document.createElement('img');
+                img.src = p.foto_url || FOTO_PADRAO;
+                img.className = 'w-7 h-7 rounded-lg object-cover';
+
+                const bloco = document.createElement('div');
+                const nomeEl = document.createElement('span');
+                nomeEl.className = 'block text-white font-bold';
+                nomeEl.textContent = p.nome || '';
+                const cargoEl = document.createElement('span');
+                cargoEl.className = 'block text-[9px] text-zinc-400';
+                cargoEl.textContent = p.cargo || '';
+
+                const meusPontos = (votosProf || {})[p.id] || 0;
+                const estP = App.calcularEstrelaProf(meusPontos, totalClientesBase);
+                const linhaEst = document.createElement('span');
+                linhaEst.className = 'prof-estrelas mt-0.5';
+                for (let i = 0; i < estP.cheias; i++) linhaEst.innerHTML += '<i class="fa-solid fa-star"></i>';
+                if (estP.meia) linhaEst.innerHTML += '<i class="fa-solid fa-star-half-stroke"></i>';
+                for (let i = 0; i < estP.vazias; i++) linhaEst.innerHTML += '<i class="fa-regular fa-star text-zinc-600"></i>';
+                const contEst = document.createElement('span');
+                contEst.className = 'text-[8px] text-zinc-500 ml-1';
+                contEst.textContent = meusPontos + '/' + totalClientesBase;
+                linhaEst.appendChild(contEst);
+
+                bloco.appendChild(nomeEl);
+                bloco.appendChild(cargoEl);
+                bloco.appendChild(linhaEst);
+                const qtdCert = (App._certPorProf && App._certPorProf[p.id]) || 0;
+                if (qtdCert > 0) {
+                    const selo = document.createElement('span');
+                    selo.className = 'text-[9px] text-amber-400 font-bold';
+                    selo.title = qtdCert === 1 ? '1 curso registrado' : (qtdCert + ' cursos registrados');
+                    selo.innerHTML = '<i class="fa-solid fa-graduation-cap"></i> ' + qtdCert + (qtdCert === 1 ? ' curso' : ' cursos');
+                    bloco.appendChild(selo);
+                }
+                linha.appendChild(img);
+                linha.appendChild(bloco);
+                th.appendChild(linha);
+                headerRow.appendChild(th);
+            });
+
+            const horarios = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"];
+            let atendimentoCount = 0;
+            let totalGanhos = 0;
+
+            tbody.innerHTML = '';
+            horarios.forEach(h => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-white/5';
+
+                const tdHora = document.createElement('td');
+                tdHora.className = 'py-3 px-4 text-brand-500 font-bold';
+                tdHora.textContent = h;
+                tr.appendChild(tdHora);
+
+                profsExibicao.forEach(p => {
+                    // O banco guarda 14:00:00 e a grade usa 14:00: compara só HH:MM
+                    const hhmm = (v) => String(v || '').slice(0, 5);
+                    // 1) o atendimento que COMECA neste bloco
+                    const ag = (agendamentos || []).find(a => a.profissional_id == p.id && hhmm(a.horario) === hhmm(h));
+                    // 2) o atendimento que COBRE este bloco (servico longo em andamento)
+                    const agCobrindo = !ag ? (agendamentos || []).find(a => a.profissional_id == p.id && this.cobreHorario(a, hhmm(h))) : null;
+                    const agExibir = ag || agCobrindo;
+                    if (ag && this.user.role === 'profissional') {
+                        atendimentoCount++;
+                        totalGanhos += (ag.valor * 0.5);
+                    }
+
+                    const td = document.createElement('td');
+                    td.className = 'py-3 px-4';
+
+                    if (agExibir) {
+                        const ag = agExibir;
+                        const ehInicio = this.normalizarHora(ag.horario) === this.normalizarHora(h);
+                        if (!ag.status) ag.status = 'espera';
+
+                        if (!ehInicio) {
+                            // Bloco de continuacao: faixa colorida, sem texto repetido
+                            const cont = document.createElement('div');
+                            const est = String(ag.status || 'espera').toLowerCase();
+                            const estOk = ['espera','atendendo','finalizado','faltou'].indexOf(est) >= 0 ? est : 'espera';
+                            cont.className = 'ag-continuacao ag-cont-' + estOk;
+                            cont.title = ag.cliente + ' • ' + this.rotuloEstado(ag.status);
+
+                            // Se um encaixe COMECA neste bloco, ele aparece aqui em verde
+                            const encaixesAqui = (agendamentos || []).filter(x => {
+                                if (x.id === ag.id || x.profissional_id != p.id) return false;
+                                if (this.normalizarHora(x.horario) !== this.normalizarHora(h)) return false;
+                                if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
+                                return this.duracaoMinutos(x) < this.duracaoMinutos(ag);
+                            });
+                            encaixesAqui.forEach(x => {
+                                const e = document.createElement('span');
+                                e.className = 'ag-encaixe';
+                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + this.normalizarHora(x.horario_fim) + ' - ' + x.cliente;
+                                cont.appendChild(e);
+                            });
+
+                            td.appendChild(cont);
+                        } else {
+                        const caixa = document.createElement('div');
+                        caixa.className = 'ag-atendimento ' + this.classeEstado(ag.status);
+
+                        const cor = document.createElement('span');
+                        cor.className = 'ag-cor ag-cor-' + (String(ag.status || 'espera').toLowerCase());
+                        const nome = document.createElement('strong');
+                        nome.className = 'text-white block';
+                        nome.textContent = ag.cliente;
+                        nome.prepend(cor);
+
+                        const serv = document.createElement('span');
+                        serv.className = 'block opacity-90';
+                        serv.textContent = ag.servico;
+
+                        const faixa = document.createElement('span');
+                        faixa.className = 'block text-[9px] opacity-80';
+                        const mi = this.minutosDoDia(this.normalizarHora(ag.horario));
+                        const mf = mi + this.duracaoMinutos(ag);
+                        const fimMostrar = (mi >= 0)
+                            ? String(Math.floor(mf / 60)).padStart(2, '0') + ':' + String(mf % 60).padStart(2, '0')
+                            : '';
+                        faixa.textContent = this.normalizarHora(ag.horario) + ' - ' + fimMostrar + ' • ' + this.rotuloEstado(ag.status);
+
+                        const val = document.createElement('span');
+                        val.className = 'block font-bold mt-0.5';
+                        val.textContent = 'R$ ' + parseFloat(ag.valor).toFixed(2);
+
+                        caixa.appendChild(nome);
+                        caixa.appendChild(serv);
+                        caixa.appendChild(faixa);
+                        caixa.appendChild(val);
+
+                        // Encaixes dentro deste atendimento
+                        // Encaixes que COMECAM neste bloco exato (nao no bloco inicial do pai)
+                        const encaixes = (agendamentos || []).filter(x => {
+                            if (x.id === ag.id || x.profissional_id != p.id) return false;
+                            if (this.normalizarHora(x.horario) !== this.normalizarHora(h)) return false;
+                            if (!this.cobreHorario(ag, this.normalizarHora(x.horario))) return false;
+                            // So entra como encaixe se for um atendimento curto dentro do longo
+                            return this.duracaoMinutos(x) < this.duracaoMinutos(ag);
+                        });
+                        if (encaixes.length > 0) {
+                            encaixes.forEach(x => {
+                                const e = document.createElement('span');
+                                e.className = 'ag-encaixe';
+                                e.textContent = 'Encaixe ' + this.normalizarHora(x.horario) + ' - ' + this.normalizarHora(x.horario_fim) + ' - ' + x.cliente;
+                                caixa.appendChild(e);
+                            });
+                        }
+
+                        if (this.user.role === 'admin') {
+                            const acoes = document.createElement('div');
+                            acoes.className = 'flex flex-wrap gap-1 mt-1.5';
+                            ['espera','atendendo','finalizado','faltou'].forEach(st => {
+                                const b = document.createElement('button');
+                                b.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-white/20 hover:bg-white/10 transition cursor-pointer';
+                                b.textContent = this.rotuloEstado(st);
+                                b.onclick = () => this.mudarStatusAgendamento(ag.id, st);
+                                acoes.appendChild(b);
+                            });
+
+                            // Serviço dentro deste atendimento (encaixe)
+                            const bDentro = document.createElement('button');
+                            bDentro.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 transition cursor-pointer';
+                            bDentro.textContent = 'Adicionar dentro';
+                            bDentro.onclick = () => this.abrirEncaixe(ag);
+                            acoes.appendChild(bDentro);
+
+                            const bExcluir = document.createElement('button');
+                            bExcluir.className = 'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border border-rose-500/40 text-rose-300 hover:bg-rose-500/20 transition cursor-pointer';
+                            bExcluir.textContent = 'Desmarcar';
+                            bExcluir.onclick = () => this.excluirAgendamento(ag.id, ag.cliente);
+                            acoes.appendChild(bExcluir);
+
+                            caixa.appendChild(acoes);
+                        }
+
+                        td.appendChild(caixa);
+                        }
+                    } else if (this.user.role === 'admin') {
+                        const btnLivre = document.createElement('button');
+                        btnLivre.className = 'text-zinc-600 hover:text-brand-500 text-[11px] transition cursor-pointer';
+                        btnLivre.textContent = 'Disponível';
+                        btnLivre.onclick = () => this.abrirMarcar(h);
+                        td.appendChild(btnLivre);
+                    } else {
+                        const span = document.createElement('span');
+                        span.className = 'text-zinc-600 text-[11px]';
+                        span.textContent = 'Disponível';
+                        td.appendChild(span);
+                    }
+
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+
+            if (this.user.role === 'profissional') {
+                var elAt = document.getElementById('prof-stat-atendimentos');
+            if (elAt) elAt.textContent = atendimentoCount;
+                var elCom = document.getElementById('prof-stat-comissao');
+            if (elCom) elCom.textContent = `R$ ${totalGanhos.toFixed(2)}`;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async handleCreateProduto(event) {
+        event.preventDefault();
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
+        const nome = document.getElementById('prod-nome').value;
+        const tipo = document.getElementById('prod-tipo').value;
+        const preco_venda = parseValor(document.getElementById('prod-preco').value);
+        const stock = parseInt(document.getElementById('prod-stock').value) || 0;
+        const data_validade = document.getElementById('prod-validade').value;
+        try {
+            const { error } = await supabaseClient.from('produtos').insert([{
+                estabelecimento_id: estabId,
+                nome,
+                tipo,
+                preco_venda,
+                stock,
+                data_validade
+            }]);
+            if (error) throw error;
+            UI.showToast('Produto cadastrado com sucesso!');
+            event.target.reset();
+            this.renderProdutos();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+    async handleCreateServico(event) {
+        event.preventDefault();
+        const estabId = await this.obterEstabId();
+        if (!estabId) {
+            UI.showToast('Não encontrei o seu salão. Recarregue a página e entre novamente.', 'error');
+            return;
+        }
+        const nome = document.getElementById('serv-nome').value;
+        const preco = parseValor(document.getElementById('serv-preco').value);
+        const comissao = parseFloat(document.getElementById('serv-comissao').value) || 50;
+        try {
+            const { error } = await supabaseClient.from('servicos').insert([{
+                estabelecimento_id: estabId,
+                nome,
+                preco,
+                comissao
+            }]);
+            if (error) throw error;
+            UI.showToast('Serviço adicionado com sucesso!');
+            event.target.reset();
+            this.renderServicos();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+    async renderServicos() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const lista = document.getElementById('lista-servicos');
+        if (!lista) return;
+        try {
+            const { data, error } = await supabaseClient.from('servicos').select('*').eq('estabelecimento_id', estabId);
+            if (error) throw error;
+            lista.innerHTML = data && data.length > 0 ? data.map(s => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-bold text-white uppercase">${s.nome}</h4>
+                        <p class="text-[10px] text-zinc-400 mt-0.5">Comissão: ${s.comissao}%</p>
+                    </div>
+                    <div class="text-right flex items-center gap-3">
+                        <span class="text-xs font-bold text-brand-500">R$ ${parseFloat(s.preco).toFixed(2)}</span>
+                        <button onclick="App.excluirServico('${s.id}')" class="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold uppercase transition">Excluir</button>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-xs text-zinc-500 md:col-span-2">Nenhum serviço cadastrado.</p>';
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async excluirServico(id) {
+        if (!confirm("Tem certeza que deseja excluir este serviço?")) return;
+        try {
+            const { error } = await supabaseClient.from('servicos').delete().eq('id', id);
+            if (error) throw error;
+            UI.showToast('Serviço excluído com sucesso!');
+            this.renderServicos();
+        } catch (e) {
+            UI.showToast(mensagemAmigavel(e), 'error');
+        }
+    },
+    async renderListaProfissionais() {
+        const lista = document.getElementById('lista-profissionais');
+        if (!lista) return;
+        try {
+            await this.carregarSeloCertificados();
+            const estabId = await this.obterEstabId();
+            // Esqueleto enquanto carrega: parece instantaneo mesmo em 3G
+            if (!lista.querySelector('.hc-esqueleto')) {
+                lista.innerHTML = '<div class="hc-esqueleto mb-2"></div><div class="hc-esqueleto mb-2"></div><div class="hc-esqueleto"></div>';
+            }
+            const { data, error } = await supabaseClient.from('profissionais').select('*').eq('estabelecimento_id', estabId);
+            if (error) {
+                console.error('Erro ao buscar profissionais:', error);
+                lista.textContent = 'Não foi possível carregar a equipe agora.';
+                return;
+            }
+
+            lista.innerHTML = '';
+            if (!data || data.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-xs text-zinc-500';
+                p.textContent = 'Nenhum profissional cadastrado.';
+                lista.appendChild(p);
+                return;
+            }
+
+            data.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-between gap-3 flex-wrap';
+
+                const esquerda = document.createElement('div');
+                esquerda.className = 'flex items-center gap-3';
+
+                const img = document.createElement('img');
+                img.src = p.foto_url || FOTO_PADRAO;
+                img.className = 'w-10 h-10 rounded-xl object-cover';
+
+                const info = document.createElement('div');
+                const h4 = document.createElement('h4');
+                h4.className = 'text-xs font-bold text-white';
+                h4.innerHTML = (p.nome || '') + App.seloCertificado(p.id);
+                const pcargo = document.createElement('p');
+                pcargo.className = 'text-[10px] text-brand-500';
+                pcargo.textContent = p.cargo || '';
+                const pcpf = document.createElement('p');
+                pcpf.className = 'text-[9px] text-zinc-500';
+                pcpf.textContent = 'CPF: ' + (p.cpf || '');
+                info.appendChild(h4); info.appendChild(pcargo); info.appendChild(pcpf);
+                esquerda.appendChild(img); esquerda.appendChild(info);
+
+                const acoes = document.createElement('div');
+                acoes.className = 'flex items-center gap-2 flex-wrap';
+
+                const btnEditar = document.createElement('button');
+                btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-xs font-bold uppercase transition cursor-pointer';
+                btnEditar.textContent = 'Editar';
+                btnEditar.onclick = (ev) => {
+                    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+                    this.abrirEditarProfissional(p.id, p.nome, p.cargo, p.cpf);
+                };
+
+                const btnExcluir = document.createElement('button');
+                btnExcluir.className = 'px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold uppercase transition cursor-pointer';
+                btnExcluir.textContent = 'Excluir';
+                btnExcluir.onclick = (ev) => {
+                    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+                    this.excluirProfissional(p.id);
+                };
+
+                acoes.appendChild(btnEditar);
+                acoes.appendChild(btnExcluir);
+
+                card.appendChild(esquerda);
+                card.appendChild(acoes);
+                lista.appendChild(card);
+            });
+        } catch (e) {
+            console.error('Erro inesperado ao listar profissionais:', e);
+            lista.textContent = 'Não foi possível carregar a equipe agora.';
+        }
+    },
+    async renderProdutos() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const lista = document.getElementById('lista-produtos');
+        const alertaBadge = document.getElementById('alerta-validade-badge');
+        if (!lista) return;
+        try {
+            const { data, error } = await supabaseClient.from('produtos').select('*').eq('estabelecimento_id', estabId);
+            if (error) throw error;
+            const hoje = new Date();
+            const daqui3Meses = new Date();
+            daqui3Meses.setMonth(hoje.getMonth() + 3);
+            let alertaCount = 0;
+            lista.innerHTML = data && data.length > 0 ? data.map(prod => {
+                const dataVal = new Date(prod.data_validade);
+                const pertoVencer = dataVal <= daqui3Meses && dataVal >= hoje;
+                if (pertoVencer) alertaCount++;
+                return `
+                    <div class="p-3.5 rounded-2xl bg-zinc-950 border ${pertoVencer ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10'} flex justify-between items-center">
+                        <div>
+                            <h4 class="text-xs font-bold text-white">${prod.nome} ${pertoVencer ? '<span class="text-[9px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full ml-2">Validade Próxima (&lt; 3 meses)</span>' : ''}</h4>
+                            <p class="text-[10px] text-zinc-400">Estoque: ${prod.stock} | Validade: ${prod.data_validade} | Tipo: ${prod.tipo}</p>
+                        </div>
+                        <span class="text-xs font-bold text-brand-500">R$ ${parseFloat(prod.preco_venda).toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('') : '<p class="text-xs text-zinc-500">Nenhum produto cadastrado.</p>';
+            if (alertaBadge) {
+                alertaBadge.textContent = alertaCount > 0 ? `${alertaCount} alerta(s) de validade` : 'Estoque Regular';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+    async renderRelatorios() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data: agendamentos, error } = await supabaseClient
+                .from('agendamentos')
+                .select('*')
+                .eq('estabelecimento_id', estabId);
+            if (error) throw error;
+
+            let faturamentoTotal = 0;
+            const clientesSet = new Set();
+
+            if (agendamentos) {
+                agendamentos.forEach(a => {
+                    faturamentoTotal += parseValor(a.valor);
+                    if (a.cliente) clientesSet.add(a.cliente.trim().toLowerCase());
+                });
+            }
+
+            const fatElem = document.getElementById('relatorio-faturamento');
+            const atemElem = document.getElementById('relatorio-atendimentos');
+            const cliElem = document.getElementById('relatorio-clientes');
+
+            if (fatElem) fatElem.textContent = `R$ ${faturamentoTotal.toFixed(2)}`;
+            if (atemElem) atemElem.textContent = agendamentos ? agendamentos.length : 0;
+            if (cliElem) cliElem.textContent = clientesSet.size;
+        } catch (e) {
+            console.error("Erro ao carregar relatórios:", e);
+        }
+    },
+    async renderAvaliacoes() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        const container = document.getElementById('lista-avaliacoes');
+        if (!container) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('avaliacoes')
+                .select('*')
+                .eq('estabelecimento_id', estabId)
+                .order('created_at', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                container.innerHTML = '<p class="text-xs text-zinc-500">Nenhuma avaliação registrada até o momento.</p>';
+                return;
+            }
+
+            container.innerHTML = data.map(av => `
+                <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-white uppercase">${av.cliente_nome || 'Cliente Anônimo'}</span>
+                        <div class="flex text-yellow-400 text-xs">
+                            ${'★'.repeat(av.nota || 5)}${'☆'.repeat(5 - (av.nota || 5))}
+                        </div>
+                    </div>
+                    <p class="text-xs text-zinc-300 italic">"${av.comentario || 'Sem comentário'}"</p>
+                    <span class="text-[9px] text-zinc-500 block">${new Date(av.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+            `).join('');
+        } catch (e) {
+            container.innerHTML = '<p class="text-xs text-zinc-500">Nenhuma avaliação registrada até o momento.</p>';
+        }
+    },
+    handleFotoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.fotoBase64Temp = e.target.result;
+            const preview = document.getElementById('preview-foto-prof');
+            const icon = document.getElementById('icon-foto-prof');
+            if (preview) {
+                preview.src = this.fotoBase64Temp;
+                preview.classList.remove('hidden');
+            }
+            if (icon) icon.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    },
+    carregarPostIts() {
+        const container = document.getElementById('lista-postits');
+        if (!container) return;
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '["Ligar para fornecedor", "Comprar novo secador"]');
+        container.innerHTML = postits.map((nota, index) => `
+            <div class="p-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs flex justify-between items-center">
+                <span>${nota}</span>
+                <button onclick="App.removerPostIt(${index})" class="text-zinc-400 hover:text-red-400 text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        `).join('') || '<p class="text-[10px] text-zinc-500">Nenhuma nota colada.</p>';
+    },
+    adicionarPostIt() {
+        const nota = prompt("Digite a sua nova nota ou lembrete:");
+        if (!nota || nota.trim() === '') return;
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
+        postits.push(nota);
+        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
+        this.carregarPostIts();
+    },
+    removerPostIt(index) {
+        const postits = JSON.parse(localStorage.getItem('hairconcept_postits') || '[]');
+        postits.splice(index, 1);
+        localStorage.setItem('hairconcept_postits', JSON.stringify(postits));
+        this.carregarPostIts();
+    },
+    calcularGanhosPessoal() {
+        const val = parseValor(document.getElementById('prof-calc-val').value);
+        const porc = parseFloat(document.getElementById('prof-calc-porc').value);
+        const percentual = isNaN(porc) ? 50 : porc;
+        const total = (val * percentual) / 100;
+        document.getElementById('prof-calc-result').textContent = `R$ ${total.toFixed(2)}`;
+    },
+    proximaFrase() {
+        const frases = [
+            "O sucesso é a soma de pequenos esforços repetidos.",
+            "A beleza está nos detalhes e no carinho com o cliente.",
+            "Um dia produtivo começa com um sorriso e foco."
+        ];
+        const aleatoria = frases[Math.floor(Math.random() * frases.length)];
+        // O elemento pode nao existir: antes esta linha dava TypeError e
+        // MATAVA o init() inteiro, deixando a pagina em branco.
+        const elFrase = document.getElementById('frase-motivacional');
+        if (elFrase) elFrase.textContent = `"${aleatoria}"`;
+    },
+    // Links de pagamento do Mercado Pago (PIX, QR Code, boleto e cartao).
+    // Sao pagamentos AVULSOS: PIX nao existe em assinatura recorrente,
+    // porque a assinatura precisa de um cartao para cobrar todo mes.
+    LINKS_PIX: {
+        mensal: 'https://mpago.la/2FwRxii',
+        anual:  'https://mpago.la/2BGEEVK'
+    },
+
+    // Abre o pagamento por PIX / QR Code / boleto
+    pagarComPix(plano) {
+        const link = this.LINKS_PIX[plano];
+        if (!link) { UI.showToast('Plano invalido.', 'error'); return; }
+        localStorage.setItem('hairconcept_plan_pendente', plano);
+        UI.showToast('Abrindo o pagamento por PIX / QR Code...');
+        setTimeout(function () { window.open(link, '_blank'); }, 600);
+    },
+
+    async setPlan(plano) {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        
+        if (plano === 'gratis') {
+            localStorage.setItem('hairconcept_plan', 'gratis');
+            if (estabId && supabaseClient) {
+                await supabaseClient.from('estabelecimentos').update({ plano: 'gratis' }).eq('id', estabId);
+            }
+            UI.showToast('Plano Grátis ativado com sucesso!');
+            UI.switchTab('aba-agenda');
+            return;
+        }
+
+        const linksPagamento = {
+            mensal: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=c6608384109b43c787b82d8f9646331f',
+            anual: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=ba575f230a314a8c8446da6d3832fe3d' 
+        };
+
+        const linkCheckout = linksPagamento[plano];
+        if (linkCheckout) {
+            localStorage.setItem('hairconcept_plan_pendente', plano);
+            UI.showToast('Redirecionando para o Mercado Pago...');
+            setTimeout(() => {
+                window.location.href = linkCheckout;
+            }, 1000);
+        } else {
+            UI.showToast('Plano inválido.', 'error');
+        }
+    },
+    mudarDia(dias) {
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (!dataInput.value) return;
+        const atual = new Date(dataInput.value + 'T00:00:00');
+        atual.setDate(atual.getDate() + dias);
+        dataInput.value = dataLocalISO(atual);
+        this.renderAgendaGrid();
+    },
+    irParaHoje() {
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (dataInput) {
+            dataInput.value = dataLocalISO();
+            this.renderAgendaGrid();
+        }
+    },
+    saltarParaMes(mesIndex) {
+        const ano = 2026;
+        const dataInput = document.getElementById('filtro-data-agenda');
+        if (dataInput) {
+            const mesStr = String(parseInt(mesIndex) + 1).padStart(2, '0');
+            dataInput.value = `${ano}-${mesStr}-01`;
+            this.renderAgendaGrid();
+        }
+    },
+    async carregarConfiguracoes() {
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        if (!estabId || !supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient
+                .from('estabelecimentos')
+                .select('*')
+                .eq('id', estabId)
+                .single();
+            if (error) throw error;
+            if (data) {
+                const inputNome = document.getElementById('config-nome-salao');
+                const inputEmail = document.getElementById('config-email-salao');
+                const inputCnpj = document.getElementById('config-cnpj');
+                const inputWhatsapp = document.getElementById('config-whatsapp');
+                const inputEndereco = document.getElementById('config-endereco');
+                const inputInstagram = document.getElementById('config-instagram');
+                const inputFacebook = document.getElementById('config-facebook');
+                const inputAbertura = document.getElementById('config-horario-abertura');
+                const inputFechamento = document.getElementById('config-horario-fechamento');
+
+                if (inputNome) inputNome.value = data.nome_salao || '';
+                if (inputEmail) inputEmail.value = data.email || '';
+                if (inputCnpj && data.cnpj) inputCnpj.value = data.cnpj;
+                if (inputWhatsapp && data.whatsapp) inputWhatsapp.value = data.whatsapp;
+                if (inputEndereco && data.endereco) inputEndereco.value = data.endereco;
+                if (inputInstagram && data.instagram) inputInstagram.value = data.instagram;
+                if (inputFacebook && data.facebook) inputFacebook.value = data.facebook;
+                if (inputAbertura && data.horario_abertura) inputAbertura.value = String(data.horario_abertura).slice(0, 5);
+                if (inputFechamento && data.horario_fechamento) inputFechamento.value = String(data.horario_fechamento).slice(0, 5);
+
+                if (data.logo_url) {
+                    this.logoBase64Temp = data.logo_url;
+                    const preview = document.getElementById('preview-logo-salao');
+                    const icon = document.getElementById('icon-logo-salao');
+                    if (preview) {
+                        preview.src = data.logo_url;
+                        preview.classList.remove('hidden');
+                    }
+                    if (icon) icon.classList.add('hidden');
+                }
+                // Nome, assinatura e logo de uma vez só
+                this.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
+            }
+        } catch (e) {
+            console.error("Erro ao carregar configurações:", e);
+        }
+    },
+    async handleSalvarConfiguracoes(event) {
+        event.preventDefault();
+        const estabId = localStorage.getItem('hairconcept_estab_id');
+        // Le os campos da tela de Configuracao do Salao (ids "cfg-*").
+        // O recuo para os ids antigos ("config-*") mantem a tela velha funcionando.
+        const pega = function (ids) {
+            for (let i = 0; i < ids.length; i++) {
+                const el = document.getElementById(ids[i]);
+                if (el) return el.value.trim();
+            }
+            return '';
+        };
+        const nome_salao = pega(['cfg-nome-salao', 'config-nome-salao']);
+        const email = pega(['cfg-email', 'config-email-salao']);
+        const cnpj = pega(['cfg-cnpj', 'config-cnpj']);
+        const whatsapp = pega(['cfg-whatsapp', 'config-whatsapp']);
+        const endereco = pega(['cfg-endereco', 'config-endereco']);
+        const instagram = pega(['cfg-instagram', 'config-instagram']);
+        const facebook = pega(['config-facebook']);
+        // Campos novos da tela de configuracao: cidade, uf, cep
+        const cidade = pega(['cfg-cidade']);
+        const uf = pega(['cfg-uf']);
+        const cep = pega(['cfg-cep']);
+        // Campo de hora vazio precisa virar null: o banco recusa string vazia
+        const horario_abertura = (document.getElementById('cfg-abertura') || document.getElementById('config-horario-abertura'))?.value || null;
+        const horario_fechamento = (document.getElementById('cfg-fechamento') || document.getElementById('config-horario-fechamento'))?.value || null;
+        const logo_url = this.logoBase64Temp;
+
+        if (!estabId || !supabaseClient) {
+            UI.showToast('Erro: Estabelecimento não identificado.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabaseClient
+                .from('estabelecimentos')
+                .update({ 
+                    nome_salao, 
+                    email, 
+                    cnpj, 
+                    whatsapp, 
+                    endereco, 
+                    instagram, 
+                    facebook, 
+                    horario_abertura, 
+                    horario_fechamento,
+                    cidade,
+                    uf,
+                    cep,
+                    logo_url 
+                })
+                .eq('id', estabId);
+            if (error) throw error;
+            UI.showToast('Configurações salvas com sucesso!');
+            // Aplica nome, assinatura e logo na hora
+            this.aplicarIdentidadeNoHeader(nome_salao, logo_url || null);
+        } catch (e) {
+            console.error('Erro ao salvar configurações:', e);
+            const msg = String(e && e.message ? e.message : e);
+            if (msg.toLowerCase().indexOf('time') >= 0) {
+                UI.showToast('Preencha os dois horários de funcionamento antes de salvar.', 'error');
+            } else {
+                UI.showToast('Erro ao salvar configurações: ' + msg, 'error');
+            }
+        }
+    }
+};
+
+const UI = {
+    showToast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `p-3 rounded-2xl glass-water border ${type === 'error' ? 'border-rose-500/50 text-rose-300' : 'border-emerald-500/50 text-emerald-300'} text-xs font-bold uppercase shadow-xl transition-all transform translate-y-2 opacity-0`;
+        toast.textContent = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+        setTimeout(() => {
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    },
+    trocarEspaco(qual) {
+        const paineis = ['servicos', 'produtos', 'avaliacoes-nova', 'config-salao', 'cursos', 'notas'];
+        if (paineis.indexOf(qual) < 0) return;
+        paineis.forEach(function (p) {
+            const painel = document.getElementById('aba-' + p);
+            const botao = document.getElementById('btn-espaco-' + p);
+            const ativo = (p === qual);
+            if (painel) painel.classList.toggle('hidden', !ativo);
+            if (botao) {
+                botao.classList.toggle('bg-brand-500/15', ativo);
+                botao.classList.toggle('text-brand-500', ativo);
+                botao.classList.toggle('bg-zinc-900', !ativo);
+                botao.classList.toggle('border', !ativo);
+                botao.classList.toggle('border-white/10', !ativo);
+                botao.classList.toggle('text-zinc-400', !ativo);
+            }
+        });
+        // Recarrega a lista do painel aberto
+        if (qual === 'servicos') App.renderServicos();
+        if (qual === 'produtos') App.renderProdutos();
+        if (qual === 'avaliacoes-nova') App.renderAvaliacao();
+        if (qual === 'config-salao') Auth.carregarConfigSalao();
+        if (qual === 'cursos') App.carregarCursosSalao();
+        if (qual === 'notas') { Auth.carregarConfigSalao(); Auth.carregarComissoesTipo(); }
+    },
+    abrirGestao(qual) {
+        this.switchTab('aba-gestao');
+        this.trocarEspaco(qual || 'servicos');
+    },
+
+    // Monta a aba de PLANOS: mostra o plano atual, o selo e os botoes de PIX.
+    // Fica no objeto App porque e chamada como UI.carregarPlanos().
+    async carregarPlanos() {
+        const estabId = await this.obterEstabId();
+        if (!estabId) return;
+        try {
+            const { data } = await supabaseClient
+                .from('estabelecimentos').select('plano').eq('id', estabId).maybeSingle();
+            const plano = (data && data.plano) || 'gratis';
+            const limites = { gratis: 2, mensal: 10, anual: 30 };
+
+            // Selo SEU PLANO no cartao do plano atual
+            ['gratis','mensal','anual'].forEach(function (p) {
+                const bt = document.querySelector('[onclick="App.setPlan(\'' + p + '\')"]');
+                if (!bt) return;
+                const cartao = bt.closest('div.glass-water') || bt.parentNode;
+                const velho = cartao.querySelector('.hc-selo-plano');
+                if (velho) velho.remove();
+                if (p === plano) {
+                    const selo = document.createElement('span');
+                    selo.className = 'hc-selo-plano';
+                    selo.textContent = 'SEU PLANO';
+                    bt.parentNode.insertBefore(selo, bt);
+                }
+            });
+
+            // Os botoes de PIX estao no proprio index.html (um por plano pago).
+            // Antes eram criados aqui tambem, e apareciam DUPLICADOS na tela.
+
+            // Aviso de quantos profissionais o plano permite
+            let aviso = document.getElementById('hc-plano-limite');
+            if (!aviso) {
+                const alvo = document.querySelector('#aba-planos .glass-water');
+                if (alvo) {
+                    aviso = document.createElement('p');
+                    aviso.id = 'hc-plano-limite';
+                    aviso.className = 'text-center text-[11px] text-brand-500 font-bold uppercase mt-4';
+                    alvo.appendChild(aviso);
+                }
+            }
+            if (aviso) aviso.textContent = 'Seu plano permite ' + (limites[plano] || 2) + ' profissionais na equipe.';
+        } catch (e) {
+            console.warn('Nao foi possivel carregar os planos:', e);
+        }
+    },
+    switchTab(tabId) {
+        const alvo = document.getElementById(tabId);
+        if (!alvo) {
+            // Nunca falhar em silencio: se um botao apontar para uma aba que
+            // nao existe, o usuario ve o aviso em vez de clicar no vazio.
+            console.warn('A aba nao existe:', tabId);
+            try { UI.showToast('Esta tela nao esta disponivel. Avise o suporte.', 'error'); } catch (e) {}
+            return;
+        }
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        alvo.classList.remove('hidden');
+        // Cada aba carrega o que precisa ao abrir. Sem isto a aba abre VAZIA,
+        // que era o caso da aba PLANOS.
+        if (tabId === 'aba-gestao') this.trocarEspaco('servicos');
+        if (tabId === 'aba-clientes') App.renderClientes();
+        if (tabId === 'aba-equipe') App.renderListaProfissionais();
+        if (tabId === 'aba-relatorios') App.renderRelatorios();
+        if (tabId === 'aba-planos') UI.carregarPlanos();
+        if (tabId === 'aba-configuracoes') App.carregarConfiguracoes();
+        if (tabId === 'aba-avisos') { App.carregarAvisos(); App.carregarRecadosEstabelecimento(); }
+        if (tabId === 'aba-agenda') { App.popularClientesAgenda(); App.montarLateralProfs(); App.renderAgendaGrid(); }
+    },
+
+    // A aba PLANOS mostra qual plano o salao tem AGORA.
+    // O plano vem do BANCO, nao do navegador: assim nunca diverge.
+    toggleMobileMenu(forceState) {
+                if (!menu) return;
+        if (typeof forceState === 'boolean') {
+            if (forceState) menu.classList.remove('hidden');
+            else menu.classList.add('hidden');
+        } else {
+            menu.classList.toggle('hidden');
+        }
+    }
+};
+
+// Registra o objeto real no atalho: a partir daqui, os botoes da barra
+// chamam as funcoes de verdade.
+window.hcUI = UI;
+try { if (window.UI && window.UI._registrar) window.UI._registrar(UI); } catch (e) {}
+
+window.addEventListener('DOMContentLoaded', async () => {
+    // ============================================================
+    // ORDEM CERTA: o ADMIN vem PRIMEIRO.
+    // Havia um 'prof_dados' antigo no navegador que assumia o papel de
+    // profissional e saia pelo 'return' - sem nunca olhar a sessao do
+    // salao. Era isso que jogava o dono na area do profissional.
+    // ============================================================
+    // Duas checagens, nesta ordem, e nada mais:
+    //   1) existe sessao do Supabase?  -> e o SALAO
+    //   2) senao, a sessao gravada diz 'profissional'? -> e o PROFISSIONAL
+    // Antes o sistema perguntava "tem prof_dados na gaveta?" antes de
+    // "quem entrou?", e o residuo vencia. Agora o papel gravado manda.
+    // ============================================================
+    // QUEM MANDA E O PAPEL GRAVADO NO LOGIN.
+    // O Supabase apenas CONFIRMA — ele e assincrono e, na primeira
+    // volta da pagina, as vezes ainda nao respondeu. Quando isso
+    // acontecia, o prof_dados antigo vencia e o dono do salao caia
+    // na area do profissional. Agora nao ha mais essa brecha.
+    // ============================================================
+    const papelGravado = window.hcSessao.papel;   // 'salao' | 'profissional' | ''
+
+    // Sessao do Supabase: serve para CONFIRMAR, nunca para decidir sozinha.
+    let temSessaoAdmin = false;
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        temSessaoAdmin = !!(session && session.user);
+    } catch (e) { temSessaoAdmin = false; }
+    // Se ha sessao do salao e o papel gravado nao e de profissional, ele e salao.
+    if (temSessaoAdmin && papelGravado !== 'profissional') {
+        window.hcSessao.definir('salao');
+    }
+
+    // O profissional SO restaura se o papel gravado for dele, sem excecao.
+    const podeProf = (papelGravado === 'profissional');
+    const profSalvo = podeProf ? localStorage.getItem('hairconcept_prof_dados') : null;
+
+    // Se ha rastro de profissional mas o papel nao e dele, limpa agora.
+    if (!podeProf && localStorage.getItem('hairconcept_prof_dados')) {
+        window.hcSessao.limparResiduo('salao');
+    }
+
+    if (profSalvo) {
+        try {
+            const data = JSON.parse(profSalvo);
+            if (!data || !data.id) throw new Error('dados incompletos');
+            App.user = { loggedIn: true, role: 'profissional', name: data.nome || '', id: data.id };
+            App.aplicarIdentidadeNoHeader(data.nome_salao, data.logo_url || null);
+            if (data.estabelecimento_id) App.carregarIdentidadeDoSalao(data.estabelecimento_id);
+            const nomeEl = document.getElementById('prof-header-nome');
+            const cargoEl = document.getElementById('prof-header-cargo');
+            const fotoEl = document.getElementById('prof-header-foto');
+            if (nomeEl) nomeEl.textContent = data.nome || '';
+            if (cargoEl) cargoEl.textContent = data.cargo || '';
+            if (fotoEl && data.foto_url) fotoEl.src = data.foto_url;
+            App.finishLogin();
+            return;
+        } catch (e) {
+            localStorage.removeItem('hairconcept_prof_dados');
+        }
+    }
+
+    // Link de recuperação de senha: o Supabase entrega o token na barra de endereços
+    const hash = window.location.hash || '';
+    const query = window.location.search || '';
+    // IMPORTANTE: o Supabase poe ?code=... em QUALQUER retorno de login.
+    // Por isso so tratamos como recuperacao se for explicitamente de recuperacao.
+    const params = new URLSearchParams(query);
+    const ehRecuperacao = /type=recovery/.test(hash) ||
+                          params.get('type') === 'recovery' ||
+                          (/access_token/.test(hash) && /type=recovery/.test(hash));
+    if (ehRecuperacao) {
+        if (supabaseClient && supabaseClient.auth) {
+            try {
+                const { error } = await supabaseClient.auth.getSessionFromUrl
+                    ? await supabaseClient.auth.getSessionFromUrl({ storeSession: true })
+                    : { error: null };
+                if (error) console.error('Erro ao ler o link de recuperação:', error);
+            } catch (e) {
+                console.error('Erro ao processar o link de recuperação:', e);
+            }
+            Auth.abrirModal('modal-nova-senha');
+            return;
+        }
+    }
+
+    // Admin: restaura a sessão do Supabase
+    if (supabaseClient && supabaseClient.auth) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && App.checarContaExcluida && await App.checarContaExcluida(session)) {
+            await supabaseClient.auth.signOut();
+            localStorage.clear();
+            location.reload();
+            return;
+        }
+        if (session && !App.user.loggedIn) {
+            // Sessao do Supabase ativa = e o salao.
+            window.hcSessao.definir('salao');
+            window.hcSessao.limparResiduo('salao');
+            const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+            App.user = { loggedIn: true, role: 'admin', name: name };
+            App.finishLogin();
+        }
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session && !App.user.loggedIn) {
+                // Entrou conta nova: e o salao.
+                window.hcSessao.definir('salao');
+                window.hcSessao.limparResiduo('salao');
+                const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+                App.user = { loggedIn: true, role: 'admin', name: name };
+                App.finishLogin(`Bem-vindo, ${name}!`);
+            }
+        });
+    }
+
+    // DECISAO DA ABERTURA, agora no fim: so aqui o sistema ja sabe se ha sessao.
+    // Quem ja esta logado entra direto, sem passar pela tela de boas-vindas.
+    try {
+        // A decisao da abertura usa a SESSAO GRAVADA no login, nunca o
+        // prof_dados: era ele que fazia o dono do salao cair na area errada.
+        const papelGravado = window.hcSessao ? window.hcSessao.papel : '';
+        const temProf = papelGravado === 'profissional';
+        const temAdmin = papelGravado === 'salao' || temSessaoAdmin;
+        const logado = temProf || temAdmin || (App.user && App.user.loggedIn);
+        if (logado) {
+            localStorage.setItem('hairconcept_viu_abertura', 'sim');
+            Auth.liberarAbertura();
+        } else {
+            // SEM login: a tela de abertura SEMPRE aparece.
+            // Nada de "ja viu antes" — quem saiu, volta para ela.
+            document.body.classList.add('hc-abertura-ativa');
+        }
+    } catch (e) { console.warn('Abertura:', e); }
+});
