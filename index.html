@@ -563,13 +563,36 @@ tailwind.config = {
 
     <aside id="ag-lateral" class="ag-lateral">
       <p class="ag-lateral-titulo">Profissionais</p>
-      <input type="text" id="ag-filtro-profs" placeholder="Buscar profissional..."
-        oninput="App.filtrarLateralProfs(this.value)"
-        class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white mb-2">
+      <input type="text" id="ag-filtro-profs" placeholder="Buscar profissional..." oninput="App.filtrarLateralProfs(this.value)" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white mb-2">
       <div id="ag-lista-profs"></div>
     </aside>
 
     <div>
+
+
+  <!-- ===== MENU DO DIA (abre pelo icone de cada dia na semana) ===== -->
+  <div id="menu-dia-pop" class="menu-dia-pop hidden">
+    <p id="menu-dia-rotulo" class="text-[10px] font-bold uppercase text-zinc-400 mb-2">Dia</p>
+
+    <button type="button" onclick="App.fecharAgendaDia()" class="menu-dia-op">
+      <i class="fa-solid fa-lock"></i> Fechar o dia inteiro
+    </button>
+
+    <p class="text-[9px] font-bold uppercase text-zinc-500 mt-3 mb-1">Fechar um intervalo</p>
+    <div class="flex items-center gap-2 mb-2">
+      <input type="time" id="menu-dia-de" step="1800" class="glass-input rounded-lg px-2 py-1.5 text-xs text-white">
+      <span class="text-zinc-500 text-xs">até</span>
+      <input type="time" id="menu-dia-ate" step="1800" class="glass-input rounded-lg px-2 py-1.5 text-xs text-white">
+    </div>
+    <input type="text" id="menu-dia-motivo" placeholder="Motivo (ex: almoço)" class="w-full glass-input rounded-lg px-2 py-1.5 text-xs text-white mb-2">
+    <div class="flex gap-2">
+      <button type="button" onclick="App.fecharAgendaIntervalo()" class="flex-1 px-3 py-2 rounded-lg bg-brand-500 text-white text-[10px] font-bold uppercase">Fechar intervalo</button>
+      <button type="button" onclick="App.fecharMenuDia()" class="px-3 py-2 rounded-lg bg-zinc-900 border border-white/10 text-zinc-400 text-[10px] font-bold uppercase">Cancelar</button>
+    </div>
+    <button type="button" id="menu-dia-todos" onclick="App.fecharAgendaDia()" class="w-full mt-2 px-3 py-2 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase">
+      Fechar para toda a equipe
+    </button>
+  </div>
 
 <!-- ===== ALTERNADOR DIA / SEMANA ===== -->
   <div class="flex items-center gap-2 mb-3">
@@ -799,7 +822,53 @@ tailwind.config = {
       </div>
     </div>
 
-    <!-- ============ CHAT ============ -->
+    
+    <!-- ===== RECADOS DA EQUIPE (o salao responde) ===== -->
+    <div class="hc-prof-secao">
+      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-inbox"></i> Mensagens da equipe</h3>
+      <div class="hc-prof-card">
+        <div id="lista-recados-estab" class="hc-prof-notas"></div>
+        <div class="hc-prof-chat-envio" style="margin-top:12px;">
+          <select id="admin-resposta-para" class="hc-prof-chat-input" style="max-width:150px;">
+            <option value="">Todos</option>
+          </select>
+          <input type="text" id="admin-resposta-input" placeholder="Responder ou avisar a equipe..." class="hc-prof-chat-input"
+            onkeypress="if(event.key === 'Enter') App.enviarRespostaAdmin()">
+          <button type="button" onclick="App.enviarRespostaAdmin()" class="hc-prof-chat-btn" title="Enviar">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MEU FECHAMENTO DETALHADO ===== -->
+    <div class="hc-prof-secao">
+      <h3 class="hc-prof-secao-titulo"><i class="fa-solid fa-receipt"></i> Detalhes do fechamento</h3>
+      <div class="hc-prof-card">
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          <div class="hc-prof-stat">
+            <span>Atendimentos</span>
+            <strong id="fech-qtd">0</strong>
+          </div>
+          <div class="hc-prof-stat">
+            <span>Valor total</span>
+            <strong id="fech-valor">R$ 0,00</strong>
+          </div>
+          <div class="hc-prof-stat">
+            <span>Minha parte</span>
+            <strong id="fech-comissao" class="hc-prof-verde">R$ 0,00</strong>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-3">
+          <label class="text-[10px] text-zinc-400 uppercase">Minha comissão (%)</label>
+          <input type="number" id="fech-pct" value="50" class="hc-prof-input" style="max-width:90px;">
+        </div>
+        <div id="fech-lista" class="flex flex-col gap-2"></div>
+        <div id="fech-historico" class="flex flex-col gap-2 mt-3"></div>
+      </div>
+    </div>
+
+<!-- ============ CHAT ============ -->
     <div class="hc-prof-chat">
       <h3 class="hc-prof-chat-titulo">
         <i class="fa-solid fa-comments"></i> Falar com o salão
@@ -1095,6 +1164,21 @@ tailwind.config = {
       <div id="ranking-gestao" class="space-y-2"></div>
     </div>
   </div>
+
+    <!-- ===== AVALIACAO DO CLIENTE ===== -->
+    <div class="glass-water rounded-3xl p-6 border border-white/10 space-y-4 mt-5">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <h3 class="text-sm font-bold uppercase text-white flex items-center gap-2">
+          <i class="fa-solid fa-star text-brand-500"></i> Avaliação do cliente
+        </h3>
+        <div class="flex gap-2">
+          <button type="button" id="btn-aval-cli" onclick="UI.trocarTipoAvaliacao('cli')" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 text-[10px] font-bold uppercase">Clientes</button>
+          <button type="button" onclick="UI.trocarTipoAvaliacao('prof')" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 text-[10px] font-bold uppercase">Profissionais</button>
+        </div>
+      </div>
+      <div id="lista-avaliacoes" class="space-y-2"></div>
+    </div>
+
 </section>
 
 <!-- TELA DE BOAS-VINDAS (primeiro login) -->
@@ -1318,6 +1402,9 @@ v>
       </div>
     </div>
   </div>
+
+    <p id="hc-plano-limite" class="text-xs text-zinc-400 text-center"></p>
+
 </section>
 
 <!-- AVALIAÇÕES -->
@@ -1704,5 +1791,153 @@ handleParticles();
 
 <!-- Script Principal -->
 <script src="app.js"></script>
+<script>
+// ============================================================
+// ACESSIBILIDADE — vale nos dois perfis (salão e profissional).
+// A escolha do usuário fica salva e vale na próxima visita.
+// ============================================================
+window.HCAcess = (function () {
+    var CHAVE = 'hairconcept_acessibilidade';
+    var opcoes = { fonte: 0, espaco: false, linha: false, claro: false, cinza: false,
+                   cursor: false, links: false, guias: false, 'sem-anim': false };
+
+    function salvar() { try { localStorage.setItem(CHAVE, JSON.stringify(opcoes)); } catch (e) {} }
+    function ler() {
+        try { var s = localStorage.getItem(CHAVE); if (s) opcoes = Object.assign(opcoes, JSON.parse(s)); }
+        catch (e) {}
+    }
+
+    function aplicar() {
+        var b = document.body;
+        // Fonte: 5 niveis (0 = normal)
+        b.classList.remove('hc-f1', 'hc-f2', 'hc-f3', 'hc-f4', 'hc-f5');
+        if (opcoes.fonte !== 0) b.classList.add('hc-f' + Math.abs(opcoes.fonte));
+        b.classList.toggle('hc-fonte-menor', opcoes.fonte < 0);
+
+        b.classList.toggle('hc-espaco', !!opcoes.espaco);
+        b.classList.toggle('hc-linha', !!opcoes.linha);
+        b.classList.toggle('hc-claro', !!opcoes.claro);
+        b.classList.toggle('hc-cinza', !!opcoes.cinza);
+        b.classList.toggle('hc-cursor', !!opcoes.cursor);
+        b.classList.toggle('hc-links', !!opcoes.links);
+        b.classList.toggle('hc-sem-anim', !!opcoes['sem-anim']);
+        b.classList.toggle('hc-guias', !!opcoes.guias);
+    }
+
+    // Faixa que segue o mouse, para não perder a linha na leitura
+    var guia = null;
+    document.addEventListener('mousemove', function (ev) {
+        if (!opcoes.guias) return;
+        if (!guia) {
+            guia = document.createElement('div');
+            guia.className = 'hc-guia-leitura';
+            document.body.appendChild(guia);
+        }
+        guia.style.top = ev.clientY + 'px';
+    });
+
+    return {
+        iniciar: function () { ler(); aplicar(); },
+        abrir: function () { document.getElementById('hc-acess-painel').classList.remove('hidden'); },
+        fechar: function () { document.getElementById('hc-acess-painel').classList.add('hidden'); },
+        fonte: function (passo) {
+            opcoes.fonte = Math.max(-2, Math.min(4, opcoes.fonte + passo));
+            aplicar(); salvar();
+        },
+        alternar: function (qual) {
+            opcoes[qual] = !opcoes[qual];
+            aplicar(); salvar();
+            if (typeof UI !== 'undefined' && UI.showToast) {
+                UI.showToast(opcoes[qual] ? 'Ativado' : 'Desativado');
+            }
+        },
+        libras: function () {
+            // Abre o plugin oficial do VLibras
+            var btn = document.querySelector('[vw-access-button]');
+            if (btn) btn.click();
+            else if (window.plugin && window.plugin.toggle) window.plugin.toggle();
+        },
+        resetar: function () {
+            opcoes = { fonte: 0, espaco: false, linha: false, claro: false, cinza: false,
+                       cursor: false, links: false, guias: false, 'sem-anim': false };
+            aplicar(); salvar();
+        }
+    };
+})();
+
+// Aplica a escolha salva assim que a página abre
+document.addEventListener('DOMContentLoaded', function () { window.HCAcess.iniciar(); });
+if (document.readyState !== 'loading') window.HCAcess.iniciar();
+
+// Inicia o tradutor de Libras
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.VLibras && window.VLibras.Widget) {
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    }
+});
+</script>
+
+
+
+<!-- ============ ACESSIBILIDADE E LIBRAS ============ -->
+<!-- Um só botão abre o painel: fonte, contraste, leitura e Libras. -->
+<button type="button" id="hc-acess-btn" onclick="HCAcess.abrir()"
+  title="Acessibilidade" aria-label="Abrir recursos de acessibilidade">
+  <i class="fa-solid fa-universal-access"></i>
+</button>
+
+<div id="hc-acess-painel" class="hc-acess-painel hidden" role="dialog" aria-label="Recursos de acessibilidade">
+  <div class="hc-acess-topo">
+    <h3><i class="fa-solid fa-universal-access"></i> Acessibilidade</h3>
+    <button type="button" class="hc-acess-x" onclick="HCAcess.fechar()" aria-label="Fechar">&times;</button>
+  </div>
+
+  <p class="hc-acess-grupo">Leitura</p>
+  <div class="hc-acess-linha">
+    <button type="button" onclick="HCAcess.fonte(1)"><i class="fa-solid fa-magnifying-glass-plus"></i> Aumentar fonte</button>
+    <button type="button" onclick="HCAcess.fonte(-1)"><i class="fa-solid fa-magnifying-glass-minus"></i> Diminuir fonte</button>
+  </div>
+  <div class="hc-acess-linha">
+    <button type="button" onclick="HCAcess.alternar('espaco')"><i class="fa-solid fa-text-width"></i> Espaçamento do texto</button>
+    <button type="button" onclick="HCAcess.alternar('linha')"><i class="fa-solid fa-arrows-up-down"></i> Altura da linha</button>
+  </div>
+  <div class="hc-acess-linha">
+    <button type="button" onclick="HCAcess.alternar('guias')"><i class="fa-solid fa-bars-staggered"></i> Guia de leitura</button>
+    <button type="button" onclick="HCAcess.alternar('links')"><i class="fa-solid fa-link"></i> Sublinhar links</button>
+  </div>
+
+  <p class="hc-acess-grupo">Cores</p>
+  <div class="hc-acess-linha">
+    <button type="button" onclick="HCAcess.alternar('claro')"><i class="fa-solid fa-circle-half-stroke"></i> Inverter cores</button>
+    <button type="button" onclick="HCAcess.alternar('cinza')"><i class="fa-solid fa-droplet-slash"></i> Escala de cinza</button>
+  </div>
+  <div class="hc-acess-linha">
+    <button type="button" onclick="HCAcess.alternar('cursor')"><i class="fa-solid fa-arrow-pointer"></i> Cursor grande</button>
+  </div>
+
+  <p class="hc-acess-grupo">Movimento</p>
+  <div class="hc-acess-linha">
+    <button type="button" onclick="HCAcess.alternar('sem-anim')"><i class="fa-solid fa-ban"></i> Desligar animações</button>
+  </div>
+
+  <p class="hc-acess-grupo">Libras</p>
+  <div class="hc-acess-linha">
+    <button type="button" onclick="HCAcess.libras()"><i class="fa-solid fa-hands"></i> Abrir tradutor de Libras</button>
+  </div>
+
+  <button type="button" class="hc-acess-reset" onclick="HCAcess.resetar()">
+    <i class="fa-solid fa-rotate-left"></i> Voltar ao normal
+  </button>
+</div>
+
+<!-- VLibras — tradutor oficial de Libras (governo federal, gratuito) -->
+<div vw class="enabled">
+  <div vw-access-button class="active"></div>
+  <div vw-plugin-wrapper>
+    <div class="vw-plugin-top-wrapper"></div>
+  </div>
+</div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
 </body>
 </html>
