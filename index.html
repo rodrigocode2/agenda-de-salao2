@@ -775,7 +775,17 @@ tailwind.config = {
     </div>
   </div>
 
-  <!-- TABELA DA AGENDA -->
+    <!-- ===== ALTERNADOR DIA / SEMANA ===== -->
+  <div class="flex items-center gap-2 mb-3">
+    <div id="agenda-modos" class="flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
+      <button type="button" id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer ativo"><i class="fa-solid fa-calendar-day mr-1.5"></i> Dia</button>
+      <button type="button" id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer"><i class="fa-solid fa-calendar-week mr-1.5"></i> Semana</button>
+    </div>
+  </div>
+
+  <!-- ===== VISAO DO DIA ===== -->
+  <div id="agenda-modo-dia">
+<!-- TABELA DA AGENDA -->
   <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
     <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
       <thead>
@@ -785,6 +795,21 @@ tailwind.config = {
       </thead>
       <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
     </table>
+  </div>
+  </div>
+
+  <!-- ===== VISAO DA SEMANA ===== -->
+  <div id="agenda-modo-semana" class="hidden">
+    <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+      <div class="semana-scroll">
+        <table class="semana-tabela">
+          <thead>
+            <tr id="semana-cabecalho"></tr>
+          </thead>
+          <tbody id="semana-corpo" class="semana-corpo"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
 </section>
