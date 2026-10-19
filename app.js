@@ -437,6 +437,12 @@ const Auth = {
     abrirAreaProf() {
         const area = document.getElementById('hc-area-prof');
         if (area) area.classList.remove('hidden');
+        // A aba do profissional precisa estar visivel (ela e separada da agenda)
+        try {
+            document.querySelectorAll('.tab-content').forEach(function (el) { el.classList.add('hidden'); });
+            const aba = document.getElementById('aba-prof');
+            if (aba) aba.classList.remove('hidden');
+        } catch (e) { console.warn('abrir aba do prof:', e && e.message); }
         const p = (this.user && this.user.profDados) || {};
         const el = function (id) { return document.getElementById(id); };
         if (el('hc-prof-nome')) el('hc-prof-nome').textContent = (p.nome || this.user.name || 'Profissional');
