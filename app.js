@@ -332,7 +332,7 @@ const Auth = {
         if (p.cor) this.aplicarCorProf(p.cor);
         if (el('prof-bio') && p.bio) el('prof-bio').value = p.bio;
         this._diaProf = dataLocalISO();
-        this.renderDiaProf();
+        try { this.renderDiaProf(); } catch (e) { console.warn('[HairConcept] dia do prof falhou:', e && e.message); }
         // Carrega as ferramentas dele
         this.carregarCursosProf();
         this.carregarMeusCertificados();
@@ -832,25 +832,34 @@ const App = {
             : (this.user.role === 'profissional');
 
         // Todo mundo precisa da agenda e das notas
-        this.renderAgendaGrid();
-        this.carregarPostIts();
-        this.carregarRecadosEstabelecimento();
-        this.proximaFrase();
+        // Cada peça protegida por conta própria: uma falhando não derruba
+        // as outras nem deixa a PÁGINA EM BRANCO.
+        var seguro = function (nome, fn) {
+            try { fn(); } catch (e) { console.warn('[HairConcept] ' + nome + ' falhou:', e && e.message); }
+        };
+        seguro('agenda',   function () { App.renderAgendaGrid(); });
+        seguro('post-its', function () { App.carregarPostIts(); });
+        seguro('recados',  function () { App.carregarRecadosEstabelecimento(); });
+        seguro('frase',    function () { App.proximaFrase(); });
 
         if (!ehProfissional) {
-            // Só o salão carrega o resto (deixa o login do profissional leve)
-            this.renderListaProfissionais();
-            this.renderProdutos();
-            this.renderServicos();
-            this.popularSelectProfissionais();
-            this.carregarConfiguracoes();
-            this.renderRelatorios();
-            this.renderAvaliacoes();
-            this.carregarAvisos();
-            this.renderClientes();
-            this.popularClientesAgenda();
-            this.renderRanking();
-            this.renderAvaliacao();
+            // Só o salão carrega o resto. Cada peça protegida: uma falhando
+            // não derruba as outras nem deixa a tela em branco.
+            var seguroSalao = function (nome, fn) {
+                try { fn(); } catch (e) { console.warn('[HairConcept] ' + nome + ' falhou:', e && e.message); }
+            };
+            seguroSalao('equipe',        function () { App.renderListaProfissionais(); });
+            seguroSalao('produtos',      function () { App.renderProdutos(); });
+            seguroSalao('servicos',      function () { App.renderServicos(); });
+            seguroSalao('select-profs',  function () { App.popularSelectProfissionais(); });
+            seguroSalao('config',        function () { App.carregarConfiguracoes(); });
+            seguroSalao('relatorios',    function () { App.renderRelatorios(); });
+            seguroSalao('avaliacoes',    function () { App.renderAvaliacoes(); });
+            seguroSalao('avisos',        function () { App.carregarAvisos(); });
+            seguroSalao('clientes',      function () { App.renderClientes(); });
+            seguroSalao('agenda-cli',    function () { App.popularClientesAgenda(); });
+            seguroSalao('ranking',       function () { App.renderRanking(); });
+            seguroSalao('avaliacao',     function () { App.renderAvaliacao(); });
         }
 
         // Mostra ou esconde as partes conforme o perfil
@@ -866,11 +875,11 @@ const App = {
             });
             // O selo do certificado precisa estar carregado ANTES de desenhar
             // a area, senao o chapeu nao aparece no nome.
-            try { await this.carregarSeloCertificados(); } catch (e) {}
+            try { await this.carregarSeloCertificados(); } catch (e) { console.warn('selo:', e && e.message); }
             // Cor salva no navegador (funciona mesmo sem a coluna no banco)
             const corSalva = localStorage.getItem('hairconcept_prof_cor');
             if (corSalva) this.aplicarCorProf(corSalva);
-            this.carregarFechamento();
+            try { this.carregarFechamento(); } catch (e) { console.warn('fechamento:', e && e.message); }
             this.abrirAreaProf();
             document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
         } else {
