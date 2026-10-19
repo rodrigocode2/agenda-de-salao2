@@ -102,8 +102,25 @@ function irAba(aba) {
         });
         if (aba === 'aba-agenda' && typeof App !== 'undefined') {
             try { App.renderAgendaGrid(); } catch (e) {}
+            try { if (App.montarLateralProfs) App.montarLateralProfs(); } catch (e) {}
+            try { if (App.popularClientesAgenda) App.popularClientesAgenda(); } catch (e) {}
+        }
+        if (aba === 'aba-prof' && typeof App !== 'undefined') {
+            // A aba do profissional precisa carregar o que ele ve
+            try { if (App.abrirAreaProf) App.abrirAreaProf(); } catch (e) {}
         }
         if (aba === 'aba-gestao') { try { irGestao('servicos'); } catch (e) {} }
+        // Cada aba carrega o que precisa (as mesmas do switchTab)
+        if (typeof App !== 'undefined') {
+            try {
+                if (aba === 'aba-clientes' && App.renderClientes) App.renderClientes();
+                if (aba === 'aba-equipe' && App.renderListaProfissionais) App.renderListaProfissionais();
+                if (aba === 'aba-relatorios' && App.renderRelatorios) App.renderRelatorios();
+                if (aba === 'aba-avisos' && App.carregarAvisos) App.carregarAvisos();
+                if (aba === 'aba-planos' && UI && UI.carregarPlanos) UI.carregarPlanos();
+                if (aba === 'aba-configuracoes' && App.carregarConfiguracoes) App.carregarConfiguracoes();
+            } catch (e) { console.warn('[HairConcept] carregar aba:', e && e.message); }
+        }
     } catch (e) { console.warn('[HairConcept] nao consegui abrir ' + aba + ':', e && e.message); }
 }
 
@@ -5583,6 +5600,7 @@ const UI = {
         if (tabId === 'aba-configuracoes') App.carregarConfiguracoes();
         if (tabId === 'aba-avisos') { App.carregarAvisos(); App.carregarRecadosEstabelecimento(); }
         if (tabId === 'aba-agenda') { App.popularClientesAgenda(); App.montarLateralProfs(); App.renderAgendaGrid(); }
+        if (tabId === 'aba-prof' && App.abrirAreaProf) { App.abrirAreaProf(); }
     },
 
     // A aba PLANOS mostra qual plano o salao tem AGORA.
