@@ -165,10 +165,19 @@ function fecharGaveta() {
     if (fundo) fundo.classList.remove('mostrando');
 }
 
+// Abre e fecha a lista de profissionais no celular.
+// No desktop (>=1024px) ela fica sempre visivel, pelo CSS.
+function toggleLateralProfs() {
+    var lat = document.getElementById('ag-lateral');
+    if (!lat) { console.warn('[HairConcept] a lista de profissionais nao existe nesta tela'); return; }
+    lat.classList.toggle('aberta');
+}
+
 window.irAba = irAba;
 window.irGestao = irGestao;
 window.abrirGaveta = abrirGaveta;
 window.fecharGaveta = fecharGaveta;
+window.toggleLateralProfs = toggleLateralProfs;
 
 // ============================================================
 // ATALHO DA INTERFACE — existe desde a PRIMEIRA linha do arquivo.
