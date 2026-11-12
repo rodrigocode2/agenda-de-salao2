@@ -252,14 +252,6 @@ html, body {
   }
 }
 
-/* Telas muito estreitas: agenda ainda utilizável */
-@media (max-width: 420px) {
-  border-radius: 0.75rem;
-  padding: 0.5rem;
-  font-size: 11px;
-  border: 1px solid;
-  position: relative;
-}
 .ag-espera    { background: rgba(234, 179, 8, 0.16);  border-color: rgba(234, 179, 8, 0.45);  color: #fde68a; }
 .ag-atendendo { background: rgba(59, 130, 246, 0.16); border-color: rgba(59, 130, 246, 0.45); color: #bfdbfe; }
 .ag-finalizado{ background: rgba(161, 161, 170, 0.14);border-color: rgba(161, 161, 170, 0.4); color: #d4d4d8; }

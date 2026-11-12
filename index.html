@@ -38,12 +38,13 @@ tailwind.config = {
 }
 </script>
 <!-- Google Fonts (Space Grotesk + Syne, usadas no Tailwind) -->
-<link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syne:wght@700;800&display=swap)" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 
 <style type="text/css"></style>
 <!-- FontAwesome CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="agenda.css">
 </head>
 <body class="bg-darkbg-300 text-slate-100 min-h-screen flex flex-col antialiased relative">
 <!-- ============ SIDEBAR DE NAVEGACAO ============ -->
@@ -552,89 +553,8 @@ tailwind.config = {
 </section>
 
 <!-- AGENDA PAINEL PRINCIPAL -->
-<section id="aba-agenda" class="tab-content hidden space-y-6 p-6 rounded-3xl border border-white/10 glass-water">
-  
-  <!-- ===== LATERAL DE PROFISSIONAIS ===== -->
-  <button type="button" class="ag-lateral-toggle" onclick="toggleLateralProfs()">
-    <i class="fa-solid fa-users"></i> Profissionais
-  </button>
-
-  <div class="ag-layout">
-
-    <aside id="ag-lateral" class="ag-lateral">
-      <p class="ag-lateral-titulo">Profissionais</p>
-      <input type="text" id="ag-filtro-profs" placeholder="Buscar profissional..." oninput="App.filtrarLateralProfs(this.value)" class="w-full glass-input rounded-xl px-3 py-2 text-xs text-white mb-2">
-      <div id="ag-lista-profs"></div>
-    </aside>
-
-    <div>
-
-
-  <!-- ===== MENU DO DIA (abre pelo icone de cada dia na semana) ===== -->
-  <div id="menu-dia-pop" class="menu-dia-pop hidden">
-    <p id="menu-dia-rotulo" class="text-[10px] font-bold uppercase text-zinc-400 mb-2">Dia</p>
-
-    <button type="button" onclick="App.fecharAgendaDia()" class="menu-dia-op">
-      <i class="fa-solid fa-lock"></i> Fechar o dia inteiro
-    </button>
-
-    <p class="text-[9px] font-bold uppercase text-zinc-500 mt-3 mb-1">Fechar um intervalo</p>
-    <div class="flex items-center gap-2 mb-2">
-      <input type="time" id="menu-dia-de" step="1800" class="glass-input rounded-lg px-2 py-1.5 text-xs text-white">
-      <span class="text-zinc-500 text-xs">até</span>
-      <input type="time" id="menu-dia-ate" step="1800" class="glass-input rounded-lg px-2 py-1.5 text-xs text-white">
-    </div>
-    <input type="text" id="menu-dia-motivo" placeholder="Motivo (ex: almoço)" class="w-full glass-input rounded-lg px-2 py-1.5 text-xs text-white mb-2">
-    <div class="flex gap-2">
-      <button type="button" onclick="App.fecharAgendaIntervalo()" class="flex-1 px-3 py-2 rounded-lg bg-brand-500 text-white text-[10px] font-bold uppercase">Fechar intervalo</button>
-      <button type="button" onclick="App.fecharMenuDia()" class="px-3 py-2 rounded-lg bg-zinc-900 border border-white/10 text-zinc-400 text-[10px] font-bold uppercase">Cancelar</button>
-    </div>
-    <button type="button" id="menu-dia-todos" onclick="App.fecharAgendaDia()" class="w-full mt-2 px-3 py-2 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase">
-      Fechar para toda a equipe
-    </button>
-  </div>
-
-<!-- ===== ALTERNADOR DIA / SEMANA ===== -->
-  <div class="flex items-center gap-2 mb-3">
-    <div id="agenda-modos" class="flex items-center gap-1 bg-zinc-950/80 p-1.5 rounded-2xl border border-white/10">
-      <button type="button" id="btn-modo-dia" onclick="App.trocarModoAgenda('dia')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer ativo"><i class="fa-solid fa-calendar-day mr-1.5"></i> Dia</button>
-      <button type="button" id="btn-modo-semana" onclick="App.trocarModoAgenda('semana')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition cursor-pointer"><i class="fa-solid fa-calendar-week mr-1.5"></i> Semana</button>
-    </div>
-  </div>
-
-  <!-- ===== VISAO DO DIA ===== -->
-  <div id="agenda-modo-dia">
-<!-- TABELA DA AGENDA -->
-  <div class="glass-water rounded-2xl border border-white/10 overflow-x-auto shadow-2xl">
-    <table class="w-full text-left border-collapse min-w-[640px] md:min-w-[800px]">
-      <thead>
-        <tr id="grid-header-row" class="bg-zinc-950/90 border-b border-white/10 text-zinc-400 text-[11px] uppercase tracking-wider">
-          <th class="py-3 px-4 w-24">Horário</th>
-        </tr>
-      </thead>
-      <tbody id="grid-horarios-body" class="divide-y divide-white/5 text-xs"></tbody>
-    </table>
-  </div>
-  </div>
-
-  <!-- ===== VISAO DA SEMANA ===== -->
-  <div id="agenda-modo-semana" class="hidden">
-    <div id="semana-wrap" class="glass-water rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-      <div class="semana-scroll">
-        <table class="semana-tabela">
-          <thead>
-            <tr id="semana-cabecalho"></tr>
-          </thead>
-          <tbody id="semana-corpo" class="semana-corpo"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-
-    </div>
-  </div>
-
+<section id="aba-agenda" class="tab-content hidden space-y-6 p-3 sm:p-6 rounded-3xl border border-white/10 glass-water">
+  <div id="agenda-app"></div>
 </section>
 
 <!-- ===== ABA DO PROFISSIONAL (separada da agenda do salao) ===== -->
@@ -1752,45 +1672,11 @@ handleParticles();
 </script>
 
 
-<script>
-// No celular, a grade da semana mostra UM dia por vez, e deslizar troca de dia.
-(function () {
-  var diaAtivo = 0;
-  function aplicarDia() {
-    var cels = document.querySelectorAll('#semana-corpo .semana-cel');
-    var cabs = document.querySelectorAll('#semana-cabecalho .semana-th');
-    if (!cabs.length) return;
-    var n = cabs.length;
-    if (diaAtivo < 0) diaAtivo = n - 1;
-    if (diaAtivo >= n) diaAtivo = 0;
-    cels.forEach(function (c, i) { c.classList.toggle('mostrando', (i % n) === diaAtivo); });
-    cabs.forEach(function (c, i) { c.classList.toggle('mostrando', i === diaAtivo); });
-  }
-  window.__aplicarDiaSemana = aplicarDia;
 
-  var x0 = null;
-  var alvo = document.getElementById('agenda-modo-semana');
-  if (alvo) {
-    alvo.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
-    alvo.addEventListener('touchend', function (e) {
-      if (x0 === null) return;
-      var dx = e.changedTouches[0].clientX - x0;
-      if (Math.abs(dx) > 45) { diaAtivo += (dx < 0 ? 1 : -1); aplicarDia(); }
-      x0 = null;
-    }, { passive: true });
-  }
-
-  // Reaplica sempre que a semana for redesenhada
-  var orig = window.renderAgendaSemanaHook;
-  var obs = new MutationObserver(function () { if (window.innerWidth < 768) aplicarDia(); });
-  var corpo = document.getElementById('semana-corpo');
-  if (corpo) obs.observe(corpo, { childList: true });
-  if (window.innerWidth < 768) setTimeout(aplicarDia, 400);
-})();
-</script>
 
 <!-- Script Principal -->
 <script src="app.js"></script>
+<script src="agenda.js"></script>
 <script>
 // ============================================================
 // ACESSIBILIDADE — vale nos dois perfis (salão e profissional).
