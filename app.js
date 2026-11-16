@@ -9,7 +9,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
 // O site manda o CODIGO DO SALAO em toda chamada, num cabecalho proprio.
 // Assim o banco encontra o salao mesmo que a conta de login mude.
-const CODIGO_SALAO_PADRAO = 'deconcept2';
+const CODIGO_SALAO_PADRAO = 'powerupstyle';
 window.hcSalao = {
     get codigo() {
         try { return localStorage.getItem('hairconcept_codigo_salao') || CODIGO_SALAO_PADRAO; }
@@ -3354,7 +3354,7 @@ const App = {
         try {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session || !session.user) return id || null;
-            // 1o: o salao pelo CODIGO (deconcept2). Assim trocar de conta
+            // 1o: o salao pelo CODIGO (powerupstyle). Assim trocar de conta
             // Google nao abre um salao vazio e os clientes nao "somem".
             const codigo = (localStorage.getItem('hairconcept_codigo_salao') || '').trim().toLowerCase();
             if (codigo) {
