@@ -1793,3 +1793,8 @@ body.hc-claro .hc-side-logo, body.hc-claro canvas { filter: invert(1) hue-rotate
   .hc-acess-painel { right: 10px; left: 10px; width: auto; bottom: 76px; }
   #hc-acess-btn { bottom: 14px; right: 14px; }
 }
+
+/* Janelas acima do cabecalho e do menu; X sempre visivel; avisos acima de tudo */
+.modal-overlay { z-index: 200 !important; }
+.modal-x-fixo, .modal-x { z-index: 201 !important; }
+#toast-container { z-index: 9000 !important; }

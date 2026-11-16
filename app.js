@@ -630,7 +630,7 @@ const Auth = {
     async carregarComissoesTipo() {
         const caixa = document.getElementById('lista-comissoes-tipo');
         if (!caixa) return;
-        const estabId = await this.obterEstabId();
+        const estabId = await App.obterEstabId();
         const salvos = {};
         if (estabId) {
             try {
@@ -653,7 +653,7 @@ const Auth = {
     },
 
     async salvarComissoesTipo() {
-        const estabId = await this.obterEstabId();
+        const estabId = await App.obterEstabId();
         if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
         const campos = document.querySelectorAll('.cfg-comissao');
         const linhas = [];
@@ -678,7 +678,7 @@ const Auth = {
     },
 
     async salvarDadosFiscais() {
-        const estabId = await this.obterEstabId();
+        const estabId = await App.obterEstabId();
         if (!estabId) { UI.showToast('Não encontrei o seu salão.', 'error'); return; }
         const val = function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
         try {
@@ -697,7 +697,7 @@ const Auth = {
 
     // Carrega a aba CONFIGURACAO DO SALAO (a antiga config, agora dentro da gestao)
     async carregarConfigSalao() {
-        const estabId = await this.obterEstabId();
+        const estabId = await App.obterEstabId();
         if (!estabId) return;
         try {
             const { data } = await supabaseClient
@@ -4949,7 +4949,7 @@ const UI = {
     // Monta a aba de PLANOS: mostra o plano atual, o selo e os botoes de PIX.
     // Fica no objeto App porque e chamada como UI.carregarPlanos().
     async carregarPlanos() {
-        const estabId = await this.obterEstabId();
+        const estabId = await App.obterEstabId();
         if (!estabId) return;
         try {
             const { data } = await supabaseClient
