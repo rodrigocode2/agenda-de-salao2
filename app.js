@@ -1,3 +1,9 @@
+// Escapa texto vindo do banco antes de colocar em innerHTML (evita que um
+// nome ou recado com <tags> vire código na tela de quem abre).
+function escapeHTML(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
 const SUPABASE_URL = 'https://wahtcnoszlqtrfccfjxe.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_g2JwYeFICTnivZWJZTzWmg_XzHAUm3Z';
 
@@ -559,9 +565,9 @@ const Auth = {
                 return '<div class="hc-prof-card ' + classe + '">' +
                     '<div class="hc-prof-card-hora">' + ini + (fim ? '<span>' + fim + '</span>' : '') + '</div>' +
                     '<div class="hc-prof-card-info">' +
-                        '<strong>' + (a.cliente || 'Cliente') + '</strong>' +
-                        '<span>' + (a.servico || '') + '</span>' +
-                        (a.observacao ? '<em>' + a.observacao + '</em>' : '') +
+                        '<strong>' + escapeHTML(a.cliente || 'Cliente') + '</strong>' +
+                        '<span>' + escapeHTML(a.servico || '') + '</span>' +
+                        (a.observacao ? '<em>' + escapeHTML(a.observacao) + '</em>' : '') +
                     '</div>' +
                     '<div class="hc-prof-card-estado">' + estado + '</div>' +
                 '</div>';
@@ -1618,10 +1624,10 @@ const App = {
                     <div class="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs flex justify-between items-center gap-4">
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="text-brand-500 font-bold uppercase">${r.remetente}:</span>
+                                <span class="text-brand-500 font-bold uppercase">${escapeHTML(r.remetente)}:</span>
                                 <span class="text-[9px] text-zinc-500">${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                             </div>
-                            <span class="text-zinc-200 mt-0.5 block">${r.mensagem}</span>
+                            <span class="text-zinc-200 mt-0.5 block">${escapeHTML(r.mensagem)}</span>
                         </div>
                         <button onclick="App.apagarRecado('${r.id}')" title="Apagar mensagem" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 text-[10px] font-bold uppercase transition shrink-0 flex items-center gap-1">
                             <i class="fa-solid fa-trash"></i> Apagar
@@ -1643,9 +1649,9 @@ const App = {
                     const isEu = r.remetente.toLowerCase().includes((this.user.name || '').toLowerCase()) && !r.remetente.includes('Admin');
                     return `
                         <div class="flex flex-col ${isEu ? 'items-end' : 'items-start'} mb-2">
-                            <span class="text-[9px] text-zinc-500 mb-0.5 px-1">${r.remetente} • ${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            <span class="text-[9px] text-zinc-500 mb-0.5 px-1">${escapeHTML(r.remetente)} • ${new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                             <div class="p-3 rounded-2xl max-w-[85%] text-xs ${isEu ? 'bg-brand-500 text-white rounded-br-xs' : 'bg-zinc-900 border border-white/10 text-zinc-200 rounded-bl-xs'}">
-                                ${r.mensagem}
+                                ${escapeHTML(r.mensagem)}
                             </div>
                         </div>
                     `;
@@ -4448,7 +4454,7 @@ const App = {
             lista.innerHTML = data && data.length > 0 ? data.map(s => `
                 <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 flex justify-between items-center">
                     <div>
-                        <h4 class="text-xs font-bold text-white uppercase">${s.nome}</h4>
+                        <h4 class="text-xs font-bold text-white uppercase">${escapeHTML(s.nome)}</h4>
                         <p class="text-[10px] text-zinc-400 mt-0.5">Comissão: ${s.comissao}%</p>
                     </div>
                     <div class="text-right flex items-center gap-3">
@@ -4572,7 +4578,7 @@ const App = {
                 return `
                     <div class="p-3.5 rounded-2xl bg-zinc-950 border ${pertoVencer ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10'} flex justify-between items-center">
                         <div>
-                            <h4 class="text-xs font-bold text-white">${prod.nome} ${pertoVencer ? '<span class="text-[9px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full ml-2">Validade Próxima (&lt; 3 meses)</span>' : ''}</h4>
+                            <h4 class="text-xs font-bold text-white">${escapeHTML(prod.nome)} ${pertoVencer ? '<span class="text-[9px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full ml-2">Validade Próxima (&lt; 3 meses)</span>' : ''}</h4>
                             <p class="text-[10px] text-zinc-400">Estoque: ${prod.stock} | Validade: ${prod.data_validade} | Tipo: ${prod.tipo}</p>
                         </div>
                         <span class="text-xs font-bold text-brand-500">R$ ${parseFloat(prod.preco_venda).toFixed(2)}</span>
@@ -4636,12 +4642,12 @@ const App = {
             container.innerHTML = data.map(av => `
                 <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
                     <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-white uppercase">${av.cliente_nome || 'Cliente Anônimo'}</span>
+                        <span class="text-xs font-bold text-white uppercase">${escapeHTML(av.cliente_nome || 'Cliente Anônimo')}</span>
                         <div class="flex text-yellow-400 text-xs">
                             ${'★'.repeat(av.nota || 5)}${'☆'.repeat(5 - (av.nota || 5))}
                         </div>
                     </div>
-                    <p class="text-xs text-zinc-300 italic">"${av.comentario || 'Sem comentário'}"</p>
+                    <p class="text-xs text-zinc-300 italic">"${escapeHTML(av.comentario || 'Sem comentário')}"</p>
                     <span class="text-[9px] text-zinc-500 block">${new Date(av.created_at).toLocaleDateString('pt-BR')}</span>
                 </div>
             `).join('');
