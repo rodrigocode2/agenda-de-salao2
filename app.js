@@ -4729,7 +4729,12 @@ const App = {
         if (!link) { UI.showToast('Plano invalido.', 'error'); return; }
         localStorage.setItem('hairconcept_plan_pendente', plano);
         UI.showToast('Abrindo o pagamento por PIX / QR Code...');
-        setTimeout(function () { window.open(link, '_blank'); }, 600);
+        // Tem que abrir NA HORA do clique: com atraso (setTimeout) o navegador
+        // bloqueia a janela como pop-up e o PIX nunca aparecia.
+        let janela = null;
+        try { janela = window.open(link, '_blank'); } catch (e) { janela = null; }
+        if (janela) { try { janela.opener = null; } catch (e) { /* ok */ } }
+        else { window.location.href = link; } // pop-up bloqueado: abre nesta mesma aba
     },
 
     async setPlan(plano) {
