@@ -223,3 +223,9 @@
 @media (prefers-reduced-motion: no-preference) {
   .ga-bloco, .ga-btn, .ga-chip, .ga-dia { transition: background-color .12s, border-color .12s; }
 }
+
+.ga-data {
+  min-height: 48px; padding: 0 12px; border-radius: 14px; border: 1px solid var(--ga-line-strong);
+  background: var(--ga-panel-2); color: var(--ga-txt); font: inherit; font-weight: 700; color-scheme: dark;
+}
+@media (max-width: 719px) { .ga-data { flex: 1 1 140px; } }

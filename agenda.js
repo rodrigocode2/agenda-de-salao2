@@ -236,6 +236,11 @@ const Agenda = (function () {
     nav.appendChild(botao('›', 'ga-prox', 'Próximo'));
     topo.appendChild(nav);
 
+    var dataIn = el('input', 'ga-data'); dataIn.type = 'date'; dataIn.id = 'ga-data';
+    dataIn.setAttribute('aria-label', 'Ir para uma data');
+    dataIn.addEventListener('change', function () { if (dataIn.value) irPara(dataIn.value); });
+    topo.appendChild(dataIn);
+
     var modo = el('div', 'ga-grupo modo'); modo.setAttribute('role', 'tablist'); modo.setAttribute('aria-label', 'Modo da agenda');
     var bd = botao('Dia', 'ga-m-dia'); bd.setAttribute('role', 'tab');
     var bs = botao('Semana', 'ga-m-semana'); bs.setAttribute('role', 'tab');
@@ -322,6 +327,7 @@ const Agenda = (function () {
       ? seg.getDate() + ' – ' + rotuloData(sab) + ' ' + sab.getFullYear()
       : DIAS_LONGO[dataSel.getDay()] + ', ' + rotuloData(dataSel) + ' ' + dataSel.getFullYear();
     $('ga-faixa').textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
+    $('ga-data').value = est.data;
     $('ga-m-dia').setAttribute('aria-selected', String(est.modo === 'dia'));
     $('ga-m-semana').setAttribute('aria-selected', String(est.modo === 'semana'));
 
