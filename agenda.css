@@ -93,7 +93,9 @@
   border-bottom: 1px solid var(--ga-line-strong); padding: 10px 6px; min-width: 0; text-align: center;
 }
 .ga-cab-hora { border-right: 1px solid var(--ga-line); }
-.ga-cab-dia { display: grid; justify-items: center; gap: 2px; }
+.ga-cab-dia { display: grid; justify-items: center; gap: 2px; width: 100%; background: none; border: 0; padding: 0; cursor: pointer; }
+.ga-cab-dia:hover b { background: var(--ga-brand-soft); }
+.ga-cab-dia.hoje:hover b { background: var(--ga-brand); }
 .ga-cab-dia small { color: var(--ga-mut); font-size: 11px; font-weight: 700; letter-spacing: .05em; }
 .ga-cab-dia b {
   display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px;

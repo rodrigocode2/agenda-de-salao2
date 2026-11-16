@@ -384,7 +384,10 @@ const Agenda = (function () {
     if (c.tipo === 'dia') {
       var d = paraData(c.iso);
       var q = c.prof ? eventos(c.prof, c.iso).length : 0;
-      var box = el('div', 'ga-cab-dia' + (c.iso === iso(new Date()) ? ' hoje' : ''));
+      var box = el('button', 'ga-cab-dia' + (c.iso === iso(new Date()) ? ' hoje' : ''));
+      box.type = 'button';
+      box.dataset.dia = c.iso;
+      box.setAttribute('aria-label', 'Abrir ' + DIAS_LONGO[d.getDay()] + ', ' + rotuloData(d));
       box.appendChild(el('small', null, DIAS[(d.getDay() + 6) % 7]));
       box.appendChild(el('b', null, String(d.getDate())));
       box.appendChild(el('em', null, q ? q + (q === 1 ? ' atend.' : ' atends.') : '—'));
@@ -575,6 +578,14 @@ const Agenda = (function () {
   }
 
   function cliquePainel(ev) {
+    var cd = ev.target.closest('.ga-cab-dia');
+    if (cd && cd.dataset.dia) {
+      est.data = ajustarDomingo(cd.dataset.dia, 1);
+      sincronizarCampoData();
+      est.rolar = true;
+      trocarModo('dia');
+      return;
+    }
     var fx = ev.target.closest('.ga-fechado');
     if (fx && fx._bloqueio) { if (ehAdmin()) janelaReabrir(fx._bloqueio); return; }
     var b = ev.target.closest('.ga-bloco');
