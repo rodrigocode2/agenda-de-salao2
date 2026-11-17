@@ -914,13 +914,11 @@ const Auth = {
         try {
             // Localiza o salão pelo nome para gravar o aviso junto dele
             let estabId = null;
-            const { data: saloes, error: erroSalao } = await supabaseClient
-                .from('estabelecimentos')
-                .select('id')
-                .ilike('nome_salao', nomeEstab)
-                .limit(1);
+            // (funcao do banco: quem pede ajuda ainda nao esta logado e nao pode ler a tabela)
+            const { data: idSalao, error: erroSalao } = await supabaseClient
+                .rpc('salao_id_por_nome', { p_nome: nomeEstab });
             if (erroSalao) console.error('Erro ao procurar salão:', erroSalao);
-            if (saloes && saloes.length > 0) estabId = saloes[0].id;
+            if (idSalao) estabId = idSalao;
 
             const { error } = await supabaseClient.from('solicitacoes').insert([{
                 estabelecimento_id: estabId,
