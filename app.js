@@ -5022,19 +5022,24 @@ const UI = {
 
     // A aba PLANOS mostra qual plano o salao tem AGORA.
     // O plano vem do BANCO, nao do navegador: assim nunca diverge.
+    // Botao de menu (hamburguer) do celular: abre/fecha a lateral
     toggleMobileMenu(forceState) {
-                if (!menu) return;
-        if (typeof forceState === 'boolean') {
-            if (forceState) menu.classList.remove('hidden');
-            else menu.classList.add('hidden');
-        } else {
-            menu.classList.toggle('hidden');
-        }
+        Auth.toggleSidebar(typeof forceState === 'boolean' ? forceState : undefined);
     }
 };
 
 // Registra o objeto real no atalho: a partir daqui, os botoes da barra
 // chamam as funcoes de verdade.
+// Alguns botoes do HTML chamam App.* / UI.* mas a funcao mora em outro objeto
+// (Auth ou App). Estes atalhos ligam cada botao a funcao de verdade.
+['irDiaProf', 'renderDiaProf', 'salvarDadosFiscais', 'salvarComissoesTipo', 'carregarComissoesTipo', 'carregarConfigSalao'].forEach(function (n) {
+    if (typeof App[n] !== 'function' && typeof Auth[n] === 'function') {
+        App[n] = function () { return Auth[n].apply(Auth, arguments); };
+    }
+});
+if (typeof UI.trocarTipoAvaliacao !== 'function' && typeof App.trocarTipoAvaliacao === 'function') {
+    UI.trocarTipoAvaliacao = function () { return App.trocarTipoAvaliacao.apply(App, arguments); };
+}
 window.hcUI = UI;
 try { if (window.UI && window.UI._registrar) window.UI._registrar(UI); } catch (e) {}
 
