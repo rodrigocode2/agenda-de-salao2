@@ -975,14 +975,9 @@ const App = {
         const statusPagamento = urlParams.get('status') || urlParams.get('collection_status');
         
         if (statusPagamento === 'approved') {
-            const estabId = localStorage.getItem('hairconcept_estab_id');
-            const planoPago = localStorage.getItem('hairconcept_plan_pendente') || 'mensal';
-            localStorage.setItem('hairconcept_plan', planoPago);
+            // Quem ativa o plano e o servidor (aviso do Mercado Pago), nunca a URL.
             localStorage.removeItem('hairconcept_plan_pendente');
-            if (estabId && supabaseClient) {
-                await supabaseClient.from('estabelecimentos').update({ plano: planoPago }).eq('id', estabId);
-            }
-            UI.showToast(`Pagamento aprovado! Plano ${planoPago === 'anual' ? 'Anual' : 'Mensal'} ativado com sucesso.`);
+            UI.showToast('Pagamento recebido! Seu plano é liberado assim que o Mercado Pago confirmar (poucos instantes). Recarregue a página em seguida.');
             window.history.replaceState({}, document.title, window.location.pathname);
         } else if (statusPagamento === 'failure' || statusPagamento === 'cancelled') {
             UI.showToast('O pagamento não foi concluído. Mantendo plano grátis.', 'error');
@@ -4884,17 +4879,27 @@ const App = {
     },
 
     // Abre o pagamento por PIX / QR Code / boleto
-    pagarComPix(plano) {
-        const link = this.LINKS_PIX[plano];
-        if (!link) { UI.showToast('Plano invalido.', 'error'); return; }
+    async pagarComPix(plano) {
+        const fallback = this.LINKS_PIX[plano];
+        if (!fallback) { UI.showToast('Plano invalido.', 'error'); return; }
         localStorage.setItem('hairconcept_plan_pendente', plano);
         UI.showToast('Abrindo o pagamento por PIX / QR Code...');
-        // Tem que abrir NA HORA do clique: com atraso (setTimeout) o navegador
-        // bloqueia a janela como pop-up e o PIX nunca aparecia.
+        // A janela abre NA HORA do clique (senao o navegador bloqueia como pop-up)
+        // e recebe o endereco quando o servidor criar o pagamento.
         let janela = null;
-        try { janela = window.open(link, '_blank'); } catch (e) { janela = null; }
-        if (janela) { try { janela.opener = null; } catch (e) { /* ok */ } }
-        else { window.location.href = link; } // pop-up bloqueado: abre nesta mesma aba
+        try { janela = window.open('', '_blank'); } catch (e) { janela = null; }
+        let link = null;
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('criar-pagamento', { body: { plano: plano } });
+            if (!error && data && data.link) link = data.link;
+        } catch (e) { console.warn('criar-pagamento:', e); }
+        if (!link) {
+            // Servidor de pagamento fora do ar: usa o link fixo (ativacao com o suporte)
+            link = fallback;
+            UI.showToast('Pague pelo link e envie o comprovante ao suporte para liberar o plano.');
+        }
+        if (janela) { try { janela.opener = null; } catch (e) { /* ok */ } janela.location.href = link; }
+        else { window.location.href = link; }
     },
 
     async setPlan(plano) {
@@ -4910,21 +4915,8 @@ const App = {
             return;
         }
 
-        const linksPagamento = {
-            mensal: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=c6608384109b43c787b82d8f9646331f',
-            anual: 'https://mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=ba575f230a314a8c8446da6d3832fe3d' 
-        };
-
-        const linkCheckout = linksPagamento[plano];
-        if (linkCheckout) {
-            localStorage.setItem('hairconcept_plan_pendente', plano);
-            UI.showToast('Redirecionando para o Mercado Pago...');
-            setTimeout(() => {
-                window.location.href = linkCheckout;
-            }, 1000);
-        } else {
-            UI.showToast('Plano inválido.', 'error');
-        }
+        if (plano === 'mensal' || plano === 'anual') { this.pagarComPix(plano); }
+        else { UI.showToast('Plano inválido.', 'error'); }
     },
     mudarDia(dias) {
         const dataInput = document.getElementById('filtro-data-agenda');
