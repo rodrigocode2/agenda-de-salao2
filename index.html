@@ -1357,6 +1357,18 @@ v>
         <p class="text-xs text-zinc-400">Histórico de caixa e indicadores acumulados</p>
       </div>
     </div>
+    <div class="space-y-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h3 class="text-xs font-bold uppercase text-white"><i class="fa-solid fa-gauge-high text-brand-500 mr-1.5"></i>Painel de resultados</h3>
+        <select id="painel-periodo" onchange="App.renderPainel()" class="glass-input rounded-xl px-3 py-2 text-xs text-white">
+          <option value="mes">Este mês</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="30">Últimos 30 dias</option>
+          <option value="ano">Este ano</option>
+        </select>
+      </div>
+      <div id="painel-resultados" class="space-y-4"></div>
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-1">
         <span class="text-[10px] text-zinc-400 uppercase font-bold">Faturamento Total</span>

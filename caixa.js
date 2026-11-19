@@ -258,6 +258,101 @@
     if (host && !$('caixa-forma')) host.appendChild(formaSelect('caixa-forma'));
   }
 
+
+  // ---------------- PAINEL DE RESULTADOS ----------------
+  function limitesPeriodo(tipo) {
+    var h = new Date(), ini = new Date(h.getFullYear(), h.getMonth(), 1);
+    if (tipo === 'ano') ini = new Date(h.getFullYear(), 0, 1);
+    else if (tipo === '7' || tipo === '30') { ini = new Date(h); ini.setDate(ini.getDate() - (parseInt(tipo, 10) - 1)); }
+    var f = function (d) { return (typeof dataLocalISO === 'function') ? dataLocalISO(d) : d.toISOString().slice(0, 10); };
+    return [f(ini), f(h)];
+  }
+
+  function topo(mapa, n) {
+    return Object.keys(mapa).map(function (k) { return [k, mapa[k]]; })
+      .sort(function (a, b) { return b[1].valor - a[1].valor; }).slice(0, n);
+  }
+
+  function cartaoNumero(rotulo, valor, cor) {
+    var d = el('div', 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10');
+    d.appendChild(el('p', 'text-[10px] uppercase font-bold text-zinc-500', rotulo));
+    d.appendChild(el('p', 'text-sm font-black ' + (cor || 'text-white'), valor));
+    return d;
+  }
+
+  function rankingBloco(titulo, linhas, vazio) {
+    var d = el('div', 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2');
+    d.appendChild(el('h4', 'text-[11px] font-bold uppercase text-white', titulo));
+    if (!linhas.length) d.appendChild(el('p', 'text-[10px] text-zinc-500', vazio));
+    var maior = linhas.length ? linhas[0][1].valor || 1 : 1;
+    linhas.forEach(function (l, i) {
+      var w = el('div', 'space-y-1');
+      var t = el('div', 'flex justify-between text-[11px] text-zinc-300');
+      t.appendChild(el('span', null, (i + 1) + '. ' + l[0]));
+      t.appendChild(el('span', 'text-zinc-400', l[1].qtd + 'x • ' + grana(l[1].valor)));
+      w.appendChild(t);
+      var barra = el('div', 'h-1.5 rounded-full bg-zinc-800 overflow-hidden');
+      var fill = el('div', 'h-full rounded-full bg-brand-500');
+      fill.style.width = Math.max(4, Math.round(l[1].valor / maior * 100)) + '%';
+      barra.appendChild(fill); w.appendChild(barra);
+      d.appendChild(w);
+    });
+    return d;
+  }
+
+  async function renderPainel() {
+    var box = $('painel-resultados'); if (!box) return;
+    var lim = limitesPeriodo(($('painel-periodo') && $('painel-periodo').value) || 'mes');
+    var estabId = await App.obterEstabId();
+    if (!estabId) return;
+    var rs = await Promise.all([
+      supabaseClient.from('transacoes_caixa').select('tipo, valor, forma_pagamento').eq('estabelecimento_id', estabId).gte('data_transacao', lim[0]).lte('data_transacao', lim[1]),
+      supabaseClient.from('agendamentos').select('cliente, servico, valor, status, profissional_nome').eq('estabelecimento_id', estabId).eq('status', 'finalizado').gte('data', lim[0]).lte('data', lim[1]),
+      supabaseClient.from('agendamentos').select('id', { count: 'exact', head: true }).eq('estabelecimento_id', estabId).eq('status', 'faltou').gte('data', lim[0]).lte('data', lim[1]),
+      supabaseClient.from('vendas_produtos').select('produto_nome, quantidade, valor_total').eq('estabelecimento_id', estabId).gte('data_venda', lim[0]).lte('data_venda', lim[1])
+    ]);
+    var caixa = rs[0].data || [], ags = rs[1].data || [], faltas = rs[2].count || 0, vendas = rs[3].data || [];
+    var ent = 0, sai = 0;
+    caixa.forEach(function (x) { if (x.tipo === 'entrada') ent += num(x.valor); else sai += num(x.valor); });
+    var porProf = {}, porServ = {}, clientes = {}, somaServ = 0;
+    ags.forEach(function (a) {
+      var v = num(a.valor); somaServ += v;
+      var p = a.profissional_nome || 'Sem profissional', s = a.servico || 'Sem serviço';
+      (porProf[p] = porProf[p] || { qtd: 0, valor: 0 }).qtd++; porProf[p].valor += v;
+      (porServ[s] = porServ[s] || { qtd: 0, valor: 0 }).qtd++; porServ[s].valor += v;
+      clientes[String(a.cliente || '').trim().toLowerCase()] = 1;
+    });
+    var porProd = {};
+    vendas.forEach(function (x) { var k = x.produto_nome || 'Produto'; (porProd[k] = porProd[k] || { qtd: 0, valor: 0 }); porProd[k].qtd += (x.quantidade || 0); porProd[k].valor += num(x.valor_total); });
+    var atend = ags.length;
+    var ticket = atend ? somaServ / atend : 0;
+
+    box.innerHTML = '';
+    var g = el('div', 'grid grid-cols-2 md:grid-cols-4 gap-3');
+    g.appendChild(cartaoNumero('Recebido no caixa', grana(ent), 'text-emerald-400'));
+    g.appendChild(cartaoNumero('Despesas', grana(sai), 'text-rose-400'));
+    g.appendChild(cartaoNumero('Resultado', grana(ent - sai), ent - sai >= 0 ? 'text-white' : 'text-rose-400'));
+    g.appendChild(cartaoNumero('Ticket médio', grana(ticket)));
+    g.appendChild(cartaoNumero('Atendimentos', String(atend)));
+    g.appendChild(cartaoNumero('Clientes atendidos', String(Object.keys(clientes).length)));
+    g.appendChild(cartaoNumero('Faltas', String(faltas), faltas ? 'text-amber-400' : 'text-white'));
+    g.appendChild(cartaoNumero('Produtos vendidos', grana(vendas.reduce(function (s, x) { return s + num(x.valor_total); }, 0))));
+    box.appendChild(g);
+    var r = el('div', 'grid grid-cols-1 md:grid-cols-3 gap-3');
+    r.appendChild(rankingBloco('Profissionais', topo(porProf, 5), 'Sem atendimentos finalizados.'));
+    r.appendChild(rankingBloco('Serviços', topo(porServ, 5), 'Sem atendimentos finalizados.'));
+    r.appendChild(rankingBloco('Produtos', topo(porProd, 5), 'Sem vendas no período.'));
+    box.appendChild(r);
+    box.appendChild(el('p', 'text-[10px] text-zinc-500', 'Os rankings contam atendimentos finalizados (use "Receber" na agenda). O caixa soma tudo que foi lançado.'));
+  }
+
+  App.renderPainel = renderPainel;
+  var _rel = App.renderRelatorios;
+  App.renderRelatorios = function () {
+    try { renderPainel(); } catch (e) { console.warn(e); }
+    return _rel ? _rel.apply(App, arguments) : undefined;
+  };
+
   App.abrirComanda = abrirComanda;
   App.renderCaixa = function () { montarFormaAvulsa(); return renderCaixa(); };
   App.lancarCaixa = lancarCaixa;
