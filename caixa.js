@@ -238,6 +238,7 @@
 
   async function lancarCaixa(event) {
     if (event && event.preventDefault) event.preventDefault();
+    montarFormaAvulsa();
     var tipo = $('caixa-tipo').value;
     var descricao = $('caixa-desc').value.trim();
     var valor = num($('caixa-valor').value);
@@ -245,7 +246,7 @@
     var estabId = await App.obterEstabId();
     var q = await supabaseClient.from('transacoes_caixa').insert([{
       estabelecimento_id: estabId, tipo: tipo, descricao: descricao, valor: valor,
-      data_transacao: ($('caixa-data') && $('caixa-data').value) || hojeISO(), forma_pagamento: $('caixa-forma').value
+      data_transacao: ($('caixa-data') && $('caixa-data').value) || hojeISO(), forma_pagamento: ($('caixa-forma') || {}).value || 'dinheiro'
     }]);
     if (q.error) { aviso(erro(q.error), 'error'); return; }
     $('caixa-desc').value = ''; $('caixa-valor').value = '';

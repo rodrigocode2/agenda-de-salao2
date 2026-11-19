@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hairconceptbeta.vercel.app/sitemap.xml

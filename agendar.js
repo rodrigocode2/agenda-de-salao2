@@ -122,12 +122,40 @@
     corpo.appendChild(d);
   }
 
+  // SEO da pagina publica do salao: titulo, descricao, canonical e dados estruturados (BeautySalon)
+  function seoSalao() {
+    var url = location.origin + location.pathname + '?s=' + encodeURIComponent(codigo);
+    var nomes = salao.servicos.map(function (s) { return s.nome; });
+    var desc = 'Agendamento online em ' + salao.nome + ': marque horário no salão de beleza' + (nomes.length ? ' para ' + nomes.slice(0, 5).join(', ') : '') + '. Escolha o profissional, o dia e o horário.';
+    document.title = 'Agendamento online em ' + salao.nome + ' | Marcar horário no salão';
+    var meta = function (sel, attr, val, criar) {
+      var e = document.querySelector(sel);
+      if (!e && criar) { e = document.createElement(criar.tag); Object.keys(criar.attrs).forEach(function (k) { e.setAttribute(k, criar.attrs[k]); }); document.head.appendChild(e); }
+      if (e) e.setAttribute(attr, val);
+    };
+    meta('meta[name="description"]', 'content', desc);
+    meta('meta[property="og:title"]', 'content', document.title);
+    meta('meta[property="og:description"]', 'content', desc);
+    meta('link[rel="canonical"]', 'href', url, { tag: 'link', attrs: { rel: 'canonical' } });
+    meta('meta[property="og:url"]', 'content', url, { tag: 'meta', attrs: { property: 'og:url' } });
+    var ld = {
+      '@context': 'https://schema.org', '@type': 'BeautySalon', name: salao.nome, url: url,
+      description: desc, priceRange: '$$',
+      potentialAction: { '@type': 'ReserveAction', target: { '@type': 'EntryPoint', urlTemplate: url, actionPlatform: ['http://schema.org/DesktopWebPlatform', 'http://schema.org/MobileWebPlatform'] }, result: { '@type': 'Reservation', name: 'Agendamento online' } },
+      hasOfferCatalog: { '@type': 'OfferCatalog', name: 'Serviços', itemListElement: salao.servicos.map(function (s) { return { '@type': 'Offer', priceCurrency: 'BRL', price: String(s.preco), itemOffered: { '@type': 'Service', name: s.nome } }; }) }
+    };
+    if (salao.whatsapp) ld.telephone = String(salao.whatsapp);
+    var sc = document.createElement('script'); sc.type = 'application/ld+json'; sc.textContent = JSON.stringify(ld);
+    document.head.appendChild(sc);
+  }
+
   async function iniciar() {
     if (!codigo) { corpo.textContent = 'Link inválido. Peça o link atualizado ao salão.'; return; }
     var r = await sb.rpc('public_salao', { p_codigo: codigo });
     if (r.error || !r.data) { corpo.textContent = 'Salão não encontrado. Peça o link atualizado ao salão.'; return; }
     salao = r.data;
     document.title = 'Agende em ' + salao.nome;
+    seoSalao();
     document.getElementById('ag-salao').textContent = salao.nome;
     if (!salao.servicos.length || !salao.profissionais.length) { corpo.textContent = 'Este salão ainda não liberou a agenda online.'; return; }
     desenhar();
