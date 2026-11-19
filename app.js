@@ -2355,7 +2355,12 @@ const App = {
                 else saldo[v.cliente_id].menos++;
             });
 
+            // Ultima visita e proximo horario de cada cliente (pelo nome)
+            const hist = await this.carregarHistoricoClientes(estabId);
+
             let clientes = data || [];
+            this._clientesCache = clientes;
+            this.renderRelacionamento(clientes, hist);
             const digitosBusca = busca.replace(/\D/g, '');
             if (busca) {
                 const alvo = busca.toLowerCase();
@@ -2407,6 +2412,18 @@ const App = {
                 contato.className = 'text-[10px] text-zinc-400';
                 contato.textContent = [c.telefone, c.cpf, c.email].filter(Boolean).join(' • ');
                 info.appendChild(nome); info.appendChild(contato);
+                const hh = hist[String(c.nome || '').trim().toLowerCase()] || {};
+                const ficha = [];
+                if (c.nascimento) ficha.push('Aniversário ' + this.formatarDiaMes(c.nascimento));
+                if (hh.ultima) ficha.push('Última visita ' + this.formatarDataBR(hh.ultima));
+                if (hh.visitas) ficha.push(hh.visitas + (hh.visitas === 1 ? ' atendimento' : ' atendimentos'));
+                if (hh.proximo) ficha.push('Próximo: ' + this.formatarDataBR(hh.proximo.data) + ' ' + String(hh.proximo.horario || '').slice(0, 5));
+                if (ficha.length) {
+                    const fi = document.createElement('p');
+                    fi.className = 'text-[10px] text-zinc-500 mt-0.5';
+                    fi.textContent = ficha.join(' • ');
+                    info.appendChild(fi);
+                }
 
                 // Votos: estrela amarela para cliente boa, vermelha para alerta
                 const linhaVotos = document.createElement('div');
@@ -2444,6 +2461,21 @@ const App = {
                 const acoes = document.createElement('div');
                 acoes.className = 'flex items-center gap-2 flex-wrap';
 
+                const h = hist[String(c.nome || '').trim().toLowerCase()] || {};
+                if (c.telefone) {
+                    const extras = [];
+                    if (this.aniversarioNoMes(c.nascimento)) extras.push(['Parabéns', 'fa-cake-candles', this.msgParabens(c)]);
+                    if (h.proximo) extras.push(['Lembrar horário', 'fa-bell', this.msgLembrete(c, h.proximo)]);
+                    if (h.ultima && this.diasDesde(h.ultima) >= 45 && !h.proximo) extras.push(['Saudade', 'fa-heart', this.msgSaudade(c, h.ultima)]);
+                    extras.forEach((x) => {
+                        const b = document.createElement('a');
+                        b.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition';
+                        b.href = this.linkZap(c.telefone, x[2]);
+                        b.target = '_blank'; b.rel = 'noopener';
+                        b.innerHTML = '<i class="fa-solid ' + x[1] + '"></i> ' + x[0];
+                        acoes.appendChild(b);
+                    });
+                }
                 if (c.telefone) {
                     const btnZap = document.createElement('a');
                     btnZap.className = 'px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold uppercase transition';
@@ -2468,7 +2500,7 @@ const App = {
                 const btnEditar = document.createElement('button');
                 btnEditar.className = 'px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-zinc-300 hover:bg-zinc-800 text-[10px] font-bold uppercase transition cursor-pointer';
                 btnEditar.textContent = 'Editar';
-                btnEditar.onclick = () => this.abrirEditarCliente(c.id, c.nome, c.telefone, c.cpf, c.email);
+                btnEditar.onclick = () => this.abrirEditarCliente(c.id, c.nome, c.telefone, c.cpf, c.email, c.nascimento);
                 acoes.appendChild(btnEditar);
 
                 const btnExcluir = document.createElement('button');
@@ -2484,6 +2516,128 @@ const App = {
             console.error('Erro inesperado ao listar clientes:', e);
             lista.textContent = 'Não foi possível carregar os clientes agora.';
         }
+    },
+
+    // ---------- Relacionamento com o cliente (ficha, aniversario, WhatsApp) ----------
+    nomeSalaoMsg() {
+        try { return (this._nomeSalao || document.getElementById('nome-salao-header')?.textContent || '').trim(); } catch (e) { return ''; }
+    },
+    primeiroNome(c) { return String((c && c.nome) || '').trim().split(/\s+/)[0] || ''; },
+    assinaturaMsg() { const n = this.nomeSalaoMsg(); return n ? ' Um abraço, ' + n + '.' : ''; },
+    linkZap(telefone, texto) {
+        let d = String(telefone || '').replace(/\D/g, '');
+        if (d.length <= 11) d = '55' + d;
+        return 'https://wa.me/' + d + (texto ? '?text=' + encodeURIComponent(texto) : '');
+    },
+    msgParabens(c) {
+        return 'Oi, ' + this.primeiroNome(c) + '! Feliz aniversário! 🎉 Que seu dia seja lindo. Quando quiser vir se cuidar, é só me chamar para marcar seu horário.' + this.assinaturaMsg();
+    },
+    msgSaudade(c, ultima) {
+        return 'Oi, ' + this.primeiroNome(c) + '! Faz um tempinho desde sua última visita (' + this.formatarDataBR(ultima) + '). Que tal marcar um horário? Me diga o melhor dia que eu reservo para você.' + this.assinaturaMsg();
+    },
+    msgLembrete(c, ag) {
+        const hora = String(ag.horario || '').slice(0, 5);
+        const com = ag.profissional_nome ? ' com ' + ag.profissional_nome : '';
+        return 'Oi, ' + this.primeiroNome(c) + '! Lembrando do seu horário' + com + ' em ' + this.formatarDataBR(ag.data) + ' às ' + hora + '. Pode confirmar presença? Se precisar remarcar, é só avisar.' + this.assinaturaMsg();
+    },
+    formatarDataBR(iso) {
+        const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
+    },
+    formatarDiaMes(iso) {
+        const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? m[3] + '/' + m[2] : '';
+    },
+    diasDesde(iso) {
+        const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return 0;
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        return Math.round((hoje - new Date(+m[1], +m[2] - 1, +m[3])) / 86400000);
+    },
+    aniversarioNoMes(iso) {
+        const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return !!m && (+m[2]) === new Date().getMonth() + 1;
+    },
+    async carregarHistoricoClientes(estabId) {
+        const mapa = {};
+        try {
+            const hoje = dataLocalISO(new Date());
+            const { data } = await supabaseClient.from('agendamentos')
+                .select('cliente, data, horario, status, profissional_nome')
+                .eq('estabelecimento_id', estabId).limit(5000);
+            (data || []).forEach(function (a) {
+                const k = String(a.cliente || '').trim().toLowerCase();
+                if (!k || a.status === 'cancelado') return;
+                const h = mapa[k] || (mapa[k] = { visitas: 0 });
+                if (a.data < hoje) {
+                    h.visitas++;
+                    if (!h.ultima || a.data > h.ultima) h.ultima = a.data;
+                } else if (!h.proximo || a.data < h.proximo.data || (a.data === h.proximo.data && a.horario < h.proximo.horario)) {
+                    h.proximo = a;
+                }
+            });
+        } catch (e) { console.warn('Nao carreguei o historico dos clientes:', e); }
+        try {
+            if (this._nomeSalao === undefined) {
+                const { data } = await supabaseClient.from('estabelecimentos').select('nome_salao').eq('id', estabId).maybeSingle();
+                this._nomeSalao = (data && data.nome_salao) || '';
+            }
+        } catch (e) { this._nomeSalao = ''; }
+        return mapa;
+    },
+    renderRelacionamento(clientes, hist) {
+        const box = document.getElementById('painel-relacionamento');
+        if (!box) return;
+        const aniv = clientes.filter((c) => this.aniversarioNoMes(c.nascimento))
+            .sort((a, b) => +String(a.nascimento).slice(8, 10) - +String(b.nascimento).slice(8, 10));
+        const sumidos = clientes.filter((c) => {
+            const h = hist[String(c.nome || '').trim().toLowerCase()];
+            return h && h.ultima && !h.proximo && this.diasDesde(h.ultima) >= 45;
+        }).sort((a, b) => (hist[String(a.nome).trim().toLowerCase()].ultima < hist[String(b.nome).trim().toLowerCase()].ultima ? -1 : 1));
+        box.innerHTML = '';
+        const bloco = (titulo, icone, lista, textoLinha, msgFn) => {
+            const d = document.createElement('div');
+            d.className = 'p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2';
+            const t = document.createElement('h4');
+            t.className = 'text-[11px] font-bold uppercase text-white';
+            t.innerHTML = '<i class="fa-solid ' + icone + ' text-brand-500 mr-1.5"></i>';
+            t.appendChild(document.createTextNode(titulo + ' (' + lista.length + ')'));
+            d.appendChild(t);
+            if (!lista.length) {
+                const p = document.createElement('p');
+                p.className = 'text-[10px] text-zinc-500';
+                p.textContent = 'Ninguém por aqui agora.';
+                d.appendChild(p);
+            }
+            lista.slice(0, 8).forEach((c) => {
+                const l = document.createElement('div');
+                l.className = 'flex items-center justify-between gap-2 text-[11px] text-zinc-300';
+                const s = document.createElement('span');
+                s.textContent = c.nome + ' — ' + textoLinha(c);
+                l.appendChild(s);
+                if (c.telefone) {
+                    const a = document.createElement('a');
+                    a.className = 'text-emerald-400 hover:text-emerald-300';
+                    a.href = this.linkZap(c.telefone, msgFn(c));
+                    a.target = '_blank'; a.rel = 'noopener';
+                    a.title = 'Enviar mensagem no WhatsApp';
+                    a.innerHTML = '<i class="fa-brands fa-whatsapp"></i>';
+                    l.appendChild(a);
+                }
+                d.appendChild(l);
+            });
+            if (lista.length > 8) {
+                const mais = document.createElement('p');
+                mais.className = 'text-[10px] text-zinc-500';
+                mais.textContent = '+ ' + (lista.length - 8) + ' na lista abaixo';
+                d.appendChild(mais);
+            }
+            box.appendChild(d);
+        };
+        bloco('Aniversariantes do mês', 'fa-cake-candles', aniv, (c) => this.formatarDiaMes(c.nascimento), (c) => this.msgParabens(c));
+        bloco('Sem voltar há 45+ dias', 'fa-clock-rotate-left', sumidos,
+            (c) => 'visita em ' + this.formatarDataBR(hist[String(c.nome).trim().toLowerCase()].ultima),
+            (c) => this.msgSaudade(c, hist[String(c.nome).trim().toLowerCase()].ultima));
     },
 
     // ---------- Mascara de telefone ----------
@@ -2549,6 +2703,7 @@ const App = {
         const telefone = document.getElementById('cli-telefone').value.trim();
         const cpf = document.getElementById('cli-cpf').value.trim();
         const email = document.getElementById('cli-email').value.trim();
+        const nascimento = document.getElementById('cli-nascimento')?.value || null;
 
         if (!nome) {
             UI.showToast('Escreva o nome do cliente.', 'error');
@@ -2609,7 +2764,8 @@ const App = {
                 nome: nome,
                 telefone: telefone || null,
                 cpf: cpf || null,
-                email: email || null
+                email: email || null,
+                nascimento: nascimento
             }]);
             if (error) {
                 console.error('Erro ao criar cliente:', error);
@@ -2622,6 +2778,7 @@ const App = {
             document.getElementById('cli-telefone').value = '';
             document.getElementById('cli-cpf').value = '';
             document.getElementById('cli-email').value = '';
+            if (document.getElementById('cli-nascimento')) document.getElementById('cli-nascimento').value = '';
             this.renderClientes();
             this.popularClientesAgenda();
         } catch (e) {
@@ -2630,7 +2787,7 @@ const App = {
         }
     },
 
-    abrirEditarCliente(id, nome, telefone, cpf, email) {
+    abrirEditarCliente(id, nome, telefone, cpf, email, nascimento) {
         const campoId = document.getElementById('editar-cli-id');
         if (campoId) campoId.value = id;
         const n = document.getElementById('editar-cli-nome');
@@ -2641,6 +2798,8 @@ const App = {
         if (t) t.value = telefone || '';
         if (c) c.value = cpf || '';
         if (m) m.value = email || '';
+        const nasc = document.getElementById('editar-cli-nascimento');
+        if (nasc) nasc.value = nascimento || '';
         Auth.abrirModal('modal-editar-cliente');
     },
 
@@ -2651,6 +2810,7 @@ const App = {
         const telefone = document.getElementById('editar-cli-telefone').value.trim();
         const cpf = document.getElementById('editar-cli-cpf').value.trim();
         const email = document.getElementById('editar-cli-email').value.trim();
+        const nascimento = document.getElementById('editar-cli-nascimento')?.value || null;
 
         // Sem id = cliente NOVO. Com id = edicao da ficha que ja existe.
         if (!id && !nome) { UI.showToast('Escreva o nome do cliente.', 'error'); return; }
@@ -2664,7 +2824,8 @@ const App = {
                     nome: nome,
                     telefone: telefone || null,
                     cpf: cpf || null,
-                    email: email || null
+                    email: email || null,
+                    nascimento: nascimento
                 }]);
                 if (erroNovo) { console.error('Erro ao criar cliente:', erroNovo); UI.showToast(mensagemAmigavel(erroNovo), 'error'); return; }
                 Auth.fecharModal('modal-editar-cliente');
@@ -2684,7 +2845,7 @@ const App = {
         try {
             const { data, error } = await supabaseClient
                 .from('clientes')
-                .update({ nome: nome, telefone: telefone || null, cpf: cpf || null, email: email || null })
+                .update({ nome: nome, telefone: telefone || null, cpf: cpf || null, email: email || null, nascimento: nascimento })
                 .eq('id', id)
                 .select('id');
             if (error) {

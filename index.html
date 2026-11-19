@@ -343,6 +343,10 @@ tailwind.config = {
           <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
           <input type="email" id="editar-cli-email" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
         </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Aniversário</label>
+          <input type="date" id="editar-cli-nascimento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+        </div>
         <button type="submit" class="w-full py-3.5 rounded-xl bg-brand-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-brand-600 transition">Salvar alterações</button>
       </form>
     </div>
@@ -1593,14 +1597,20 @@ v>
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">CPF</label>
         <input type="text" id="cli-cpf" placeholder="000.000.000-00" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
       </div>
-      <div class="sm:col-span-2 lg:col-span-3">
+      <div class="sm:col-span-2">
         <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">E-mail</label>
         <input type="email" id="cli-email" placeholder="cliente@email.com" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Aniversário</label>
+        <input type="date" id="cli-nascimento" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
       </div>
       <div class="flex items-end">
         <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg"><i class="fa-solid fa-plus mr-1"></i> Adicionar</button>
       </div>
     </form>
+
+    <div id="painel-relacionamento" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
 
     <div class="border-t border-white/10 pt-5 space-y-4">
       <div class="flex items-center gap-3 flex-wrap">
