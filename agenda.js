@@ -652,6 +652,7 @@ const Agenda = (function () {
       });
       d.appendChild(sts);
       var outras = el('div', 'ga-dlg-acoes');
+      if (st !== 'faltou') outras.appendChild(acao('Receber', 'ok', function () { fecharJanela(); App.abrirComanda(a); }));
       outras.appendChild(acao('Adicionar dentro', 'ok', function () { fecharJanela(); App.abrirEncaixe(a); }));
       outras.appendChild(acao('Desmarcar', 'perigo', function () { fecharJanela(); App.excluirAgendamento(a.id, a.cliente); }));
       d.appendChild(outras);

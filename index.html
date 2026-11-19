@@ -82,6 +82,9 @@ tailwind.config = {
     </button>
 
     <p class="hc-side-grupo">Gestão</p>
+    <button type="button" class="hc-side-item admin-only" data-aba="aba-caixa" onclick="irAba('aba-caixa')">
+      <i class="fa-solid fa-cash-register"></i><span>Caixa</span>
+    </button>
     <button type="button" class="hc-side-item admin-only" data-aba="aba-relatorios" onclick="irAba('aba-relatorios')">
       <i class="fa-solid fa-chart-line"></i><span>Relatórios</span>
     </button>
@@ -311,6 +314,17 @@ tailwind.config = {
   </div>
 
   <!-- ============ MODAL: EDITAR CLIENTE ============ -->
+  <!-- ============ MODAL: COMANDA (receber atendimento) ============ -->
+  <div id="modal-comanda" class="modal-overlay hidden">
+    <div class="modal-caixa">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-base font-bold uppercase text-white">Comanda</h3>
+        <button type="button" onclick="Auth.fecharModal('modal-comanda')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="comanda-corpo"></div>
+    </div>
+  </div>
+
   <div id="modal-editar-cliente" class="modal-overlay hidden">
     <div class="modal-caixa">
       <div class="flex items-center justify-between mb-5">
@@ -1574,6 +1588,41 @@ v>
 </section>
 
 <!-- CLIENTES CADASTRADOS -->
+<section id="aba-caixa" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+  <div class="glass-water rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
+    <div class="flex items-center justify-between border-b border-white/10 pb-4 gap-4 flex-wrap">
+      <div>
+        <h2 class="text-xl font-bold uppercase text-white"><i class="fa-solid fa-cash-register text-brand-500 mr-2"></i>Caixa</h2>
+        <p class="text-xs text-zinc-400">Tudo que entrou e saiu no dia. Para receber um atendimento, abra o horário na agenda e toque em Receber.</p>
+      </div>
+      <input type="date" id="caixa-data" onchange="App.renderCaixa()" class="glass-input rounded-xl px-3 py-2 text-xs text-white">
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10"><p class="text-[10px] uppercase font-bold text-zinc-500">Entradas</p><p id="caixa-entradas" class="text-sm font-black text-emerald-400">R$ 0,00</p></div>
+      <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10"><p class="text-[10px] uppercase font-bold text-zinc-500">Saídas</p><p id="caixa-saidas" class="text-sm font-black text-rose-400">R$ 0,00</p></div>
+      <div class="p-3.5 rounded-2xl bg-zinc-950 border border-white/10"><p class="text-[10px] uppercase font-bold text-zinc-500">Saldo</p><p id="caixa-saldo" class="text-sm font-black text-white">R$ 0,00</p></div>
+    </div>
+    <div id="caixa-formas" class="flex flex-wrap gap-2"></div>
+    <form onsubmit="App.lancarCaixa(event)" class="grid grid-cols-2 lg:grid-cols-5 gap-3 items-end border-t border-white/10 pt-5">
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Tipo</label>
+        <select id="caixa-tipo" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white"><option value="entrada">Entrada</option><option value="saida">Saída</option></select>
+      </div>
+      <div class="col-span-2">
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Descrição</label>
+        <input type="text" id="caixa-desc" placeholder="Ex: Conta de luz" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-zinc-400 mb-1">Valor (R$)</label>
+        <input type="number" id="caixa-valor" step="0.01" min="0" class="w-full glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      </div>
+      <div id="caixa-forma-host"></div>
+      <button type="submit" class="col-span-2 lg:col-span-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider transition"><i class="fa-solid fa-plus mr-1"></i> Lançar</button>
+    </form>
+    <div id="caixa-lista" class="space-y-2"></div>
+  </div>
+</section>
+
 <section id="aba-clientes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
   <div class="glass-water rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
     <div class="flex items-center justify-between border-b border-white/10 pb-4 gap-4 flex-wrap">
@@ -1687,6 +1736,7 @@ handleParticles();
 <!-- Script Principal -->
 <script src="app.js"></script>
 <script src="agenda.js"></script>
+<script src="caixa.js"></script>
 <script>
 // ============================================================
 // ACESSIBILIDADE — vale nos dois perfis (salão e profissional).

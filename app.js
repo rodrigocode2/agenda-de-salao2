@@ -136,6 +136,7 @@ function irAba(aba) {
                 if (aba === 'aba-clientes' && App.renderClientes) App.renderClientes();
                 if (aba === 'aba-equipe' && App.renderListaProfissionais) App.renderListaProfissionais();
                 if (aba === 'aba-relatorios' && App.renderRelatorios) App.renderRelatorios();
+                if (aba === 'aba-caixa' && App.renderCaixa) App.renderCaixa();
                 if (aba === 'aba-avisos' && App.carregarAvisos) App.carregarAvisos();
                 if (aba === 'aba-planos' && UI && UI.carregarPlanos) UI.carregarPlanos();
                 if (aba === 'aba-configuracoes' && App.carregarConfiguracoes) App.carregarConfiguracoes();
@@ -5172,6 +5173,7 @@ const UI = {
         if (tabId === 'aba-clientes') App.renderClientes();
         if (tabId === 'aba-equipe') App.renderListaProfissionais();
         if (tabId === 'aba-relatorios') App.renderRelatorios();
+        if (tabId === 'aba-caixa' && App.renderCaixa) App.renderCaixa();
         if (tabId === 'aba-planos') UI.carregarPlanos();
         if (tabId === 'aba-configuracoes') App.carregarConfiguracoes();
         if (tabId === 'aba-avisos') { App.carregarAvisos(); App.carregarRecadosEstabelecimento(); }
