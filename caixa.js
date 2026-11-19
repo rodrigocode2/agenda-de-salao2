@@ -353,6 +353,26 @@
     return _rel ? _rel.apply(App, arguments) : undefined;
   };
 
+  // ---------------- LINK DE AGENDAMENTO ----------------
+  async function montarLink() {
+    var campo = $('link-agendamento'); if (!campo) return;
+    var estabId = await App.obterEstabId(); if (!estabId) return;
+    var r = await supabaseClient.from('estabelecimentos').select('link_publico').eq('id', estabId).maybeSingle();
+    var cod = r.data && r.data.link_publico;
+    campo.value = cod ? new URL('agendar.html?s=' + cod, location.href).href : 'Link indisponível. Recarregue a página.';
+  }
+  App.copiarLinkAgendamento = function () {
+    var c = $('link-agendamento'); if (!c || !c.value) return;
+    var fim = function () { aviso('Link copiado!'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(c.value).then(fim, function () { c.select(); document.execCommand('copy'); fim(); });
+    else { c.select(); document.execCommand('copy'); fim(); }
+  };
+  var _cfg = App.carregarConfiguracoes;
+  App.carregarConfiguracoes = function () {
+    try { montarLink(); } catch (e) { console.warn(e); }
+    return _cfg ? _cfg.apply(App, arguments) : undefined;
+  };
+
   App.abrirComanda = abrirComanda;
   App.renderCaixa = function () { montarFormaAvulsa(); return renderCaixa(); };
   App.lancarCaixa = lancarCaixa;

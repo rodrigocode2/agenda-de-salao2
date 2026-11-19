@@ -1388,6 +1388,14 @@ v>
 
 <!-- CONFIGURAÇÕES DO ESTABELECIMENTO -->
 <section id="aba-configuracoes" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+  <div class="glass-water rounded-3xl p-6 border border-white/10 space-y-3 shadow-2xl">
+    <h3 class="text-xs font-bold uppercase text-white"><i class="fa-solid fa-link text-brand-500 mr-1.5"></i>Link de agendamento online</h3>
+    <p class="text-xs text-zinc-400">Envie para seus clientes marcarem sozinhos (Instagram, WhatsApp). Os horários caem direto na sua agenda, ocupados e fechados não aparecem.</p>
+    <div class="flex gap-2 flex-wrap">
+      <input type="text" id="link-agendamento" readonly class="flex-1 min-w-[200px] glass-input rounded-xl px-3.5 py-2.5 text-xs text-white">
+      <button type="button" onclick="App.copiarLinkAgendamento()" class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase transition cursor-pointer">Copiar</button>
+    </div>
+  </div>
   <div class="glass-water rounded-3xl p-8 border border-white/10 space-y-6 shadow-2xl">
     <div class="flex justify-between items-center border-b border-white/10 pb-4">
       <div>
